@@ -1528,12 +1528,18 @@ class TestClusteringConstraints:
     ):
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
-            "config.init.time_cluster": "data_tables/cluster_days.csv",
+            "config.init.time_cluster": "cluster_days_param",
             "config.build.extra_math": (
                 ["storage_inter_cluster"] if storage_inter_cluster else []
             ),
             "config.build.cyclic_storage": cyclic,
+            "data_tables.cluster_days": {
+                "data": "data_tables/cluster_days.csv",
+                "rows": "timesteps",
+                "add_dims": {"parameters": "cluster_days_param"},
+            },
         }
+
         if storage_initial:
             override.update({"techs.test_storage.constraints.storage_initial": 0})
         return build_model(override, "simple_storage,investment_costs")

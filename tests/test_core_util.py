@@ -1,19 +1,11 @@
-import glob
 import importlib.resources
 import logging
-from pathlib import Path
 
-import jsonschema
 import pytest
 
 import calliope
-from calliope.io import read_rich_yaml
-from calliope.schemas.math_schema import CalliopeBuildMath
-from calliope.util import schema
 from calliope.util.generate_runs import generate_runs
 from calliope.util.logging import log_time
-
-from .common.util import check_error_or_warning
 
 with importlib.resources.as_file(importlib.resources.files("calliope")) as f:
     _MODEL_NATIONAL = (
@@ -120,72 +112,3 @@ class TestPandasExport:
             self.MODEL.inputs[variable_name].to_dataframe()
         else:
             pass
-
-
-class TestValidateDict:
-    @pytest.mark.xfail(
-        reason="Checking the schema itself doesn't seem to be working properly; no clear idea of _why_ yet..."
-    )
-    @pytest.mark.parametrize(
-        ("schema_dict", "expected_path"),
-        [
-            ({"foo": 2}, ""),
-            ({"properties": {"bar": {"foo": "string"}}}, " at `properties.bar`"),
-            (
-                {
-                    "definitions": {"baz": {"foo": "string"}},
-                    "properties": {"bar": {"$ref": "#/definitions/baz"}},
-                },
-                " at `definitions.baz`",
-            ),
-        ],
-    )
-    def test_malformed_schema(self, schema_dict, expected_path):
-        to_validate = {"bar": [1, 2, 3]}
-        with pytest.raises(jsonschema.SchemaError) as err:
-            schema.validate_dict(to_validate, schema_dict, "foobar")
-        assert check_error_or_warning(
-            err,
-            f"The foobar schema is malformed{expected_path}: Unevaluated properties are not allowed ('foo' was unexpected)",
-        )
-
-    @pytest.mark.parametrize(
-        ("to_validate", "expected_path"),
-        [
-            ({"invalid": {"foo": 2}}, ""),
-            ({"valid": {"foo": 2, "invalid": 3}}, "valid: "),
-        ],
-    )
-    def test_invalid_dict(self, to_validate, expected_path):
-        schema_dict = {
-            "properties": {
-                "valid": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {"foo": {"type": "number"}},
-                }
-            },
-            "additionalProperties": False,
-        }
-        with pytest.raises(calliope.exceptions.ModelError) as err:
-            schema.validate_dict(to_validate, schema_dict, "foobar")
-        assert check_error_or_warning(
-            err,
-            [
-                "Errors during validation of the foobar dictionary",
-                f"* {expected_path}Additional properties are not allowed ('invalid' was unexpected)",
-            ],
-        )
-
-    @pytest.fixture
-    def base_math(self):
-        return read_rich_yaml(Path(calliope.__file__).parent / "math" / "plan.yaml")
-
-    @pytest.mark.parametrize(
-        "dict_path", glob.glob(str(Path(calliope.__file__).parent / "math" / "*.yaml"))
-    )
-    def test_validate_math(self, base_math, dict_path):
-        base_math.union(
-            read_rich_yaml(dict_path, allow_override=True), allow_override=True
-        )
-        CalliopeBuildMath(**base_math)

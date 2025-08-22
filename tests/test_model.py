@@ -257,7 +257,7 @@ class TestOperateMode:
         """Cannot build in operate mode if time clustering is in use."""
 
         m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.config = m.config.update({"init.time_cluster": "foo.yaml"})
+        m.config = m.config.update({"init.time_cluster": "foo"})
         with pytest.raises(
             calliope.exceptions.ModelError, match="Unable to run this model in op"
         ):

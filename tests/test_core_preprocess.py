@@ -57,8 +57,8 @@ class TestModelRun:
     @pytest.fixture
     def subset_time_model(self):
         def _subset_time_model(param):
-            override = read_rich_yaml(f"config.init.subset.timesteps: {pytest.param}")
-            build_model(override_dict=override(["2005-01"]), scenario="simple_supply")
+            override = read_rich_yaml(f"config.init.subset.timesteps: {param}")
+            build_model(override_dict=override, scenario="simple_supply")
 
         return _subset_time_model
 
@@ -98,7 +98,7 @@ class TestModelRun:
             subset_time_model(time_subset)
         assert check_error_or_warning(
             excinfo,
-            f"subset time range {tuple(time_subset)} is outside the input data time range",
+            f"subset time range {time_subset} is outside the input data time range",
         )
 
     def test_inconsistent_time_indices_passes_thanks_to_time_subsetting(self):
@@ -213,8 +213,13 @@ class TestChecks:
         """
         override = {
             "config.init.subset.timesteps": ["2005-01-01", "2005-01-04"],
-            "config.init.time_cluster": "data_tables/cluster_days.csv",
+            "config.init.time_cluster": "cluster_days_param",
             "config.build.cyclic_storage": True,
+            "data_tables.cluster_days": {
+                "data": "data_tables/cluster_days.csv",
+                "rows": "timesteps",
+                "add_dims": {"parameters": "cluster_days_param"},
+            },
         }
 
         with pytest.raises(exceptions.ModelError) as error:

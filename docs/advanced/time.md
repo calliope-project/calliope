@@ -21,12 +21,18 @@ Any [pandas-compatible rule describing the target resolution][pandas.DataFrame.r
 
 ## Time clustering
 
-By supplying a file linking dates in your model timeseries with representative days, it is possible to cluster your timeseries:
+By loading a file linking dates in your model timeseries with representative days, it is possible to cluster your timeseries:
 
 ```yaml
 config:
   init:
-    time_cluster: cluster_days.csv
+    time_cluster: cluster_days_param
+data_tables:
+  cluster_days:
+    data: /path/to/cluster_days.csv
+    rows: timesteps
+    add_dims:
+      parameters: cluster_days_param
 ```
 
 When using representative days, you may want to enable a number of additional constraints to improve how carriers are stored between representative days, based on the study undertaken by [Kotzur et al.](https://doi.org/10.1016/j.apenergy.2018.01.023).
@@ -84,8 +90,20 @@ We were previously using this in our internal clustering.
         .apply(lambda x: representative_dates[x])
     )
     cluster_days.to_csv("/absolute_path/to/clusters.csv")
+    data_table_definition = {
+        "cluster_days": {
+            "data": "cluster_days",
+            "rows": "timesteps",
+            "add_dims": {"parameters": "cluster_days_param"}
+        }
+    }
 
-    model_clustered = calliope.Model(..., time_cluster="/absolute_path/to/clusters.csv")
+    model_clustered = calliope.read_yaml(
+        ...,
+        time_cluster="cluster_days_param",
+        data_tables_df={"cluster_days": cluster_days}
+        override_dict={"data_tables": data_table_definition}
+    )
     ```
 
 !!! note

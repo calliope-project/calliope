@@ -178,8 +178,11 @@ class TestParserElements:
     @pytest.mark.parametrize("data_var_string", ["foo", "with_INF", "all_infs"])
     def test_data_var_fail_not_in_model(self, data_var, data_var_string, eval_kwargs):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
-        assert not evaluated_
+        with pytest.raises(
+            BackendError,
+            match=f"Data variable `{data_var_string}` not found in model dataset",
+        ):
+            parsed_[0].eval(**eval_kwargs)
 
     @pytest.mark.parametrize(
         "data_var_string", ["multi_dim_var", "no_dim_var", "multi_dim_expr"]
@@ -188,7 +191,7 @@ class TestParserElements:
         self, data_var, data_var_string, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(BackendError) as excinfo:
             parsed_[0].eval(apply_where=False, **eval_kwargs)
         assert check_error_or_warning(
             excinfo,
@@ -197,7 +200,7 @@ class TestParserElements:
 
     def test_data_var_fail_cannot_handle_constraint(self, data_var, eval_kwargs):
         parsed_ = data_var.parse_string("no_dim_constr", parse_all=True)
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(BackendError) as excinfo:
             parsed_[0].eval(**eval_kwargs)
         assert check_error_or_warning(
             excinfo, ["Cannot check values", "Received constraint: `no_dim_constr`"]
@@ -582,7 +585,6 @@ class TestAsMathString:
         ("parser", "instring", "expected"),
         [
             ("data_var", "with_inf", r"\exists (\textit{with_inf}_\text{node,tech})"),
-            ("data_var", "foo", r"\exists (\text{foo})"),
             ("data_var", "no_dims", r"\exists (\textit{no_dims})"),
             ("config_option", "config.foo", r"\text{config.foo}"),
             ("bool_operand", "True", "true"),

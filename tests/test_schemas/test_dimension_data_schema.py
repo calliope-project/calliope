@@ -8,7 +8,7 @@ from calliope.schemas.dimension_data_schema import (
     IndexedParam,
 )
 
-from ..test_core_util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 
 class TestIndexedParam:

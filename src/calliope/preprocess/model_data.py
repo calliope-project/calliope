@@ -17,10 +17,9 @@ from typing_extensions import NotRequired, TypedDict
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.preprocess import data_tables, model_math, time
-from calliope.schemas import math_schema
+from calliope.schemas import dimension_data_schema, math_schema
 from calliope.schemas.config_schema import Init
-from calliope.util.schema import MODEL_SCHEMA, validate_dict
-from calliope.util.tools import listify, relative_path
+from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
 
@@ -194,10 +193,11 @@ class ModelDataFactory:
             techs_this_node_incl_inheritance = self._inherit_defs(
                 "techs", techs_this_node, nodes=node_name
             )
-            validate_dict(
-                {"techs": techs_this_node_incl_inheritance},
-                MODEL_SCHEMA,
-                f"tech definition at node `{node_name}`",
+            dimension_data_schema.CalliopeNode.model_validate(
+                node_data | {"techs": None}
+            )
+            dimension_data_schema.CalliopeTechs.model_validate(
+                techs_this_node_incl_inheritance
             )
             self._raise_error_on_transmission_tech_def(
                 techs_this_node_incl_inheritance, node_name
@@ -229,9 +229,6 @@ class ModelDataFactory:
             coords="minimal",
         )
 
-        validate_dict(
-            {"nodes": active_node_dict}, MODEL_SCHEMA, "node (non-tech) definition"
-        )
         node_ds = self._definition_dict_to_ds(active_node_dict, "nodes")
         ds = xr.merge([node_tech_ds, node_ds])
         self._add_to_dataset(ds, "YAML definition")
@@ -281,9 +278,7 @@ class ModelDataFactory:
 
         if self.config.time_cluster is not None:
             self.dataset = time.cluster(
-                self.dataset,
-                relative_path(self.definition_path, self.config.time_cluster),
-                self.config.datetime_format,
+                self.dataset, self.config.time_cluster, self.config.datetime_format
             )
 
     def clean_data_from_undefined_members(self):
@@ -644,9 +639,7 @@ class ModelDataFactory:
                 if tech_def.get("base_tech") == "transmission"
             }
         )
-        validate_dict(
-            {"techs": active_link_techs}, MODEL_SCHEMA, "link tech definition"
-        )
+        dimension_data_schema.CalliopeTechs.model_validate(active_link_techs)
         link_tech_dict = AttrDict()
         if not active_link_techs:
             LOGGER.debug("links | No links between nodes defined.")

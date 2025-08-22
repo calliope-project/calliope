@@ -3,7 +3,6 @@
 """Functionality to add and process time varying parameters."""
 
 import logging
-from pathlib import Path
 from typing import overload
 
 import numpy as np
@@ -145,23 +144,20 @@ def resample(data: xr.Dataset, dim: str, resolution: str) -> xr.Dataset:
     return data_new
 
 
-def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
+def cluster(data: xr.Dataset, clustering_param: str, time_format: str):
     """Apply the given clustering time series to the given data.
 
     Args:
         data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
-        clustering_file (str | Path): Path to file containing rows of dates and the corresponding datestamp to which they are to be clustered.
-        time_format (str): The format that dates in `clustering_file` have been defined (e.g., "%Y-%m-%d" or "ISO8601").
+        clustering_param (str): Name of array in data to use for clustering.
+        time_format (str): The format that dates in `clustering_param` have been defined (e.g., "%Y-%m-%d" or "ISO8601").
 
     Returns:
         xarray.Dataset:
             `data` clustered according to contents of `clustering_file`.
 
     """
-    clustering_timeseries = pd.read_csv(clustering_file, index_col=0).squeeze()
-    clustering_timeseries.index = _datetime_index(
-        clustering_timeseries.index + " 00:00:00", time_format
-    )
+    clustering_timeseries = data[clustering_param].to_series()
     representative_days = _datetime_index(
         clustering_timeseries.dropna() + " 00:00:00", time_format
     ).dt.date

@@ -718,7 +718,7 @@ If you want to achieve some of the same plots that were possible with the Callio
 ### Clustering
 
 Time masking and clustering capabilities have been severely reduced.
-Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2H`, `config.init.time_cluster: cluster_file.csv`.
+Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2H`, `config.init.time_cluster: cluster_param`.
 Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries.
 
 If you want to masking/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](advanced/time.md#time-clustering) page.

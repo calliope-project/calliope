@@ -127,7 +127,14 @@ class TestResamplingAndCluster:
             scenario="simple_supply",
             subset={"timesteps": ["2005-01-01", "2005-01-04"]},
             resample={"timesteps": "6h"},
-            time_cluster="data_tables/cluster_days.csv",
+            time_cluster="cluster_days_param",
+            override_dict={
+                "data_tables.cluster_days": {
+                    "data": "data_tables/cluster_days.csv",
+                    "rows": "timesteps",
+                    "add_dims": {"parameters": "cluster_days_param"},
+                }
+            },
         )
 
         dtindex = pd.DatetimeIndex(

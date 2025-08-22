@@ -357,70 +357,77 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             parsing.ParsedBackendComponent | None: parsed component. None if the break_early condition was met.
         """
         references: set[str] = set()
-
+        default_empty = xr.DataArray(np.nan)
         if break_early and not component_def.active:
             self.log(
-                component_type, name, "Component deactivated and therefore not built."
+                component_type,
+                name,
+                "Component deactivated; only metadata will be stored.",
             )
-            return None
-
-        self._raise_error_on_preexistence(name, component_type)
-        parsed_component = parsing.ParsedBackendComponent(
-            component_type, name, component_def
-        )
-
-        top_level_where = parsed_component.generate_top_level_where_array(
-            self,
-            align_to_foreach_sets=False,
-            break_early=break_early,
-            references=references,
-        )
-        if break_early and not top_level_where.any():
-            component_da = xr.DataArray(np.nan)
-
+            component_da = default_empty
+            parsed_component = None
         else:
-            self._create_obj_list(name, component_type)
-            equations = parsed_component.parse_equations(self.valid_component_names)
+            self._raise_error_on_preexistence(name, component_type)
+            parsed_component = parsing.ParsedBackendComponent(
+                component_type, name, component_def
+            )
 
-            if not equations:
-                component_da = component_setter(
-                    parsed_component.drop_dims_not_in_foreach(top_level_where),
-                    references,
-                )
+            top_level_where = parsed_component.generate_top_level_where_array(
+                self,
+                align_to_foreach_sets=False,
+                break_early=break_early,
+                references=references,
+            )
+            if break_early and not top_level_where.any():
+                component_da = default_empty
+
             else:
-                component_da = (
-                    xr.DataArray()
-                    .where(parsed_component.drop_dims_not_in_foreach(top_level_where))
-                    .astype(np.dtype("O"))
-                )
-            for element in equations:
-                where = element.evaluate_where(
-                    self, initial_where=top_level_where, references=references
-                )
-                if break_early and not where.any():
-                    continue
+                self._create_obj_list(name, component_type)
+                equations = parsed_component.parse_equations(self.valid_component_names)
 
-                where = parsed_component.drop_dims_not_in_foreach(where)
-
-                if component_da.where(where).notnull().any():
-                    if component_da.shape:
-                        overlap = component_da.where(where).to_series().dropna().index
-                        substring = f"trying to set two equations for the same index:\n{overlap}"
-                    else:
-                        substring = (
-                            "trying to set two equations for the same component."
+                if not equations:
+                    component_da = component_setter(
+                        parsed_component.drop_dims_not_in_foreach(top_level_where),
+                        references,
+                    )
+                else:
+                    component_da = (
+                        xr.DataArray()
+                        .where(
+                            parsed_component.drop_dims_not_in_foreach(top_level_where)
                         )
+                        .astype(np.dtype("O"))
+                    )
+                for element in equations:
+                    where = element.evaluate_where(
+                        self, initial_where=top_level_where, references=references
+                    )
+                    if break_early and not where.any():
+                        continue
 
+                    where = parsed_component.drop_dims_not_in_foreach(where)
+
+                    if component_da.where(where).notnull().any():
+                        if component_da.shape:
+                            overlap = (
+                                component_da.where(where).to_series().dropna().index
+                            )
+                            substring = f"trying to set two equations for the same index:\n{overlap}"
+                        else:
+                            substring = (
+                                "trying to set two equations for the same component."
+                            )
+
+                        self.delete_component(name, component_type)
+                        raise BackendError(f"{element.name} | {substring}")
+
+                    to_fill = component_setter(element, where, references)
+                    component_da = component_da.fillna(to_fill)
+
+                if break_early and component_da.isnull().all():
                     self.delete_component(name, component_type)
-                    raise BackendError(f"{element.name} | {substring}")
-
-                to_fill = component_setter(element, where, references)
-                component_da = component_da.fillna(to_fill)
-
-            if break_early and component_da.isnull().all():
-                self.delete_component(name, component_type)
-                # simplify the component since it's empty
-                component_da = xr.DataArray(np.nan)
+                    # simplify the component since it's empty
+                    component_da = default_empty
 
         self._add_to_dataset(
             name, component_da, component_type, component_def.model_dump(), references
@@ -591,6 +598,8 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 (either with the same or different type as `obj_type`).
         """
         if key in self._dataset.keys():
+            if not self._dataset[key].attrs.get("active", True):
+                return None
             if key in getattr(self, obj_type):
                 raise BackendError(
                     f"Trying to add already existing `{key}` to backend model {obj_type}."

@@ -67,10 +67,10 @@ class Init(CalliopeBaseModel):
     resample: Resamples = Resamples()
     """Setting to adjust datetime dimension resolution, e.g. '2h' for 2-hourly"""
 
-    time_cluster: str | None = None
+    time_cluster: AttrStr | None = None
     """
     Setting to cluster the timeseries.
-    Must be a path to a file where each date is linked to a representative date that also exists in the timeseries.
+    Must reference the name of an input data array.
     """
 
     datetime_format: str = Field(default="ISO8601")

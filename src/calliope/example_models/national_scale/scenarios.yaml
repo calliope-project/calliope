@@ -31,7 +31,13 @@ overrides:
       init:
         name: "National-scale example model with time clustering"
         subset: {timesteps: null} # No time subsetting
-        time_cluster: data_tables/cluster_days.csv
+        time_cluster: cluster_days_param
+    data_tables:
+      cluster_days:
+        data: data_tables/cluster_days.csv
+        rows: timesteps
+        add_dims:
+          parameters: cluster_days_param
 
   spores:
     config.init:

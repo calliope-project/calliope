@@ -77,55 +77,38 @@ config:
 !!! danger
     Modes and other pre-defined options such as `operate` and `spores` might not work as expected!
 
-## Adding your parameters to the YAML schema
+## Adding your parameters math definition
 
-Our YAML schemas are used to validate user inputs.
-The model definition schema includes metadata on all our pre-defined parameters, which you can find rendered in our [reference page][model-definition-schema].
+The math definition contains metadata about the parameters, dimensions, and lookup tables used in defining the optimisation problem.
+We use this to validate user inputs.
 
 When you add your own math you are likely to be adding new parameters to the model.
-You can update the Calliope model definition schema to include your new entries using [`calliope.util.schema.update_model_schema(...)`][calliope.util.schema.update_model_schema].
+Be sure to add your parameter metadata to the math definition as well.
 This ensures that your parameters have default values attached to them and if you choose to [write your own documentation](#writing-your-own-math-documentation), your parameters will have this metadata added to their descriptions.
 
-Entries in the schema look like this:
+Entries look like this:
 
 ```yaml
-flow_cap_max:
-  $ref: "#/$defs/TechParamNullNumber"  # (1)!
-  default: .inf
-  x-type: float
-  title: Maximum rated flow capacity.
-  description: >-
-    Limits `flow_cap` to a maximum.
-  x-unit: power.
+dims:
+  techs:
+    dtype: string
+    title: Technologies
+
+parameters:
+  flow_cap_max:
+    default: .inf
+    title: Maximum rated flow capacity.
+    description: >-
+        Limits `flow_cap` to a maximum.
+    unit: power.
+lookups:
+  source_unit:
+    default: absolute
+    title: Source unit
+    description: The unit of a given technologies source data
+    one_of: [absolute, per_cap, per_area]
+
 ```
-
-1. This is a cross-reference to a much longer schema entry that says the parameter type is either `None`, a simple number, or an indexed parameter dictionary with the `data`, `index`, and `dims` keys.
-
-When you add your own parameters to the schema, you will need to know the top-level key under which the parameter will be found in your YAML definition: [`nodes`](../creating/nodes.md), [`techs`](../creating/techs.md), or [`parameters`](../creating/parameters.md).
-As a general rule, if it includes the `techs` dimension, put it under `techs`; if it includes `nodes` but _not_ `techs` then put it under `nodes`; if it includes neither dimension, put it under `parameters`.
-
-The dictionary you supply for each parameter can include the following:
-
-* title (str): Short description of the parameter.
-* description (str): Long description of the parameter.
-* type (str or array): expected type of entry.
-We recommend you use the pre-defined cross-reference `$ref: "#/$defs/TechParamNullNumber"` instead of explicitly using this key, to allow the parameter to be either numeric or an indexed parameter.
-If you are adding a cost, you can use the cross reference `$ref: "#/$defs/TechCostNullNumber"`.
-If you want to allow non-numeric data (e.g., strings), you would set `type: string` instead of using the cross-reference.
-* default (str): default value.
-This will be used in generating the optimisation problem.
-* x-type (str): type of the non-NaN array entries in the internal calliope representation of the parameter.
-This is usually one of `float` or `str`.
-* x-unit (str): Unit of the parameter to use in documentation.
-* x-operate-param (bool): If True, this parameter's schema data will only be loaded into the optimisation problem if running in "operate" mode.
-
-!!! note
-    Schema attributes which start with `x-` are Calliope-specific.
-    They are not used at all for YAML validation and instead get picked up by us using the utility function [calliope.util.schema.extract_from_schema][].
-
-!!! warning
-    The schema is updated in-place so your edits to it will remain active as long as you are running in the same session.
-    You can reset your updates to the schema and return to the pre-defined schema by calling [`calliope.util.schema.reset()`][calliope.util.schema.reset]
 
 ## Writing your own math documentation
 

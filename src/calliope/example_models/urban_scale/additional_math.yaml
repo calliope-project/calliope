@@ -1,6 +1,5 @@
 parameters:
   heat_to_power_ratio:
-    type: float
     default: 1
     title: Heat to power ratio for CHP
     description: Ratio of heat output to electricity output for combined heat and power (CHP) technology.
