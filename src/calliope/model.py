@@ -15,7 +15,7 @@ import xarray as xr
 
 from calliope import _version, backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
-from calliope.postprocess import postprocess_results
+from calliope.postprocess.orchestrator import postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.schemas import (
     config_schema,

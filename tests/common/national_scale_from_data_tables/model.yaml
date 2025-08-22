@@ -13,6 +13,7 @@ config:
   solve:
     solver: cbc
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
+    enable_postprocessing: true
 
 nodes:
   region1.techs: {demand_power, ccgt}

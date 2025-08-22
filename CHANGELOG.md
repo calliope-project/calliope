@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|new| calliope postprocessing can be turned off and is extensible per base math file (#747, #638)
+
 |changed| MILP math formulation now has its own file (`milp.yaml`), which can be requested via `extra_math` (#749).
 
 |fixed| Updates to the expression underlying the Gurobi backend objective function make their way through to the objective function before solving (#797).

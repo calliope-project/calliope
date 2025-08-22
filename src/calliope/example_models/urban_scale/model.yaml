@@ -24,6 +24,8 @@ config:
 
   solve:
     solver: cbc
+    enable_postprocessing: true
+
 # --8<-- [end:config]
 
 # --8<-- [start:parameters]
