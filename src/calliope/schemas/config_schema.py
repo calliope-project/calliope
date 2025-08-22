@@ -133,7 +133,7 @@ class BuildOperate(CalliopeBaseModel):
 class Build(CalliopeBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
-    model_config = {"title": "Model build configuration", "extra": "allow"}
+    model_config = {"title": "Model build configuration"}
 
     backend: Literal["pyomo", "gurobi"] = Field(default="pyomo")
     """Module with which to build the optimisation problem."""

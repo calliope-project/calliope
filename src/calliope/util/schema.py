@@ -2,64 +2,12 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Load, update, and access attributes in the Calliope pre-defined YAML schemas."""
 
-import importlib
-import re
-import sys
-from copy import deepcopy
-from typing import Literal
-
 import jsonschema
 
-from calliope.attrdict import AttrDict
 from calliope.exceptions import print_warnings_and_raise_errors
 from calliope.io import load_config
 
 MODEL_SCHEMA = load_config("model_def_schema.yaml")
-
-
-def reset():
-    """Reset all module-level schema to the pre-defined dictionaries."""
-    importlib.reload(sys.modules[__name__])
-
-
-def update_model_schema(
-    top_level_property: Literal["nodes", "techs", "parameters"],
-    new_entries: dict,
-    allow_override: bool = True,
-):
-    """Update existing entries in the model schema or add a new parameter to the model schema.
-
-    Available attributes:
-
-    * title (str): Short description of the parameter.
-    * description (str): Long description of the parameter.
-    * type (str): expected type of entry. Pre-defined entries tend to use "$ref: "#/$defs/TechParamNullNumber" instead, to allow type to be either numeric or an indexed parameter.
-    * default (str): default value. This will be used in generating the optimisation problem.
-    * x-type (str): type of the non-NaN array entries in the internal calliope representation of the parameter.
-    * x-unit (str): Unit of the parameter to use in documentation.
-    * x-operate-param (bool): If True, this parameter's schema data will only be loaded into the optimisation problem if running in "operate" mode.
-
-    Args:
-        top_level_property (Literal["nodes", "techs", "parameters"]): Top-level key under which parameters are to be updated/added.
-        new_entries (dict): Data to update the schema with.
-        allow_override (bool, optional): If True, allow existing entries in the schema to be overwritten. Defaults to True.
-    """
-    new_schema = deepcopy(MODEL_SCHEMA)
-    to_update: AttrDict
-    if top_level_property == "parameters":
-        to_update = new_schema["properties"][top_level_property]["properties"]
-    else:
-        to_update = new_schema["properties"][top_level_property]["patternProperties"][
-            "^[^_^\\d][\\w]*$"
-        ]["properties"]
-
-    to_update.union(new_entries, allow_override=allow_override)
-
-    validator = jsonschema.Draft202012Validator
-    validator.META_SCHEMA["unevaluatedProperties"] = False
-    validator.check_schema(new_schema)
-
-    MODEL_SCHEMA.union(new_schema, allow_override=True)
 
 
 def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None:
@@ -112,59 +60,3 @@ def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None
         print_warnings_and_raise_errors(
             errors=errors, during=f"validation of the {dict_descriptor} dictionary."
         )
-
-
-def extract_from_schema(
-    schema: dict,
-    keyword: str,
-    subset_top_level: Literal["nodes", "techs", "parameters"] | None = None,
-) -> dict:
-    """Extract a keyword for each leaf property in the schema.
-
-    This currently only reliably works for "default".
-    Other keywords exist at branch properties, which confuses the extraction process.
-
-    Args:
-        schema (dict): Schema to extract keyword from
-        keyword (str): property key to extract
-        subset_top_level (Literal["nodes", "techs", "parameters"] | None, optional):
-            Include only those properties that are leaves along a specific top-level property branch.
-            Defaults to None (all property branches are included).
-
-    Returns:
-        dict:
-            Flat dictionary of property name : keyword value.
-            Property trees are discarded since property names must be unique.
-    """
-    extracted_keywords: dict = {}
-    KeywordValidatingValidator = _extend_with_keyword(
-        jsonschema.Draft202012Validator,
-        keyword,
-        subset_top_level if subset_top_level is not None else "",
-    )
-    KeywordValidatingValidator(schema).validate(extracted_keywords)
-    return extracted_keywords
-
-
-def _extend_with_keyword(
-    validator_class: jsonschema.protocols.Validator, keyword: str, subset_top_level: str
-) -> jsonschema.protocols.Validator:
-    validate_properties = validator_class.VALIDATORS["properties"]
-
-    def set_defaults(validator, properties, instance, schema):
-        for prop, val in properties.as_dict_flat().items():
-            if prop.endswith(keyword):
-                config_key_regex = rf"config\.properties\.(init|build|solve)\.properties\.(\w+)\.{keyword}"
-                model_def_key_regex = (
-                    rf"{subset_top_level}.*\.properties\.(\w+)\.{keyword}"
-                )
-                new_key = re.match(config_key_regex, prop)
-                if new_key is None:
-                    new_key = re.match(model_def_key_regex, prop)
-                if new_key is None:
-                    continue
-                instance.setdefault(".".join(new_key.groups()), val)
-
-        yield from validate_properties(validator, properties, instance, schema)
-
-    return jsonschema.validators.extend(validator_class, {"properties": set_defaults})

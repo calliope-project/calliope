@@ -11,6 +11,9 @@ from calliope.io import to_yaml
 from calliope.preprocess import model_math
 from calliope.schemas import math_schema
 
+from ..common.util import build_test_model as build_model
+from ..common.util import check_error_or_warning
+
 
 @pytest.fixture(scope="module")
 def def_path(tmp_path_factory):
@@ -137,3 +140,84 @@ class TestBuildMath:
             match="Requested math 'foobar_fail' was not initialised.",
         ):
             model_math.build_applied_math(wrong_names, math_options)
+
+
+class TestValidateMathDict:
+    LOGGER = "calliope.backend.backend_model"
+
+    @pytest.fixture(scope="class")
+    def test_model(self):
+        return build_model({}, "simple_supply,investment_costs")
+
+    @pytest.fixture
+    def validate_math(self, test_model):
+        def _validate_math(math_dict: dict):
+            model_math.build_applied_math(
+                ["base"], test_model.math.init.model_dump(), math_dict, validate=True
+            )
+
+        return _validate_math
+
+    def test_base_math(self, caplog, validate_math):
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            validate_math({})
+        assert "Math build | Validated math strings." in caplog.text
+
+    @pytest.mark.parametrize(
+        ("equation", "where"),
+        [
+            ("1 == 1", "True"),
+            (
+                "sum(flow_out * flow_out_eff, over=[nodes, carriers, techs, timesteps]) <= .inf",
+                "base_tech==supply and flow_out_eff>0",
+            ),
+        ],
+    )
+    def test_add_math(self, caplog, validate_math, equation, where):
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            validate_math(
+                {
+                    "constraints": {
+                        "foo": {"equations": [{"expression": equation}], "where": where}
+                    }
+                }
+            )
+        assert "Optimisation Model | Validated math strings." in [
+            rec.message for rec in caplog.records
+        ]
+
+    @pytest.mark.parametrize(
+        "component_dict",
+        [
+            {"equations": [{"expression": "1 = 1"}]},
+            {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"},
+        ],
+    )
+    @pytest.mark.parametrize("both_fail", [True, False])
+    def test_add_math_fails(self, validate_math, component_dict, both_fail):
+        math_dict = {"constraints": {"foo": component_dict}}
+        errors_to_check = [
+            "math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)",
+            " * constraints:foo:",
+            "equations[0].expression",
+            "where",
+        ]
+        if both_fail:
+            math_dict["constraints"]["bar"] = component_dict
+            errors_to_check.append("* constraints:bar:")
+        else:
+            math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            validate_math(math_dict)
+        assert check_error_or_warning(excinfo, errors_to_check)
+
+    @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
+    def test_add_math_fails_marker_correct_position(self, validate_math, eq_string):
+        math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            validate_math(math_dict)
+        errorstrings = str(excinfo.value).split("\n")
+        # marker should be at the "=" sign, i.e., 2 characters from the end
+        assert len(errorstrings[-2]) - 2 == len(errorstrings[-1])

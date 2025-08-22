@@ -7,7 +7,7 @@ overrides:
   spores:
     config:
       init.name: SPORES mode
-      build.mode: spores
+      init.mode: spores
       solve.spores.number: 2
     parameters:
       spores_slack: 0.1

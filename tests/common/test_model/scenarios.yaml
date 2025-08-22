@@ -394,7 +394,7 @@ overrides:
 
   spores:
     config:
-      build.mode: spores
+      init.mode: spores
       solve.spores:
         number: 2
     parameters:
@@ -425,7 +425,7 @@ overrides:
         resample.timesteps: 24h
 
   operate:
-    config.build.mode: operate
+    config.init.mode: operate
     config.init.subset.timesteps: ["2005-01-01", "2005-01-02"]
     config.build.ensure_feasibility: true
     config.build.operate.window: 6h

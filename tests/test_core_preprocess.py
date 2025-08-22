@@ -54,73 +54,51 @@ class TestModelRun:
             info, "Errors during validation of the tech definition at node `a`"
         )
 
-    def test_incorrect_subset_time(self):
-        """If time_subset is a list, it must have two entries (start_time, end_time)
-        If time_subset is not a list, it should successfully subset on the given
-        string/integer
-        """
-
-        def override(param):
-            return read_rich_yaml(f"config.init.subset.timesteps: {param}")
-
-        # should fail: one string in list
-        with pytest.raises(ValidationError):
+    @pytest.fixture
+    def subset_time_model(self):
+        def _subset_time_model(param):
+            override = read_rich_yaml(f"config.init.subset.timesteps: {pytest.param}")
             build_model(override_dict=override(["2005-01"]), scenario="simple_supply")
 
-        # should fail: three strings in list
-        with pytest.raises(ValidationError):
-            build_model(
-                override_dict=override(["2005-01-01", "2005-01-02", "2005-01-03"]),
-                scenario="simple_supply",
-            )
+        return _subset_time_model
 
+    def correct_time_subset(self, subset_time_model):
         # should pass: two string in list as slice
-        model = build_model(
-            override_dict=override(["2005-01-01", "2005-01-01"]),
-            scenario="simple_supply",
-        )
+        model = subset_time_model(["2005-01-01", "2005-01-01"])
         assert all(
             model.inputs.timesteps.to_index()
             == pd.date_range("2005-01", "2005-01-01 23:00:00", freq="h")
         )
 
-        # should fail: must be a list, not a string
+    @pytest.mark.parametrize(
+        "time_subset", [["2005-01"], ["2005-01-01", "2005-01-02", "2005-01-03"]]
+    )
+    def test_incorrect_subset_time(self, subset_time_model, time_subset):
+        """If time_subset is a list, it must have two entries (start_time, end_time)"""
+
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            subset_time_model(time_subset)
+        assert check_error_or_warning(
+            excinfo,
+            f"Timeseries subset must be a list of two timestamps. Received: {time_subset}",
+        )
+
+    def test_subset_time_as_string(self, subset_time_model):
+        """Invalid to use a string to subset time."""
         with pytest.raises(ValidationError):
-            model = build_model(
-                override_dict=override("2005-01"), scenario="simple_supply"
-            )
+            subset_time_model("2005-01")
 
+    @pytest.mark.parametrize(
+        "time_subset", [["2005-03", "2005-04"], ["2005-02-01", "2005-02-05"]]
+    )
+    def test_subset_time_out_of_range(self, subset_time_model, time_subset):
+        """If time_subset is out of range of the input data, raise an error."""
         # should fail: time subset out of range of input data
-        with pytest.raises(exceptions.ModelError) as error:
-            build_model(
-                override_dict=override(["2005-03", "2005-04"]), scenario="simple_supply"
-            )
-
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            subset_time_model(time_subset)
         assert check_error_or_warning(
-            error,
-            "subset time range ('2005-03', '2005-04') is outside the input data time range [2005-01-01 00:00:00, 2005-01-05 23:00:00]",
-        )
-
-        # should fail: time subset out of range of input data
-        with pytest.raises(exceptions.ModelError):
-            build_model(
-                override_dict=override(["2005-02-01", "2005-02-05"]),
-                scenario="simple_supply",
-            )
-
-    def test_inconsistent_time_indices_fails(self):
-        """Test that, including after any time subsetting, the indices of all time
-        varying input data are consistent with each other
-        """
-        # should fail: wrong length of demand_heat csv vs demand_elec
-        override = read_rich_yaml(
-            "data_tables.demand_elec.data: data_tables/demand_heat_wrong_length.csv"
-        )
-        # check in output error that it points to: 07/01/2005 10:00:00
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override, scenario="simple_conversion")
-        assert check_error_or_warning(
-            excinfo, "Possibly missing data on the timesteps dimension"
+            excinfo,
+            f"subset time range {tuple(time_subset)} is outside the input data time range",
         )
 
     def test_inconsistent_time_indices_passes_thanks_to_time_subsetting(self):

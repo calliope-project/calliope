@@ -125,7 +125,7 @@ class TestParserElements:
         self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
-        default = eval_kwargs["defaults"][expected]
+        default = eval_kwargs["input_data"][expected].attrs["default"]
         assert (
             parsed_[0]
             .eval(apply_where=False, **eval_kwargs)

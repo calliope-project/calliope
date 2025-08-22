@@ -220,6 +220,10 @@ def _check_time_subset(ts_index: pd.Index, time_subset: list[str]):
         exceptions.ModelError: Time subset string format must conform to ISO8601.
         exceptions.ModelError: Cannot have time subsets that do not overlap the timeseries index.
     """
+    if len(time_subset) != 2:
+        raise exceptions.ModelError(
+            f"Timeseries subset must be a list of two timestamps. Received: {time_subset}"
+        )
     try:
         time_subset_dt = pd.to_datetime(time_subset, format="ISO8601")
     except ValueError as e:

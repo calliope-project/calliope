@@ -5,10 +5,10 @@ config:
     # What version of Calliope this model is intended for
     calliope_version: 0.7.0
     subset.timesteps: ["2005-01-01", "2005-01-05"] # Subset of timesteps
+    mode: base
 
   build:
     ensure_feasibility: true # Switches on the "unmet demand" constraint
-    mode: base # Choices: base, operate
 
   solve:
     solver: cbc

@@ -515,7 +515,7 @@ class TestEquationParserElements:
         parsed_ = helper_function.parse_string("dummy_func_1(1)", parse_all=True)
 
         eval_kwargs["helper_functions"] = {"dummy_func_1": lambda **kwargs: lambda x: x}
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(exceptions.BackendError) as excinfo:
             parsed_[0].eval(**eval_kwargs)
 
         assert check_error_or_warning(excinfo, "Helper function must be subclassed")

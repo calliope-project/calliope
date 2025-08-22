@@ -399,6 +399,8 @@ class ModelDataFactory:
         }
         for var_name, var_data in self.dataset.data_vars.items():
             self.dataset[var_name] = var_data.assign_attrs(all_attrs.get(var_name, {}))
+            # Remove this redundant attribute
+            self.dataset[var_name].attrs.pop("active", None)
 
     def _get_relevant_node_refs(self, techs_dict: AttrDict, node: str) -> list[str]:
         """Get all references to parameters made in technologies at nodes.
@@ -742,7 +744,7 @@ class ModelDataFactory:
         ds = self.dataset
         for var_name, var_data in ds.data_vars.items():
             dtype_str = (
-                self.math.parameters[var_name].dtype
+                "float"
                 if var_name in self.math.parameters.root
                 else self.math.lookups[var_name].dtype
                 if var_name in self.math.lookups.root
@@ -757,8 +759,8 @@ class ModelDataFactory:
                 LOGGER.debug(f"Updating all values of `{var_name}` to {dtype} type")
                 ds[var_name] = var_data.fillna(False).astype(dtype)
             else:
-                LOGGER.warning(
-                    f"Parameter/lookup `{var_name}` not defined in model math; cannot infer type."
+                LOGGER.info(
+                    f"Parameter/lookup `{var_name}` not defined in model math; it will not be available in the optimisation problem."
                 )
         self.dataset = ds
 
@@ -783,8 +785,8 @@ class ModelDataFactory:
                 else None
             )
             if dtype is None:
-                LOGGER.warning(
-                    f"Dimension `{dim_name}` not defined in model math; cannot infer type."
+                LOGGER.info(
+                    f"Dimension `{dim_name}` not defined in model math; it will not be available in the optimisation problem."
                 )
             elif dtype == "datetime":
                 ds.coords[dim_name] = time._datetime_index(

@@ -10,7 +10,6 @@ from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
 from calliope.preprocess.model_math import initialise_math_paths, load_math
 from calliope.schemas import CalliopeAttrs
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
@@ -60,11 +59,7 @@ def prepare_model_definition(
         "config": config,
         "definition": definition,
         "math": {"init": math},
-        "runtime": {
-            "applied_overrides": applied_overrides,
-            "scenario": scenario,
-            "defaults": extract_from_schema(MODEL_SCHEMA, "default"),
-        },
+        "runtime": {"applied_overrides": applied_overrides, "scenario": scenario},
     }
     return CalliopeAttrs(**inputs)
 

@@ -14,7 +14,6 @@ import xarray as xr
 from typing_extensions import NotRequired, TypedDict
 
 from calliope.backend import expression_parser
-from calliope.exceptions import BackendError
 from calliope.schemas import config_schema
 from calliope.util import tools
 
@@ -125,8 +124,8 @@ class ConfigOptionParser(EvalWhere):
         )
 
         if not isinstance(config_val, int | float | str | bool | np.bool_):
-            raise BackendError(
-                f"(where, {self.instring}): Configuration option resolves to invalid "
+            raise self.error_msg(
+                f"where string | Configuration option resolves to invalid "
                 f"type `{type(config_val).__name__}`, expected a number, string, or boolean."
             )
         else:
@@ -174,7 +173,9 @@ class DataVarParser(EvalWhere):
                 .attrs["obj_type"]
             )
         except KeyError:
-            return "unknown"
+            raise self.error_msg(
+                f"where string | Data variable `{self.data_var}` not found in model dataset."
+            )
 
     def _data_var_exists(
         self, source_dataset: xr.Dataset, resolve_contents: bool
@@ -229,14 +230,14 @@ class DataVarParser(EvalWhere):
                     resolve_contents=False,
                 )
             else:
-                raise TypeError(
-                    f"Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
+                raise self.error_msg(
+                    f"where string | Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
                     f"Received {data_var_type.removesuffix('s')}: `{self.data_var}`."
                 )
         else:
             if data_var_type not in ["lookups", "parameters", "dimensions"]:
-                raise TypeError(
-                    f"Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
+                raise self.error_msg(
+                    f"where string | Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
                     "These arrays cannot be used for comparison with expected values. "
                     f"Received `{self.data_var}`."
                 )
@@ -325,13 +326,18 @@ class SubsetParser(EvalWhere):
 class BoolOperandParser(EvalWhere):
     """Boolean operand parsing."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Parse action to process successfully parsed boolean strings.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used, but comes with `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: boolean (str).
         """
         self.val = tokens[0].lower()
+        self.instring = instring
 
     def __repr__(self):
         """Programming / official string representation."""
@@ -351,16 +357,21 @@ class BoolOperandParser(EvalWhere):
 class GenericStringParser(expression_parser.EvalString):
     """Parsing of generic strings."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Parse action to process successfully parsed generic strings.
 
         This is required since we call "eval()" on all elements of the where string,
         so even arbitrary strings (used in comparison operations) need to be evaluatable.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used, but comes with `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: string name (str).
         """
         self.val = tokens[0]
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Return string representation of the parsed grammar."""

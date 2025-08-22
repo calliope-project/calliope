@@ -48,9 +48,10 @@ overrides:
 
   operate:
     config:
-      init.subset.timesteps: ["2005-07-01", "2005-07-10"]
-      build:
+      init:
+        subset.timesteps: ["2005-07-01", "2005-07-10"]
         mode: operate
+      build:
         operate:
           window: 12h
           horizon: 48h

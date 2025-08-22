@@ -1,7 +1,6 @@
 parameters:
   area_use:
     default: .inf
-    dtype: float
     title: Area used.
     description: >-
       Sets `area_use` to a parameter in operate mode.
@@ -10,7 +9,6 @@ parameters:
 
   storage_cap:
     default: .inf
-    dtype: float
     title: Rated storage capacity.
     description: >-
       Sets `storage_cap` to a parameter in operate mode.
@@ -19,7 +17,6 @@ parameters:
 
   purchased_units:
     default: .inf
-    dtype: float
     title: Number of purchased units.
     description: >-
       Sets `purchased_units` to a parameter in operate mode.
@@ -28,7 +25,6 @@ parameters:
 
   source_cap:
     default: .inf
-    dtype: float
     title: Installed source consumption capacity.
     description: >-
       Sets `source_cap` to a parameter in operate mode.
@@ -37,7 +33,6 @@ parameters:
 
   flow_cap:
     default: .inf
-    dtype: float
     title: Rated flow capacity.
     description: >-
       Sets `flow_cap` to a parameter in operate mode.

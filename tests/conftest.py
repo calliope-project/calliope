@@ -294,17 +294,10 @@ def dummy_model_math(dummy_model_data):
         "only_techs": 5,
         "no_dims": 0,
     }
-    dtype_translator = {
-        "f": "float",
-        "i": "integer",
-        "U": "string",
-        "b": "bool",
-        "O": "string",
-        "M": "datetime",
-    }
+    dtype_translator = {"U": "string", "b": "bool", "O": "string", "M": "datetime"}
     dtypes = {k: v.kind for k, v in dummy_model_data.dtypes.items()}
     params = {
-        k: {"dtype": dtype_translator[v], "default": defaults.get(k, np.nan)}
+        k: {"default": defaults.get(k, np.nan)}
         for k, v in dtypes.items()
         if v in ["f", "i"]
     }

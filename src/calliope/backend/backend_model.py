@@ -99,11 +99,10 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         "unit",
         "default",
         "dtype",
+        "domain",
         "title",
         "sense",
         "math_repr",
-        "active",
-        "resample_method",
     ]
 
     objective: str
@@ -125,7 +124,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         self._dataset = xr.Dataset()
         self.config = build_config
         self.math = math
-        self.new_math = math_schema.CalliopeBuildMath()
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
         self.inputs = self._add_inputs(inputs)
@@ -428,7 +426,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             name, component_da, component_type, component_def.model_dump(), references
         )
         if name not in self.math[component_type]:
-            self.new_math = self.new_math.update(
+            self.math = self.math.update(
                 {f"{component_type}.{name}": component_def.model_dump()}
             )
 
@@ -503,14 +501,12 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """
-        da.attrs.update(
-            {
-                "obj_type": obj_type,
-                "references": set(),
-                "coords_in_name": False,
-                **attrs,  # type: ignore
-            }
-        )
+        da.attrs = {
+            "obj_type": obj_type,
+            "references": set(),
+            "coords_in_name": False,
+            **{k: v for k, v in attrs.items() if k in self._COMPONENT_ATTR_METADATA},
+        }
         self._dataset[name] = da
         if references is not None:
             self._update_references(name, references)
@@ -1148,7 +1144,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             refs = [k for k in getattr(self, component).data_vars if k in references]
             for ref in refs:
                 self.delete_component(ref, component)
-                def_ = self.math.update(self.new_math.model_dump())[component][ref]
+                def_ = self.math[component][ref]
                 getattr(self, "add_" + component.removesuffix("s"))(ref, def_)
 
     def _get_component(self, name: str, component_group: str) -> xr.DataArray:

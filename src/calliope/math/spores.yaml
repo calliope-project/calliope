@@ -4,18 +4,15 @@ parameters:
       The baseline optimal cost of the system used to set the maximum cost constraint when undertaking SPORES analysis.
       This usually only applies to `monetary` cost, but could be applied to other non-SPORES costs as necessary.
     default: .inf
-    dtype: float
   spores_slack:
     description: >-
       The amount of slack in the maximum cost constraint applied in SPORES mode.
       This is a fraction that is applied to the baseline cost, e.g., `0.1` would be used to set a maximum cost constraint of `spores_baseline_cost * 1.1`
     default: 0
-    dtype: float
   spores_score:
     description: >-
       The per-tech & per-node SPORES score used to penalise technologies at nodes that have appeared in previous SPORES iterations.
     default: 0
-    dtype: float
 
 constraints:
   total_system_cost_max:

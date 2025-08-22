@@ -17,9 +17,9 @@ config:
     math_paths:
       additional_math: "additional_math.yaml"
     extra_math: ["additional_math"]
+    mode: base # Choices: base, operate, spores
 
   build:
-    mode: base # Choices: base, operate, spores
     ensure_feasibility: true # Switching on unmet demand
 
   solve:

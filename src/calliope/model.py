@@ -37,7 +37,9 @@ def read_netcdf(path: str | Path) -> Model:
     """
     model_data = io.read_netcdf(path)
     return Model(
-        model_data["inputs"], model_data["results"], **model_data["attrs"].attrs
+        model_data["inputs"],
+        CalliopeAttrs(**model_data["attrs"].attrs),
+        model_data["results"],
     )
 
 
@@ -364,7 +366,7 @@ class Model:
                 results, self.inputs, self.config.solve.zero_threshold
             )
 
-        self.math = self.math.update({"build": self.backend.new_math.model_dump()})
+        self.math = self.math.update({"build": self.backend.math.model_dump()})
         self.runtime = self.runtime.update(
             {"termination_condition": results.attrs.pop("termination_condition")}
         )

@@ -4,7 +4,6 @@ import:
 config:
   init:
     name: Minimal test model
-  build:
     mode: base
   solve:
     solver: cbc

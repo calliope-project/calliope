@@ -56,7 +56,6 @@ class Parameter(MathComponent):
 
     default: float | int = float("nan")
     """The default value for the parameter, if not set in the data."""
-    dtype: Literal["integer", "float"] = "float"
     """The parameter data type."""
     resample_method: Literal["mean", "sum", "first"] = "first"
     """If resampling is applied over any of the parameter's dimensions, the method to use to aggregate the data."""

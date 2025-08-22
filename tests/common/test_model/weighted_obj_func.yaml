@@ -2,7 +2,6 @@ config:
   init:
     name: Cost capacity constraint test model
     subset.timesteps: ["2005-01-01", "2005-01-01"]
-  build:
     mode: base
   solve:
     solver: cbc

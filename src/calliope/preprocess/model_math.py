@@ -136,4 +136,4 @@ def _validate_math_string_parsing(math_model: CalliopeBuildMath) -> None:
             errors=validation_errors,
         )
 
-    LOGGER.info("Optimisation Model | Validated math strings.")
+    LOGGER.info("Math build | Validated math strings.")

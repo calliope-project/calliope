@@ -29,16 +29,20 @@ def built_model_cls_longnames(backend) -> calliope.Model:
 
 @pytest.fixture
 def built_model_func_longnames(backend) -> calliope.Model:
-    m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build(backend=backend, pre_validate_math_strings=False)
+    m = build_model(
+        {}, "simple_supply,two_hours,investment_costs", pre_validate_math_strings=False
+    )
+    m.build(backend=backend)
     m.backend.verbose_strings()
     return m
 
 
 @pytest.fixture
 def solved_model_func(backend) -> calliope.Model:
-    m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build(backend=backend, pre_validate_math_strings=False)
+    m = build_model(
+        {}, "simple_supply,two_hours,investment_costs", pre_validate_math_strings=False
+    )
+    m.build(backend=backend)
     m.solve()
     return m
 
@@ -103,8 +107,10 @@ def solved_model_cls_multi_type_global_expression(backend) -> calliope.Model:
 
 @pytest.fixture
 def built_model_func_updated_cost_flow_cap(backend, dummy_int: int) -> calliope.Model:
-    m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build(backend=backend, pre_validate_math_strings=False)
+    m = build_model(
+        {}, "simple_supply,two_hours,investment_costs", pre_validate_math_strings=False
+    )
+    m.build(backend=backend)
     m.backend.verbose_strings()
     m.backend.update_parameter("cost_flow_cap", dummy_int)
     return m
@@ -171,13 +177,12 @@ class TestGetters:
         expected_keys = {
             "obj_type",
             "references",
+            "coords_in_name",
             "title",
             "description",
             "unit",
             "default",
-            "yaml_snippet",
-            "coords_in_name",
-            "active",
+            "domain",
         }
         assert not expected_keys.symmetric_difference(variable.attrs.keys())
 
@@ -214,10 +219,7 @@ class TestGetters:
                 "Set as value between 1 (no loss) and 0 (all lost)."
             ),
             "default": 1.0,
-            "dtype": "float",
             "unit": "fraction.",
-            "resample_method": "mean",
-            "active": True,
         }
 
     def test_get_parameter_as_vals(self, solved_model_cls):
@@ -230,7 +232,7 @@ class TestGetters:
     def test_get_parameter_as_vals_integers(self, solved_model_func, dummy_int):
         """Timestep values should have a datetime dtype when resolving the backend parameter objects."""
         solved_model_func.backend.add_parameter(
-            "important_number", xr.DataArray(dummy_int), {"dtype": "integer"}
+            "important_number", xr.DataArray(dummy_int), {}
         )
         param = solved_model_func.backend.get_parameter(
             "important_number", as_backend_objs=False
@@ -246,9 +248,7 @@ class TestGetters:
             "description",
             "unit",
             "default",
-            "yaml_snippet",
             "coords_in_name",
-            "active",
         }
         assert not expected_keys.symmetric_difference(global_expression.attrs.keys())
 
@@ -363,10 +363,8 @@ class TestGetters:
             "obj_type",
             "references",
             "description",
-            "yaml_snippet",
             "coords_in_name",
             "title",
-            "active",
         }
 
         assert not expected_keys.symmetric_difference(constraint.attrs.keys())
@@ -855,15 +853,7 @@ class TestPiecewiseConstraints:
     def test_piecewise_attrs(self, piecewise_constraint):
         """Check a piecewise constraint has all expected attributes."""
         expected_keys = set(
-            [
-                "obj_type",
-                "references",
-                "title",
-                "description",
-                "yaml_snippet",
-                "coords_in_name",
-                "active",
-            ]
+            ["obj_type", "references", "title", "description", "coords_in_name"]
         )
         assert not expected_keys.symmetric_difference(piecewise_constraint.attrs.keys())
 

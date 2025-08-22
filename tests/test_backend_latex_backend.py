@@ -359,8 +359,6 @@ class TestLatexBackendModel:
                     \end{itemize}
 
                     \textbf{Default}: 0
-
-                    \textbf{Type}: integer
                     \end{document}"""
                 ),
             ),
@@ -401,8 +399,6 @@ class TestLatexBackendModel:
                     * expr
 
                     **Default**: 0
-
-                    **Type**: integer
                     """
                 ),
             ),
@@ -438,8 +434,6 @@ class TestLatexBackendModel:
                     * [expr](#expr)
 
                     **Default**: 0
-
-                    **Type**: integer
                     """
                 ),
             ),
@@ -525,6 +519,8 @@ class TestLatexBackendModel:
                         ```yaml
                         equations:
                         - expression: 1 + 2
+                        description: foobar
+                        default: 0
                         ```
                     """
         )
@@ -572,6 +568,8 @@ class TestLatexBackendModel:
                         ```yaml
                         equations:
                         - expression: no_dims + 1
+                        description: foobar
+                        default: 0
                         ```
 
                     ## Parameters
@@ -583,8 +581,6 @@ class TestLatexBackendModel:
                         * [expr](#expr)
 
                     **Default**: 0
-
-                    **Type**: integer
                     """
         )
 
@@ -754,7 +750,5 @@ class TestLatexBackendModel:
             **Unit**: power
 
             **Default**: 100
-
-            **Type**: float
             """
         )

@@ -34,9 +34,10 @@ overrides:
         time_cluster: data_tables/cluster_days.csv
 
   spores:
-    config.init.broadcast_param_data: false
-    config.build:
+    config.init:
+      broadcast_param_data: false
       mode: spores
+    config.build:
       ensure_feasibility: true
     config.solve.spores:
       tracking_parameter: spores_tracker
@@ -50,9 +51,10 @@ overrides:
 
   operate:
     config:
-      init.subset.timesteps: ["2005-01-01", "2005-01-10"]
-      build:
+      init:
+        subset.timesteps: ["2005-01-01", "2005-01-10"]
         mode: operate
+      build:
         operate:
           window: 12h
           horizon: 24h
