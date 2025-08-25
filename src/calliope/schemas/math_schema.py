@@ -57,7 +57,6 @@ class Parameter(MathComponent):
 
     default: float | int = float("nan")
     """The default value for the parameter, if not set in the data."""
-    """The parameter data type."""
     resample_method: Literal["mean", "sum", "first"] = "first"
     """If resampling is applied over any of the parameter's dimensions, the method to use to aggregate the data."""
     unit: str = ""
@@ -72,7 +71,7 @@ class Parameter(MathComponent):
 class Lookup(MathComponent):
     """Schema for named lookup arrays."""
 
-    default: str | float | int | bool = float("nan")
+    default: AttrStr | float | int | bool = float("nan")
     """The default value for the lookup, if not set in the data."""
     dtype: Literal["integer", "float", "string", "bool", "datetime"]
     """The lookup data type."""
