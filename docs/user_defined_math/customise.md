@@ -77,7 +77,7 @@ config:
 !!! danger
     Modes and other pre-defined options such as `operate` and `spores` might not work as expected!
 
-## Adding your parameters math definition
+## Adding your own parameters to the math definition
 
 The math definition contains metadata about the parameters, dimensions, and lookup tables used in defining the optimisation problem.
 We use this to validate user inputs.
