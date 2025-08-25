@@ -14,7 +14,7 @@ import numpy as np
 import xarray as xr
 from pydantic import BaseModel, ConfigDict
 
-from calliope.exceptions import ModelWarning
+from calliope.exceptions import ModelWarning, warn
 from calliope.schemas.config_schema import CalliopeConfig
 from calliope.schemas.general import AttrStr, NonEmptyUniqueList
 from calliope.util.tools import listify
@@ -54,7 +54,7 @@ class PostprocessRegistry:
         self._entries: dict[str, tuple[PostprocessSettings, PostprocessFunction]] = {}
         self._lock = threading.Lock()
 
-    def register_function(
+    def _register_function(
         self,
         function: PostprocessFunction,
         *,
@@ -64,7 +64,19 @@ class PostprocessRegistry:
         active: bool,
         overwrite: bool,
     ) -> None:
-        """Add an entry to the postprocessing registry."""
+        """Add an entry to the postprocessing registry.
+
+        Args:
+            function (PostprocessFunction): function to register.
+            name (str): postprocessing name to use as key / xarray data variable.
+            base_math (Iterable[str]): math tied to this postprocess.
+            order (int): priority order to use for postprocessing (higher == later).
+            active (bool): whether or not this postprocess is enabled or not.
+            overwrite (bool): whether or not to allow overwriting a postprocess.
+
+        Raises:
+            ValueError: attempted to overwrite a postprocess when `overwrite` is `False`.
+        """
         with self._lock:
             spec = PostprocessSettings(
                 name=name, order=order, base_math=listify(base_math), active=active
@@ -115,7 +127,7 @@ def postprocessor(
     """
 
     def decorator(func: F) -> F:
-        REGISTRY.register_function(
+        REGISTRY._register_function(
             func,
             base_math=base_math,
             name=name or func.__name__,
@@ -134,39 +146,45 @@ def _apply_zero_threshold(results: xr.Dataset, zero_threshold: float) -> None:
     Used to avoid floating point errors caused by solver output.
     Reasonable value = 1e-12.
     """
-    for name in list(results.data_vars):
-        # If there are any values in the data variable which fall below the
-        # threshold, note the data variable name and set those values to zero
-        results[name] = xr.where(
-            np.abs(results[name]) < zero_threshold, 0, results[name]
-        )
+    if zero_threshold != 0:
+        for name in list(results.data_vars):
+            # If there are any values in the data variable which fall below the
+            # threshold, note the data variable name and set those values to zero
+            results[name] = xr.where(
+                np.abs(results[name]) < zero_threshold, 0, results[name]
+            )
 
-    LOGGER.info(
-        "Postprocessing: applied zero threshold %s to model results.", zero_threshold
-    )
+        LOGGER.info(
+            "Postprocessing: applied zero threshold %s to model results.",
+            zero_threshold,
+        )
+    else:
+        LOGGER.info(
+            "Postprocessing: skipping zero threshold application (threshold equals 0)."
+        )
 
 
 def postprocess_results(
     results: xr.Dataset, inputs: xr.Dataset, config: CalliopeConfig
 ) -> xr.Dataset:
     """Run compatible postprocessors in deterministic order."""
-    if config.solve.enable_postprocessing:
+    if config.solve.postprocessing_active:
+        warn(
+            "Model postprocessing will be set to `False` in a future release."
+            "It can be reactivated using `config.solve.postprocessing_active: True`.",
+            FutureWarning,
+        )
         applicable_postprocesses = REGISTRY.get_applicable(config.init.base_math)
         ctx = PostprocessContext(config=config, inputs=inputs, results=results)
 
         for settings, function in applicable_postprocesses:
             name = settings.name
-            if (name in results) or name in (results.dims):
-                raise ValueError(
-                    f"Postprocess '{name}' attempted to overwrite an existing variable/coord/dim."
-                )
             try:
                 # Store postprocesses in the model results.
                 LOGGER.info("Postprocessing: applying %s postprocess function.", name)
                 postprocessed_data = function(ctx)
                 if postprocessed_data is not None:
                     results[name] = postprocessed_data
-
             except Exception as ex:
                 raise ModelWarning(f"Postprocess '{name}' failed. Skipping.") from ex
 

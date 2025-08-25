@@ -190,11 +190,18 @@ class Solve(CalliopeBaseModel):
     solver: str = Field(default="cbc")
     """Solver to use. Any solvers that have Pyomo interfaces can be used. Refer to the Pyomo documentation for the latest list."""
 
-    enable_postprocessing: bool = False
-    """Whether or not to run postprocessing functions."""
+    postprocessing_active: bool = True
+    """
+    Whether to run registered postprocessing functions after the model solves.
+    If enabled, their outputs are added to `model.results` as new data variables.
+    """
 
     zero_threshold: float = Field(default=1e-10)
-    """On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero."""
+    """
+    Zero threshold to apply to `model.results` after a model is solved.
+    Values smaller than this threshold will be considered as optimisation artefacts and will be set to zero.
+    Setting `zero_threshold: 0` will skip this step.
+    """
 
     shadow_prices: UniqueList[str] = Field(default=[])
     """Names of model constraints."""
