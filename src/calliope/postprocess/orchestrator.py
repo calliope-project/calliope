@@ -14,7 +14,7 @@ import numpy as np
 import xarray as xr
 from pydantic import BaseModel, ConfigDict
 
-from calliope.exceptions import ModelError
+from calliope.exceptions import ModelWarning
 from calliope.schemas.config_schema import CalliopeConfig
 from calliope.schemas.general import AttrStr, NonEmptyUniqueList
 from calliope.util.tools import listify
@@ -43,7 +43,7 @@ class PostprocessSettings(BaseModel):
     name: AttrStr
     order: int
     base_math: NonEmptyUniqueList
-    enabled: bool
+    active: bool
 
 
 class PostprocessRegistry:
@@ -61,13 +61,13 @@ class PostprocessRegistry:
         name: str,
         base_math: Iterable[str],
         order: int,
-        enabled: bool,
+        active: bool,
         overwrite: bool,
     ) -> None:
         """Add an entry to the postprocessing registry."""
         with self._lock:
             spec = PostprocessSettings(
-                name=name, order=order, base_math=listify(base_math), enabled=enabled
+                name=name, order=order, base_math=listify(base_math), active=active
             )
             if spec.name in self._entries and not overwrite:
                 raise ValueError(f"Postprocessor '{spec.name}' is already registered.")
@@ -81,16 +81,16 @@ class PostprocessRegistry:
             items = [
                 (spec, fn)
                 for spec, fn in self._entries.values()
-                if (base_math in spec.base_math) and (spec.enabled)
+                if (base_math in spec.base_math) and (spec.active)
             ]
             items.sort(key=lambda t: (t[0].order, str(t[0].name)))
         return items
 
-    def set_enabled(self, name: str, enabled: bool) -> None:
+    def set_active(self, name: str, active: bool) -> None:
         """Enable or disable a specific function."""
         with self._lock:
             spec, fn = self._entries[name]
-            self._entries[name] = (spec.model_copy(update={"enabled": enabled}), fn)
+            self._entries[name] = (spec.model_copy(update={"active": active}), fn)
 
 
 REGISTRY: Final = PostprocessRegistry()
@@ -101,7 +101,7 @@ def postprocessor(
     name: str | None = None,
     base_math: Iterable[str],
     order: int,
-    enabled: bool,
+    active: bool,
     overwrite: bool = False,
 ) -> Callable[[F], F]:
     """Decorator used to add new functions to the postprocessing registry.
@@ -110,7 +110,7 @@ def postprocessor(
         base_math (Iterable[str]): compatible base math files for this function.
         name (str, optional): name to use for this post processing function. Defaults to the function name.
         order (int): priority order.
-        enabled (bool): whether or not this function should be enabled.
+        active (bool): whether or not this function should be activated.
         overwrite (bool, optional): whether or not to allow overwriting functions. Defaults to False.
     """
 
@@ -120,7 +120,7 @@ def postprocessor(
             base_math=base_math,
             name=name or func.__name__,
             order=order,
-            enabled=enabled,
+            active=active,
             overwrite=overwrite,
         )
         return func
@@ -168,7 +168,7 @@ def postprocess_results(
                     results[name] = postprocessed_data
 
             except Exception as ex:
-                raise ModelError(f"Postprocess '{name}' failed.") from ex
+                raise ModelWarning(f"Postprocess '{name}' failed. Skipping.") from ex
 
     _apply_zero_threshold(results, config.solve.zero_threshold)
 

@@ -7,9 +7,9 @@ from calliope.postprocess.orchestrator import PostprocessContext, postprocessor
 
 def _get_data(name: str, context: PostprocessContext) -> xr.DataArray:
     """Get an element from either inputs or results."""
-    if name in context.results.keys():
+    try:
         data = context.results[name]
-    else:
+    except KeyError:
         data = context.inputs[name]
     return data
 
@@ -26,7 +26,7 @@ def _get_total_generation(context: PostprocessContext) -> xr.DataArray:
     return generation
 
 
-@postprocessor(base_math={"plan"}, order=0, enabled=True)
+@postprocessor(base_math={"plan"}, order=0, active=True)
 def capacity_factor(context: PostprocessContext) -> xr.DataArray:
     """Calculation of per-technology capacity factors."""
     flow_cap = _get_data("flow_cap", context)
@@ -39,7 +39,7 @@ def capacity_factor(context: PostprocessContext) -> xr.DataArray:
     return capacity_factors
 
 
-@postprocessor(base_math={"plan"}, order=0, enabled=True)
+@postprocessor(base_math={"plan"}, order=0, active=True)
 def systemwide_capacity_factor(context: PostprocessContext) -> xr.DataArray:
     """Calculation of systemwide capacity factors."""
     flow_cap = _get_data("flow_cap", context)
@@ -58,7 +58,7 @@ def systemwide_capacity_factor(context: PostprocessContext) -> xr.DataArray:
     return capacity_factors
 
 
-@postprocessor(base_math={"plan"}, order=0, enabled=True)
+@postprocessor(base_math={"plan"}, order=0, active=True)
 def systemwide_levelised_cost(context: PostprocessContext) -> xr.DataArray:
     """Calculates systemwide levelised costs indexed by techs, carriers and costs.
 
@@ -77,7 +77,7 @@ def systemwide_levelised_cost(context: PostprocessContext) -> xr.DataArray:
     return levelised_cost
 
 
-@postprocessor(base_math={"plan"}, order=0, enabled=True)
+@postprocessor(base_math={"plan"}, order=0, active=True)
 def total_levelised_cost(context: PostprocessContext) -> xr.DataArray:
     """Calculates total levelised costs by carriers and costs.
 
@@ -102,7 +102,7 @@ def total_levelised_cost(context: PostprocessContext) -> xr.DataArray:
     return levelised_cost
 
 
-@postprocessor(base_math={"plan"}, order=0, enabled=True)
+@postprocessor(base_math={"plan"}, order=0, active=True)
 def unmet_sum(context: PostprocessContext) -> xr.DataArray | None:
     """Calculate the sum of unmet demand/supply."""
     if {"unmet_demand", "unused_supply"} & set(context.results.data_vars.keys()):
