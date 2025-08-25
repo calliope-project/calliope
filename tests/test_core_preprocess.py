@@ -35,25 +35,6 @@ class TestModelRun:
         # test as dict
         calliope.Model.from_dict(model_dict.as_dict())
 
-    def test_undefined_carriers(self):
-        """Test that user has input either carrier or carrier_in/_out for each tech"""
-        override = read_rich_yaml(
-            """
-            techs:
-                test_undefined_carrier:
-                    base_tech: supply
-                    name: test
-                    source_use_max: .inf
-                    flow_cap_max: .inf
-            nodes.a.techs.test_undefined_carrier:
-            """
-        )
-        with pytest.raises(exceptions.ModelError) as info:
-            build_model(override_dict=override, scenario="simple_supply,one_day")
-        check_error_or_warning(
-            info, "Errors during validation of the tech definition at node `a`"
-        )
-
     @pytest.fixture
     def subset_time_model(self):
         def _subset_time_model(param):
@@ -154,22 +135,6 @@ class TestChecks:
         assert check_error_or_warning(
             excinfo, "Model configuration specifies calliope version"
         )
-
-    def test_unspecified_base_tech(self):
-        """All technologies must specify a base_tech"""
-        override = read_rich_yaml(
-            """
-            techs.test_supply_no_base_tech:
-                    name: Supply tech
-                    carrier_out: gas
-                    flow_cap_max: 10
-                    source_use_max: .inf
-            nodes.b.techs.test_supply_no_base_tech:
-            """
-        )
-
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, scenario="simple_supply,one_day")
 
     @pytest.mark.skip(
         reason="one_way doesn't work yet. We'll need to move this test to `model_data` once it does work."

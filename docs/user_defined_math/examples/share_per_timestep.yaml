@@ -17,6 +17,24 @@
 #
 # ---
 
+parameters:
+  demand_share_per_timestep_equals:
+    description: The share of a technology's (or group thereof) per-timestep inflow met by other technologies
+    default: 1
+  supply_share_per_timestep_equals:
+    description: The share of all of a node's per-timestep outflows met by other technologies
+    default: 1
+
+lookups:
+  demand_share_tech:
+    description: >-
+      Lookup table defining the demand technology (or group thereof)
+      who will have a specified share of their inflow(s) met by specific technologies.
+    dtype: string
+  supply_share_carrier:
+    description: The carrier for which a share of outflows will be tracked.
+    dtype: string
+
 constraints:
   demand_share_per_timestep_equals_per_tech:
     description: >

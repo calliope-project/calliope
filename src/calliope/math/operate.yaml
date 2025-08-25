@@ -39,6 +39,14 @@ parameters:
       NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
     unit: power.
 
+  link_flow_cap:
+    default: .inf
+    title: Rated link flow capacity.
+    description: >-
+      Sets `link_flow_cap` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+    unit: power.
+
 constraints:
   flow_capacity_per_storage_capacity_min.active: false
   flow_capacity_per_storage_capacity_max.active: false
@@ -56,6 +64,7 @@ constraints:
 
 variables:
   flow_cap.active: false
+  link_flow_cap.active: false
   area_use.active: false
   source_cap.active: false
   storage_cap.active: false

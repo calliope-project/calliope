@@ -12,6 +12,18 @@
 #
 # ---
 
+dimensions:
+  pieces:
+    dtype: integer
+    iterator: piece
+
+parameters:
+  flow_eff_piecewise_slopes:
+    description: The gradient of each of the piecewise limiting line defining the convex, non-linear efficiency curve
+  flow_eff_piecewise_intercept:
+    description: The y-axis intercept of each of the piecewise limiting line defining the convex, non-linear efficiency curve
+
+
 constraints:
   piecewise_efficiency:
     description: >

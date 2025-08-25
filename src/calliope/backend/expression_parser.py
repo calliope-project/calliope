@@ -37,6 +37,7 @@ from collections.abc import Callable, Iterable, Iterator
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
+import pandas as pd
 import pyparsing as pp
 import xarray as xr
 from typing_extensions import NotRequired, TypedDict, Unpack
@@ -670,8 +671,6 @@ class EvalIndexSlice(EvalToArrayStr):
 
     def as_array(self) -> xr.DataArray | list[str | float]:  # noqa: D102, override
         evaluated = self._eval("array", True)
-        if isinstance(evaluated, xr.DataArray) and evaluated.isnull().any():
-            evaluated = evaluated.notnull()
         return evaluated
 
 
@@ -827,18 +826,21 @@ class EvalUnslicedComponent(EvalToArrayStr):
         backend_interface = self.eval_attrs["backend_interface"]
 
         try:
-            if self.eval_attrs.get("as_values", False):
+            evaluated = backend_interface._dataset[self.name]
+            if (
+                self.eval_attrs.get("as_values", False)
+                and evaluated.attrs["obj_type"] == "parameters"
+            ):
                 evaluated = backend_interface.get_parameter(
                     self.name, as_backend_objs=False
                 )
-            else:
-                evaluated = backend_interface._dataset[self.name]
         except KeyError:
             raise self.error_msg(
                 f"Trying to access a math component that is not yet defined: {self.name}. "
                 "If the referenced component is a global expression, set its `order` to have it defined first."
             )
-        evaluated = evaluated.fillna(evaluated.attrs["default"])
+        if pd.notna(evaluated.attrs["default"]):
+            evaluated = evaluated.fillna(evaluated.attrs["default"])
 
         self.eval_attrs["references"].add(self.name)
         return evaluated

@@ -9,13 +9,23 @@
 #     New indexed parameters:
 #
 #     - `flow_cap_max_relative_per_ts`
-#     - `storage_max_relative_per_ts`
+#     - `storage_cap_max_relative_per_ts`
 #
 #     Helper functions used:
 #
 #     - `sum` (expression)
 #
 # ---
+
+parameters:
+  flow_cap_max_relative_per_ts:
+    description: The relative quantity of flow capacity used to limit generator outflow in each timestep.
+    default: 1
+
+  storage_cap_max_relative_per_ts:
+    description: The relative quantity of storage capacity used to limit generator outflow in each timestep.
+    default: 1
+
 
 constraints:
   max_time_varying_flow_cap:
@@ -30,3 +40,14 @@ constraints:
       - expression: >
           flow_out <=
           flow_cap_max_relative_per_ts * flow_cap * flow_out_parasitic_eff
+  max_time_varying_storage_cap:
+    description: >
+      Limit storage capacity in each hour according to a time varying fractional limit
+      that is multiplied by the technology storage cap. This represents, for
+      instance, the impact of outdoor temperature on the maximum storage capacity of a
+      technology relative to its rated max output.
+    foreach: [nodes, techs, timesteps]
+    where: "storage_cap_max_relative_per_ts"
+    equations:
+      - expression: >
+          storage <= storage_cap_max_relative_per_ts * storage_cap

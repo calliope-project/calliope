@@ -336,32 +336,34 @@ class GurobiBackendModel(backend_model.BackendModel):
             del self._dataset[key]
         self._instance.update()
 
-    def update_parameter(  # noqa: D102, override
+    def update_input(  # noqa: D102, override
         self, name: str, new_values: xr.DataArray | SupportsFloat
     ) -> None:
         new_values = xr.DataArray(new_values)
-        parameter_da = self.get_parameter(name)
-        missing_dims_in_new_vals = set(parameter_da.dims).difference(new_values.dims)
+        obj_type, math = self.math.find(name, subset={"parameters", "lookups"})
+        obj_type_singular = obj_type.removesuffix("s")
+        input_da = getattr(self, f"get_{obj_type_singular}")(name)
+        missing_dims_in_new_vals = set(input_da.dims).difference(new_values.dims)
 
         if missing_dims_in_new_vals:
             self.log(
-                "parameters",
+                obj_type,
                 name,
                 f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
                 "info",
             )
-        new_parameter_da = new_values.broadcast_like(parameter_da).fillna(parameter_da)
-        new_parameter_da.attrs = parameter_da.attrs
-        self.inputs[name] = new_parameter_da
+        new_input_da = new_values.broadcast_like(input_da).fillna(input_da)
+        new_input_da.attrs = input_da.attrs
+        self.inputs[name] = new_input_da
 
-        self.delete_component(name, "parameters")
-        self.add_parameter(name, new_parameter_da, self.math.parameters[name])
+        self.delete_component(name, obj_type)
+        getattr(self, f"add_{obj_type_singular}")(name, new_input_da, math)
 
-        refs_to_update = self._find_all_references(parameter_da.attrs["references"])
+        refs_to_update = self._find_all_references(input_da.attrs["references"])
 
         if refs_to_update:
             self.log(
-                "parameters",
+                obj_type,
                 name,
                 f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
                 "info",
@@ -396,7 +398,7 @@ class GurobiBackendModel(backend_model.BackendModel):
             if existing_bound_param in self.parameters:
                 raise BackendError(
                     "Cannot update variable bounds that have been set by parameters. "
-                    f"Use `update_parameter('{existing_bound_param}')` to update the {bound_name} bound of {name}."
+                    f"Use `update_input('{existing_bound_param}')` to update the {bound_name} bound of {name}."
                 )
 
             bound_da = xr.DataArray(new_bounds)

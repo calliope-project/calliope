@@ -16,7 +16,18 @@ PLAN_MATH: AttrDict = io.read_rich_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
 
 
 def prune_math(applied_math: dict):
-    math = AttrDict({k: applied_math[k] for k in {"variables", "global_expressions"}})
+    math = AttrDict(
+        {
+            k: applied_math[k]
+            for k in {
+                "dimensions",
+                "parameters",
+                "lookups",
+                "variables",
+                "global_expressions",
+            }
+        }
+    )
     math.set_key(
         "objectives.dummy_obj",
         {"equations": [{"expression": "1 + 1"}], "sense": "minimize"},
@@ -94,10 +105,7 @@ class TestBaseMath:
 
     @pytest.fixture(scope="class")
     def init_math_config(self, barebones_math_file):
-        return {
-            "base_math": "barebones",
-            "extra_math": {"barebones": barebones_math_file},
-        }
+        return {"math_paths": {"base": barebones_math_file}}
 
     @pytest.mark.parametrize(
         ("variable", "constraint", "overrides"),
@@ -343,7 +351,7 @@ class CustomMathExamples(ABC):
         - All variables and expressions in `plan.yaml`.
         - A standard dummy objective.
         """
-        math = prune_math(full_applied_math)
+        math = prune_math(full_applied_math.model_dump())
         barebones_path = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
         io.to_yaml(math, barebones_path)
         return str(barebones_path)
@@ -391,10 +399,7 @@ class CustomMathExamples(ABC):
 
             model = util.build_test_model(
                 {
-                    "config.init": {
-                        "base_math": "barebones",
-                        "extra_math": {"barebones": barebones_math_file},
-                    },
+                    "config.init": {"math_paths": {"base": barebones_math_file}},
                     **overrides,
                 },
                 scenario,

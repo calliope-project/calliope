@@ -362,10 +362,13 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             self.log(
                 component_type,
                 name,
-                "Component deactivated; only metadata will be stored.",
+                "Component deactivated; only metadata will be stored if no other component with the same name is defined.",
             )
-            component_da = default_empty
-            parsed_component = None
+            if name in self._dataset.data_vars:
+                return None
+            else:
+                component_da = default_empty
+                parsed_component = None
         else:
             self._raise_error_on_preexistence(name, component_type)
             parsed_component = parsing.ParsedBackendComponent(
@@ -655,7 +658,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         """
 
         def _filter(val):
-            return val in ["variables", "parameters", "global_expressions"]
+            return val in ["variables", "parameters", "global_expressions", "lookups"]
 
         in_data = set(self._dataset.filter_by_attrs(obj_type=_filter).data_vars.keys())
         in_math = set(
@@ -744,6 +747,17 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self._add_component(
             name, definition, _constraint_setter, "piecewise_constraints"
         )
+
+    def get_lookup(self, name: str) -> xr.DataArray:
+        """Extract lookup from backend dataset.
+
+        Args:
+            name (str): Name of lookup.
+
+        Returns:
+            xr.DataArray: lookup array.
+        """
+        return self._get_component(name, "lookups")
 
     @abstractmethod
     def _to_piecewise_constraint(
@@ -946,20 +960,18 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def update_parameter(
-        self, name: str, new_values: xr.DataArray | SupportsFloat
-    ) -> None:
-        """Update parameter elements using an array of new values.
+    def update_input(self, name: str, new_values: xr.DataArray | SupportsFloat) -> None:
+        """Update input elements (parameters/lookups) using an array of new values.
 
-        If the parameter has not been previously defined, it will be added to the
+        If the input has not been previously defined, it will be added to the
         optimisation problem based on the new values given (with NaNs reverting to
         default values).
-        If the new values have fewer dimensions than are on the parameter array, the
+        If the new values have fewer dimensions than are on the input array, the
         new values will be broadcast across the missing dimensions before applying the
         update.
 
         Args:
-            name (str): Parameter to update
+            name (str): Input array to update
             new_values (xr.DataArray | SupportsFloat): New values to apply. Any
                 empty (NaN) elements in the array will be skipped.
         """

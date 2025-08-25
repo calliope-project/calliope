@@ -5,7 +5,7 @@ minversion = "6.0"
 # `--strict-markers` - Raise error on unexpected pytest markers being used (add new markers to `markers` config)
 # `-nauto` - parallelise over as many threads as possible (uses pytest-xdist). If debugging (`--pdb`), this will default to one thread.
 # `--cov-report=xml --cov-config=pyproject.toml` - coverage report config for when running in tests (uses pytest-cov; call `--cov` in CLI to switch coverage on; `--cov-config` include to avoid bug)
-addopts = "-rav --dist=loadscope --strict-markers -nauto --cov-report=xml --cov-config=pyproject.toml -m 'not needs_gurobi_license' "
+addopts = "-rav --dist=loadscope --strict-markers -nauto --cov-report=xml --cov-config=pyproject.toml -m 'not needs_gurobi_license' --pdbcls=IPython.terminal.debugger:Pdb "
 
 testpaths = ["tests"]
 

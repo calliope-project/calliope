@@ -180,14 +180,16 @@ def cluster(data: xr.Dataset, clustering_param: str, time_format: str):
 
 
 @overload
-def _datetime_index(index: pd.Index, format: str) -> pd.Index: ...
+def _datetime_index(index: pd.Index | np.ndarray, format: str) -> pd.DatetimeIndex: ...
 
 
 @overload
 def _datetime_index(index: pd.Series, format: str) -> pd.Series: ...
 
 
-def _datetime_index(index: pd.Index | pd.Series, format: str) -> pd.Index | pd.Series:
+def _datetime_index(
+    index: pd.Index | np.ndarray | pd.Series, format: str
+) -> pd.Index | pd.Series:
     try:
         if format == "ISO8601":
             dt = pd.to_datetime(index, format=format)

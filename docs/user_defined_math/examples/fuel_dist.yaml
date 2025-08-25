@@ -10,7 +10,6 @@
 #
 #     - `fuel_import_max`
 #     - `fuel_export_max`
-#     - `fuel_distribution_max`
 #     - `cost_fuel_distribution`
 #     - `allow_fuel_distribution` <- lookup array with a value of `True` for each carrier where you want to track its distribution
 #
@@ -20,6 +19,22 @@
 #     - `sum` (expression)
 #
 # ---
+
+parameters:
+  fuel_import_max:
+    description: The maximum amount of fuel that can be imported
+    default: .inf
+  fuel_export_max:
+    description: The maximum amount of fuel that can be exported
+    default: .inf
+  cost_fuel_distribution:
+    description: The cost to import / revenue to export fuel
+    default: 0
+
+lookups:
+  allow_fuel_distribution:
+    description: Lookup table of nodes / carriers that are allowed to participate in fuel distribution.
+    dtype: bool
 
 variables:
   fuel_distributor:

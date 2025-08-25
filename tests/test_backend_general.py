@@ -52,7 +52,7 @@ def infeasible_model_cls(backend) -> calliope.Model:
     """If we increase demand, the solved model becomes infeasible"""
     m = build_model({}, "simple_supply,two_hours,investment_costs")
     m.build(backend=backend)
-    m.backend.update_parameter(
+    m.backend.update_input(
         "sink_use_equals",
         m.inputs.sink_use_equals.where(m.inputs.techs == "test_demand_elec") * 100,
     )
@@ -112,7 +112,7 @@ def built_model_func_updated_cost_flow_cap(backend, dummy_int: int) -> calliope.
     )
     m.build(backend=backend)
     m.backend.verbose_strings()
-    m.backend.update_parameter("cost_flow_cap", dummy_int)
+    m.backend.update_input("cost_flow_cap", dummy_int)
     return m
 
 
@@ -564,23 +564,23 @@ class TestAdders:
 
 
 class TestUpdateParameter:
-    def test_update_parameter(self, solved_model_func):
+    def test_update_input(self, solved_model_func):
         """Updating a parameter where no Null values need to be rebuilt."""
         updated_param = solved_model_func.inputs.flow_out_eff * 1000
-        solved_model_func.backend.update_parameter("flow_out_eff", updated_param)
+        solved_model_func.backend.update_input("flow_out_eff", updated_param)
 
         expected = solved_model_func.backend.get_parameter(
             "flow_out_eff", as_backend_objs=False
         )
         assert expected.where(updated_param.notnull()).equals(updated_param)
 
-    def test_update_parameter_one_val(self, caplog, solved_model_func, dummy_int: int):
+    def test_update_input_one_val(self, caplog, solved_model_func, dummy_int: int):
         """Updating a parameter where a single value needs broadcasting to the shape of the parameter, leading to any parameter Null values being rebuilt."""
         updated_param = dummy_int
         new_dims = {"techs"}
         caplog.set_level(logging.DEBUG)
 
-        solved_model_func.backend.update_parameter("flow_out_eff", updated_param)
+        solved_model_func.backend.update_input("flow_out_eff", updated_param)
 
         assert (
             f"New values will be broadcast along the {new_dims} dimension(s)"
@@ -591,18 +591,18 @@ class TestUpdateParameter:
         )
         assert (expected == dummy_int).all()
 
-    def test_update_parameter_replace_defaults(self, solved_model_func):
+    def test_update_input_replace_defaults(self, solved_model_func):
         """Updating a parameter that only exists in the backend thanks to its existence in the model definition schema."""
         updated_param = solved_model_func.inputs.flow_out_eff.fillna(0.1)
 
-        solved_model_func.backend.update_parameter("flow_out_eff", updated_param)
+        solved_model_func.backend.update_input("flow_out_eff", updated_param)
 
         expected = solved_model_func.backend.get_parameter(
             "flow_out_eff", as_backend_objs=False
         )
         assert expected.equals(updated_param)
 
-    def test_update_parameter_add_dim(self, caplog, solved_model_func):
+    def test_update_input_add_dim(self, caplog, solved_model_func):
         """flow_out_eff doesn't have the time dimension in the simple model, we add it here."""
         updated_param = solved_model_func.inputs.flow_out_eff.where(
             solved_model_func.inputs.timesteps.notnull()
@@ -614,7 +614,7 @@ class TestUpdateParameter:
         ]
         caplog.set_level(logging.DEBUG)
 
-        solved_model_func.backend.update_parameter("flow_out_eff", updated_param)
+        solved_model_func.backend.update_input("flow_out_eff", updated_param)
 
         assert (
             f"The optimisation problem components {refs_to_update} will be re-built."
@@ -626,14 +626,14 @@ class TestUpdateParameter:
         )
         assert "timesteps" in expected.dims
 
-    def test_update_parameter_replace_undefined(self, caplog, solved_model_func):
+    def test_update_input_replace_undefined(self, caplog, solved_model_func):
         """source_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value."""
         updated_param = solved_model_func.inputs.flow_out_eff
 
         refs_to_update = ["balance_supply_no_storage"]
         caplog.set_level(logging.DEBUG)
 
-        solved_model_func.backend.update_parameter("source_eff", updated_param)
+        solved_model_func.backend.update_input("source_eff", updated_param)
 
         assert (
             f"The optimisation problem components {refs_to_update} will be re-built."
@@ -657,7 +657,7 @@ class TestUpdateParameter:
     @pytest.mark.usefixtures(
         "built_model_func_longnames", "built_model_func_updated_cost_flow_cap"
     )
-    def test_update_parameter_expr_refs_rebuilt(
+    def test_update_input_expr_refs_rebuilt(
         self, request: pytest.FixtureRequest, model_suffix: str, expr: str, kwargs: dict
     ):
         """Check that parameter re-definition propagates across all cross-referenced global expressions."""
@@ -678,7 +678,7 @@ class TestUpdateParameter:
         "built_model_func_longnames", "built_model_func_updated_cost_flow_cap"
     )
     @pytest.mark.parametrize("model_suffix", ["_longnames", "_updated_cost_flow_cap"])
-    def test_update_parameter_refs_in_obj_func(
+    def test_update_input_refs_in_obj_func(
         self, request: pytest.FixtureRequest, model_suffix: str
     ):
         """Check that parameter re-definition propagates from global expressions to objective function."""
@@ -701,7 +701,7 @@ class TestUpdateParameter:
             # If this fails, it means that `updated_cost_flow_cap` might be passing for reasons unrelated to a successful rebuild.
             assert "test_demand_elec" not in objective_string
 
-    def test_update_parameter_no_refs_to_update(self, solved_model_func):
+    def test_update_input_no_refs_to_update(self, solved_model_func):
         """flow_cap_per_storage_cap_max isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
 
         Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it.
@@ -709,7 +709,7 @@ class TestUpdateParameter:
         """
         updated_param = 1
 
-        solved_model_func.backend.update_parameter(
+        solved_model_func.backend.update_input(
             "flow_cap_per_storage_cap_max", updated_param
         )
 
@@ -758,14 +758,14 @@ class TestUpdateVariable:
             bound_array.where(bound_vals.notnull()).transpose(*bound_vals.dims)
         )
 
-    def test_update_variable_error_update_parameter_instead(self, solved_model_func):
+    def test_update_variable_error_update_input_instead(self, solved_model_func):
         """Check that expected error is raised if trying to update a variable bound that was set by a parameter."""
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:
             solved_model_func.backend.update_variable_bounds("flow_cap", max=1)
         assert check_error_or_warning(
             excinfo,
             "Cannot update variable bounds that have been set by parameters."
-            " Use `update_parameter('flow_cap_max')` to update the max bound of flow_cap.",
+            " Use `update_input('flow_cap_max')` to update the max bound of flow_cap.",
         )
 
     def test_fix_variable_before_solve(self, built_model_cls_longnames):

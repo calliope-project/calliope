@@ -237,9 +237,7 @@ class TestNewBackend:
         assert fixed.where(where, other=True).all()
 
     def test_fix_variable_before_optimal_solve(self, simple_supply_gurobi_func):
-        simple_supply_gurobi_func.backend.update_parameter(
-            "flow_cap_max", xr.DataArray(0)
-        )
+        simple_supply_gurobi_func.backend.update_input("flow_cap_max", xr.DataArray(0))
         simple_supply_gurobi_func.solve(force=True)
         assert simple_supply_gurobi_func.runtime.termination_condition != "optimal"
         with pytest.raises(exceptions.BackendError) as excinfo:

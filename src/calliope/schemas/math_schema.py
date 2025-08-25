@@ -2,6 +2,7 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for Calliope mathematical definition."""
 
+from collections.abc import Iterable
 from typing import Literal
 
 from pydantic import Field
@@ -61,6 +62,11 @@ class Parameter(MathComponent):
     """If resampling is applied over any of the parameter's dimensions, the method to use to aggregate the data."""
     unit: str = ""
     """The unit of the parameter, e.g. 'kW', 'm', 'kg', 'energy', 'power', ..."""
+
+    @property
+    def dtype(self) -> Literal["float"]:
+        """Dummy variable to align with lookups and dims."""
+        return "float"
 
 
 class Lookup(MathComponent):
@@ -247,6 +253,8 @@ class Check(CalliopeBaseModel):
     """Message to display when the `where` array returns True, if raising or warning on error."""
     errors: Literal["raise", "warn", "ignore"] = "raise"
     """How to respond to any instances in which the `where` array returns True."""
+    active: bool = True
+    """If False, this check will be ignored during the build phase."""
 
 
 class Dimensions(CalliopeDictModel):
@@ -331,6 +339,25 @@ class CalliopeBuildMath(CalliopeBaseModel):
     """Possible objectives to apply to the optimisation problem."""
     checks: Checks = Checks()
     """Checks to apply before building the optimisation problem."""
+
+    def find(
+        self, component: str, subset: Iterable[str] | None = None
+    ) -> tuple[str, CalliopeDictModel]:
+        """Find a component in the math schema."""
+        to_search = subset or self.model_fields_set - {"checks"}
+        found = {
+            field: item
+            for field in to_search
+            if (item := getattr(self, field).root.get(component)) is not None
+            and item.active
+        }
+        if len(found) > 1:
+            raise ValueError(
+                f"Component name `{component}` found in multiple places: {found.keys()}."
+            )
+        if len(found) == 0:
+            raise KeyError(f"Component name `{component}` not found in math schema.")
+        return list(found.items())[0]
 
 
 class CalliopeInputMath(CalliopeDictModel):

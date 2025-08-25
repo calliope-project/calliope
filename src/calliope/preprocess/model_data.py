@@ -4,6 +4,7 @@
 
 import itertools
 import logging
+from collections.abc import Hashable, Mapping
 from copy import deepcopy
 from pathlib import Path
 from typing import Literal
@@ -26,11 +27,11 @@ LOGGER = logging.getLogger(__name__)
 DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
 
 DTYPE_OPTIONS = {
-    "string": pd.StringDtype,
-    "float": pd.Float32Dtype,
+    "string": str,
+    "float": float,
     "bool": bool,
     "datetime": np.datetime64,
-    "int": pd.Int32Dtype,
+    "integer": int,
 }
 
 DATETIME_DTYPE = "M"
@@ -79,8 +80,8 @@ class ModelDataFactory:
         init_config: Init,
         model_definition: AttrDict | xr.Dataset,
         math: math_schema.CalliopeInputMath,
-        definition_path: str | Path | None,
-        data_table_dfs: dict[str, pd.DataFrame] | None,
+        definition_path: str | Path | None = None,
+        data_table_dfs: dict[str, pd.DataFrame] | None = None,
     ):
         """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for constraint generation.
 
@@ -111,9 +112,10 @@ class ModelDataFactory:
                     )
                 )
             self.init_from_data_tables(tables)
+
         elif isinstance(model_definition, xr.Dataset):
             self.model_definition: ModelDefinition = AttrDict()
-            self.dataset = model_definition
+            self.dataset = model_definition.copy()
 
     def build(self):
         """Build dataset from model definition."""
@@ -122,11 +124,18 @@ class ModelDataFactory:
 
     def clean(self):
         """Clean built dataset."""
+        # If input dataset is empty, stop here.
+        if not self.dataset:
+            return None
         self.clean_data_from_undefined_members()
         self.add_colors()
         self.add_link_distances()
         self.update_time_dimension_and_params()
         self.assign_input_attr()
+        self.dataset = self.dataset.assign_coords(
+            self._update_dtypes(self.dataset.coords)
+        )
+        self.dataset = self._update_dtypes(self.dataset)
 
     @property
     def math_priority(self) -> list[str]:
@@ -283,8 +292,7 @@ class ModelDataFactory:
 
     def clean_data_from_undefined_members(self):
         """Generate the `definition_matrix` array and use it to strip out any dimension items that are NaN in all arrays and any arrays that are NaN in all index positions."""
-        self._update_dtypes()
-        ds = self.dataset
+        ds = self._update_dtypes(self.dataset)
         def_matrix = ds.carrier_in | ds.carrier_out
         # NaNing values where they are irrelevant requires definition_matrix to be boolean
         for var_name, var_data in ds.data_vars.items():
@@ -295,7 +303,6 @@ class ModelDataFactory:
                 if var_data.dtype.kind != "b"
                 else var_updated.fillna(False).astype(bool)
             )
-
         # dropping index values where they are irrelevant requires definition_matrix to be NaN where False
         ds["definition_matrix"] = def_matrix.where(def_matrix)
 
@@ -682,7 +689,9 @@ class ModelDataFactory:
             to_add (xr.Dataset): Dataset to merge into the central dataset.
             id_ (str): ID of dataset being added, to use in log messages
         """
-        to_add_update_dim_dtype = self._update_dims(to_add, id_)
+        to_add_update_dim_dtype = to_add.assign_coords(
+            self._update_dtypes(to_add.coords, id_)
+        )
         self.dataset = xr.merge(
             [to_add_update_dim_dtype, self.dataset],
             combine_attrs="no_conflicts",
@@ -733,60 +742,57 @@ class ModelDataFactory:
         )  # cannot import carriers at the `link_from` node
         node_to_data.pop("carrier_in")  # cannot export carrier at the `link_to` node
 
-    def _update_dtypes(self):
-        ds = self.dataset
-        for var_name, var_data in ds.data_vars.items():
-            dtype_str = (
-                "float"
-                if var_name in self.math.parameters.root
-                else self.math.lookups[var_name].dtype
-                if var_name in self.math.lookups.root
-                else None
-            )
-            if dtype_str not in [None, "bool"]:
-                dtype = DTYPE_OPTIONS[dtype_str]
-                ds[var_name] = var_data.astype(dtype)
-                LOGGER.debug(f"Updating non-NaN values of `{var_name}` to {dtype} type")
-            elif dtype_str == "bool":
-                dtype = DTYPE_OPTIONS[dtype_str]
-                LOGGER.debug(f"Updating all values of `{var_name}` to {dtype} type")
-                ds[var_name] = var_data.fillna(False).astype(dtype)
-            else:
-                LOGGER.info(
-                    f"Parameter/lookup `{var_name}` not defined in model math; it will not be available in the optimisation problem."
-                )
-        self.dataset = ds
-
-    def _update_dims(self, ds: xr.Dataset, id_: str) -> xr.Dataset:
-        """Try coercing all dimension data of the input dataset to a numeric data type.
-
-        Any dimensions where _all_ its data is potentially numeric will be returned with all data coerced to numeric.
-        All other dimensions will be returned as they were in the input dataset.
-        No changes are made to data variables in the dataset.
+    def _update_dtypes(
+        self, ds: Mapping[Hashable, "xr.DataArray"], id_: str = ""
+    ) -> Mapping[Hashable, "xr.DataArray"]:
+        """Update data types of coordinates or data variables in the dataset.
 
         Args:
-            ds (xr.Dataset): Dataset possibly containing numeric dimensions.
-            id_ (str): Identifier for `ds` to use in logging.
+            ds (xr.Dataset): Dataset to update.
+            to_update (Literal["coords", "data_vars"]): Which part of the dataset to update.
+            id_ (str, optional): ID of the dataset being updated, for logging purposes. Defaults to an empty string.
+
+        Raises:
+            exceptions.ModelError: If there is a mismatch between the provided variable and its definition in the model math.
 
         Returns:
-            xr.Dataset: Input `ds` with numeric coordinates.
+            xr.Dataset: `ds` with data types updated.
         """
-        for dim_name, dim_vals in ds.coords.items():
-            dtype = (
-                self.math.dimensions[dim_name].dtype
-                if dim_name in self.math.dimensions.root
-                else None
-            )
-            if dtype is None:
+        prefix = f"{id_} | " if id_ else ""
+        for var_name, var_data in ds.items():
+            try:
+                src, math_def = self.math.find(
+                    var_name, subset=["lookups", "parameters", "dimensions"]
+                )
+            except KeyError:
                 LOGGER.info(
-                    f"Dimension `{dim_name}` not defined in model math; it will not be available in the optimisation problem."
+                    f"{prefix}input data `{var_name}` not defined in model math; "
+                    "it will not be available in the optimisation problem."
                 )
-            elif dtype == "datetime":
-                ds.coords[dim_name] = time._datetime_index(
-                    dim_vals.to_index(), self.config.datetime_format
-                )
-            else:
-                ds.coords[dim_name] = dim_vals.astype(DTYPE_OPTIONS[dtype])
+                continue
+
+            dtype_str = math_def.dtype  # type: ignore
+            dtype = DTYPE_OPTIONS[dtype_str]
+            LOGGER.debug(
+                f"{prefix}{src} | Updating values of `{var_name}` to {dtype_str} type"
+            )
+            match dtype_str:
+                case "string":
+                    updated_var = var_data.astype(dtype).where(var_data.notnull())
+                case "integer":
+                    updated_var = var_data.fillna(0).astype(dtype)
+                    if var_data.isnull().any():
+                        updated_var = updated_var.where(var_data.notnull())
+                case "datetime":
+                    updated_var = time._datetime_index(
+                        var_data.to_series(), self.config.datetime_format
+                    ).to_xarray()
+                case "bool":
+                    updated_var = var_data.fillna(False).astype(dtype)
+                case _:
+                    updated_var = var_data.astype(dtype)
+
+            ds[var_name] = updated_var
         return ds
 
     def _subset_dims(self):

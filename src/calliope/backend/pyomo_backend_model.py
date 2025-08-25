@@ -383,14 +383,17 @@ class PyomoBackendModel(backend_model.BackendModel):
         if key in self._dataset and self._dataset[key].obj_type == component_type:
             del self._dataset[key]
 
-    def update_parameter(  # noqa: D102, override
+    def update_input(  # noqa: D102, override
         self, name: str, new_values: xr.DataArray | SupportsFloat
     ) -> None:
         new_values = xr.DataArray(new_values)
-        parameter_da = self.get_parameter(name)
+        obj_type, math = self.math.find(name, subset={"parameters", "lookups"})
+        obj_type_singular = obj_type.removesuffix("s")
+
+        input_da = getattr(self, f"get_{obj_type_singular}")(name)
         input_da = self.inputs.get(name, xr.DataArray(np.nan))
-        missing_dims_in_new_vals = set(parameter_da.dims).difference(new_values.dims)
-        missing_dims_in_orig_vals = set(new_values.dims).difference(parameter_da.dims)
+        missing_dims_in_new_vals = set(input_da.dims).difference(new_values.dims)
+        missing_dims_in_orig_vals = set(new_values.dims).difference(input_da.dims)
         refs_to_update: set = set()
 
         if missing_dims_in_new_vals:
@@ -402,11 +405,12 @@ class PyomoBackendModel(backend_model.BackendModel):
             )
 
         if (
-            (not parameter_da.shape and new_values.shape)
+            (not input_da.shape and new_values.shape)
             or missing_dims_in_orig_vals
-            or (parameter_da.isnull() & new_values.notnull()).any()
+            or (input_da.isnull() & new_values.notnull()).any()
+            or obj_type == "lookups"
         ):
-            refs_to_update = self._find_all_references(parameter_da.attrs["references"])
+            refs_to_update = self._find_all_references(input_da.attrs["references"])
             if refs_to_update:
                 self.log(
                     "parameters",
@@ -423,18 +427,14 @@ class PyomoBackendModel(backend_model.BackendModel):
                 new_input_da.attrs = input_da.attrs
                 self.inputs[name] = new_input_da
 
-            self.delete_component(name, "parameters")
-            self.add_parameter(name, self.inputs[name], self.math.parameters[name])
+            self.delete_component(name, obj_type)
+            getattr(self, f"add_{obj_type_singular}")(name, new_input_da, math)
             self._rebuild_references(refs_to_update)
             if self._has_verbose_strings:
                 self.verbose_strings()
-        else:
+        elif obj_type == "parameters":
             self._apply_func(
-                self._update_pyomo_param,
-                new_values.notnull(),
-                1,
-                parameter_da,
-                new_values,
+                self._update_pyomo_param, new_values.notnull(), 1, input_da, new_values
             )
 
     def update_variable_bounds(  # noqa: D102, override
@@ -460,7 +460,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             if existing_bound_param in self.parameters:
                 raise BackendError(
                     "Cannot update variable bounds that have been set by parameters. "
-                    f"Use `update_parameter('{existing_bound_param}')` to update the {bound_name} bound of {name}."
+                    f"Use `update_input('{existing_bound_param}')` to update the {bound_name} bound of {name}."
                 )
 
             bound_da = xr.DataArray(new_bounds)

@@ -23,19 +23,22 @@ def model_def(minimal_test_model_path):
     # Erase data tables for simplicity
     # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
     model_def_override.definition.data_tables.root = {}
-    return AttrDict(model_def_override.model_dump(exclude_defaults=True))
+    return model_def_override
 
 
 @pytest.fixture
 def init_config(default_config, model_def):
-    updated_config = default_config.update(model_def.config)
+    updated_config = default_config.update(model_def.config.model_dump())
     return updated_config.init
 
 
 @pytest.fixture
 def model_data_factory(minimal_test_model_path, model_def, init_config):
     return ModelDataFactory(
-        init_config, model_def.definition, minimal_test_model_path, []
+        init_config,
+        AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
+        model_def.math.init,
+        minimal_test_model_path,
     )
 
 
@@ -402,7 +405,13 @@ class TestModelData:
     def test_prepare_param_dict_lookup(
         self, model_data_factory: ModelDataFactory, simple_da: xr.DataArray
     ):
-        model_data_factory.LOOKUP_PARAMS["lookup_arr"] = "foobar"
+        model_data_factory.math = model_data_factory.math.update(
+            {
+                "lookups": {
+                    "lookup_arr": {"pivot_values_to_dim": "foobar", "dtype": "bool"}
+                }
+            }
+        )
         model_data_factory.dataset["orig"] = simple_da
         output = model_data_factory._prepare_param_dict("lookup_arr", ["foo", "bar"])
         assert output == {"data": True, "index": [["foo"], ["bar"]], "dims": ["foobar"]}
@@ -411,8 +420,7 @@ class TestModelData:
         with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
             model_data_factory._prepare_param_dict("foo", ["foo", "bar"])
         assert check_error_or_warning(
-            excinfo,
-            "foo | Cannot pass parameter data as a list unless the parameter is one of the pre-defined lookup arrays",
+            excinfo, "foo | Cannot pass un-indexed parameter data"
         )
 
     @pytest.mark.parametrize("param_data", [1, [1], [1, 2, 3]])
@@ -491,13 +499,11 @@ class TestModelData:
         assert "a" in model_data_factory_w_params.dataset.nodes
         assert "test_supply_elec" in model_data_factory_w_params.dataset.techs
         assert (
-            model_data_factory_w_params.dataset.carrier_in.sel(**to_drop).isnull().all()
-        )
+            model_data_factory_w_params.dataset.carrier_in.sel(**to_drop) == 0
+        ).all()
         assert (
-            model_data_factory_w_params.dataset.carrier_out.sel(**to_drop)
-            .isnull()
-            .all()
-        )
+            model_data_factory_w_params.dataset.carrier_out.sel(**to_drop) == 0
+        ).all()
 
     @pytest.mark.parametrize(
         "to_drop",
@@ -585,12 +591,15 @@ class TestModelData:
     def test_add_to_dataset_timeseries(
         self, my_caplog, model_data_factory: ModelDataFactory, coord_name
     ):
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {coord_name: {"dtype": "datetime", "iterator": "i"}}}
+        )
         new_idx = pd.Index(["2005-01-01 00:00", "2005-01-01 01:00"], name=coord_name)
         new_param = pd.DataFrame({"ts_data": [True, False]}, index=new_idx).to_xarray()
         model_data_factory._add_to_dataset(new_param, "foo")
 
         assert (
-            f"foo | Updating `{coord_name}` dimension index values to datetime format"
+            f"foo | dimensions | Updating values of `{coord_name}` to datetime type"
             in my_caplog.text
         )
         assert model_data_factory.dataset.coords[coord_name].dtype.kind == "M"
@@ -602,50 +611,65 @@ class TestModelData:
         new_param = simple_da.copy().to_dataset(name="non_ts_data")
         model_data_factory._add_to_dataset(new_param, "foo")
 
-        assert "dimension index values to datetime format" not in my_caplog.text
+        assert "datetime type" not in my_caplog.text
         # make sure nothing has changed in the array
         assert "non_ts_data" in model_data_factory.dataset
         assert model_data_factory.dataset["non_ts_data"].equals(simple_da)
 
     @pytest.mark.parametrize(
-        ("data", "kind"),
-        [
-            ([1, 2], "i"),
-            (["1", "2"], "i"),
-            (["1", 2], "i"),
-            ([1, "2"], "i"),
-            ([1.0, 2.0], "f"),
-            (["1.0", "2.0"], "f"),
-            ([1, "2.0"], "f"),
-            (["1", 2.0], "f"),
-        ],
+        "data", [[1.0, 2.0], ["1.0", "2.0"], [1, "2.0"], ["1", 2.0]]
     )
-    def test_update_numeric_dims(
-        self, my_caplog, model_data_factory: ModelDataFactory, data, kind
+    def test_update_float_dims(
+        self, my_caplog, model_data_factory: ModelDataFactory, data
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"my_data": [True, False]}, index=new_idx).to_xarray()
-        updated_ds = model_data_factory._update_numeric_dims(new_param, "foo")
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {"bar": {"dtype": "float", "iterator": "i"}}}
+        )
+        updated_ds = model_data_factory._update_dtypes(new_param.coords, "foo")
 
         assert (
-            "foo | Updating `bar` dimension index values to numeric type"
+            "foo | dimensions | Updating values of `bar` to float type"
             in my_caplog.text
         )
-        assert updated_ds.coords["bar"].dtype.kind == kind
+        assert updated_ds["bar"].dtype.kind == "f"
 
-    @pytest.mark.parametrize(("data", "kind"), [(["1", 2], "i"), ([1.0, "2.0"], "f")])
+    @pytest.mark.parametrize("data", [[1, 2], ["1", "2"], ["1", 2], [1, "2"]])
+    def test_update_integer_dims(
+        self, my_caplog, model_data_factory: ModelDataFactory, data
+    ):
+        new_idx = pd.Index(data, name="bar")
+        new_param = pd.DataFrame({"my_data": [True, False]}, index=new_idx).to_xarray()
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {"bar": {"dtype": "integer", "iterator": "i"}}}
+        )
+        updated_ds = model_data_factory._update_dtypes(new_param.coords, "foo")
+
+        assert (
+            "foo | dimensions | Updating `bar` dimension index values to integer type"
+            in my_caplog.text
+        )
+        assert updated_ds["bar"].dtype.kind == "i"
+
+    @pytest.mark.parametrize(
+        ("data", "dtype"), [(["1", 2], "integer"), ([1.0, "2.0"], "float")]
+    )
     def test_update_numeric_dims_in_model_data(
-        self, my_caplog, model_data_factory: ModelDataFactory, data, kind
+        self, my_caplog, model_data_factory: ModelDataFactory, data, dtype
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"num_data": [True, False]}, index=new_idx).to_xarray()
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {"bar": {"dtype": dtype, "iterator": "i"}}}
+        )
         model_data_factory._add_to_dataset(new_param, "foo")
 
         assert (
-            "foo | Updating `bar` dimension index values to numeric type"
+            f"foo | dimensions | Updating values of `bar` to {dtype} type"
             in my_caplog.text
         )
-        assert model_data_factory.dataset.coords["bar"].dtype.kind == kind
+        assert model_data_factory.dataset.coords["bar"].dtype.kind == dtype[0]
 
     @pytest.mark.parametrize(
         "data", [["foo", 2], [1.0, "foo"], ["foo", "bar"], ["Y1", "Y2"]]
@@ -655,13 +679,16 @@ class TestModelData:
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"ts_data": [True, False]}, index=new_idx).to_xarray()
-        updated_ds = model_data_factory._update_numeric_dims(new_param, "foo")
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {"bar": {"dtype": "string", "iterator": "i"}}}
+        )
+        updated_ds = model_data_factory._update_dtypes(new_param, "foo")
 
         assert (
-            "foo | Updating `bar` dimension index values to numeric type"
+            "foo | dimensions | Updating values of `bar` to string type"
             not in my_caplog.text
         )
-        assert updated_ds.coords["bar"].dtype.kind not in ["f", "i"]
+        assert updated_ds["bar"].dtype.kind == "O"
 
     @pytest.mark.parametrize(
         ("coords", "new_coords"),
@@ -677,6 +704,9 @@ class TestModelData:
     ):
         model_data_factory.dataset["orig"] = simple_da
         new_param = simple_da.to_series().rename_axis(index=coords).to_xarray()
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {dim: {"dtype": "float", "iterator": "i"}} for dim in coords}
+        )
         model_data_factory._log_param_updates("foo", new_param)
         for coord in new_coords:
             assert (
@@ -879,7 +909,7 @@ class TestTopLevelParams:
             "timesteps",
         )
         assert (
-            "(parameters, my_val) | Updating `timesteps` dimension index values to datetime format"
+            "(parameters, my_val) | dimensions | Updating values of `timesteps` to datetime type"
             in my_caplog.text
         )
 

@@ -7,12 +7,14 @@ import pytest
 
 import calliope
 from calliope import exceptions
-from calliope.io import to_yaml
+from calliope.io import read_rich_yaml, to_yaml
 from calliope.preprocess import model_math
 from calliope.schemas import math_schema
 
 from ..common.util import build_test_model as build_model
 from ..common.util import check_error_or_warning
+
+PRE_DEFINED_MATH = ["plan", "operate", "spores", "storage_inter_cluster"]
 
 
 @pytest.fixture(scope="module")
@@ -53,14 +55,12 @@ class TestInitMath:
 
     def test_loaded_internal(self, math_data, extra_math):
         """Loaded math should contain both user defined and internal files."""
-        assert not math_data.keys() - (
-            set(model_math.PRE_DEFINED_MATH) | extra_math.keys()
-        )
+        assert not math_data.keys() - (set(PRE_DEFINED_MATH) | extra_math.keys())
 
     def test_pre_defined_load(self, math_data):
         """Internal files should be loaded correctly."""
-        for filename in model_math.PRE_DEFINED_MATH:
-            expected = model_math._load_internal_math(filename)
+        for filename in PRE_DEFINED_MATH:
+            expected = read_rich_yaml(filename)
             math_data[filename] == expected
 
     def test_extra_load(self, math_data, extra_math, user_math):
@@ -89,13 +89,13 @@ class TestBuildMath:
             override_dict={
                 "config": {
                     "init": {
-                        "base_math": "plan",
-                        "extra_math": {
+                        "math_paths": {
                             "additional_math": str(additional.absolute()),
                             "alternative_base": str(alternative_base.absolute()),
                         },
-                    },
-                    "build": {"mode": "base", "extra_math": []},
+                        "mode": "base",
+                        "extra_math": [],
+                    }
                 }
             }
         )

@@ -228,7 +228,7 @@ This is useful to further explore the option space, restart a run that was stopp
     model.build(mode="spores")
     model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
 
-    model.backend.update_parameter("spores_slack", xr.DataArray(0.3))
+    model.backend.update_input("spores_slack", xr.DataArray(0.3))
 
     # `model.results` will now have an additional 5 SPORES run results (6-10)
     model.solve(spores={"use_latest_results": True, "number": 10, "scoring_algorithm": "random"})

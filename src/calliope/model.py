@@ -124,9 +124,7 @@ class Model:
         self.config = self.config.update({"init": kwargs})
         self._check_versions()
 
-        model_data_factory = ModelDataFactory(
-            self.config.init, inputs, self.math.init, None, None
-        )
+        model_data_factory = ModelDataFactory(self.config.init, inputs, self.math.init)
 
         model_data_factory.clean()
         self.inputs = model_data_factory.dataset
@@ -462,6 +460,7 @@ class Model:
             xr.Dataset: Slice of input data.
         """
         if self.config.init.time_cluster is not None:
+            # TODO: Consider moving this to validator in config schema
             raise exceptions.ModelError(
                 "Unable to run this model in operate (i.e. dispatch) mode because time clustering is in use"
             )
@@ -500,8 +499,9 @@ class Model:
         Returns:
             xr.Dataset: Results dataset.
         """
-        if self.backend.inputs.timesteps[0] != self.inputs.timesteps[0]:
+        if self._start_window_idx != 0:
             LOGGER.info("Optimisation model | Resetting model to first time window.")
+            self._start_window_idx = 0
             self.build(force=True)
 
         LOGGER.info("Optimisation model | Running first time window.")
@@ -511,6 +511,7 @@ class Model:
         results_list = []
 
         for idx, windowstep in enumerate(self.inputs.windowsteps[1:]):
+            self._start_window_idx = idx + 1
             windowstep_as_string = windowstep.dt.strftime("%Y-%m-%d %H:%M:%S").item()
             LOGGER.info(
                 f"Optimisation model | Running time window starting at {windowstep_as_string}."
@@ -526,12 +527,12 @@ class Model:
                 timesteps=slice(windowstep, horizonstep)
             ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
             new_ts = new_inputs.timesteps.copy()
+
             if len(new_inputs.timesteps) != len(iteration_results.timesteps):
                 LOGGER.info(
                     "Optimisation model | Reaching the end of the timeseries. "
                     "Re-building model with shorter time horizon."
                 )
-                self._start_window_idx = idx + 1
                 self.build(force=True)
             else:
                 new_inputs.coords["timesteps"] = self.backend.inputs.coords["timesteps"]
@@ -541,11 +542,11 @@ class Model:
                         and param_name in self.backend.parameters
                         and not param_data.equals(self.backend.inputs[param_name])
                     ):
-                        self.backend.update_parameter(param_name, param_data)
+                        self.backend.update_input(param_name, param_data)
                         self.backend.inputs[param_name] = param_data
 
             if "storage" in iteration_results:
-                self.backend.update_parameter(
+                self.backend.update_input(
                     "storage_initial",
                     self._recalculate_storage_initial(previous_iteration_results),
                 )
@@ -553,7 +554,6 @@ class Model:
             iteration_results = self.backend._solve(solver_config, warmstart=False)
             iteration_results.coords["timesteps"] = new_ts
 
-        self._start_window_idx = 0
         results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
         results = xr.concat(results_list, dim="timesteps", combine_attrs="drop")
         results.attrs["termination_condition"] = ",".join(
@@ -593,7 +593,7 @@ class Model:
             xr.Dataset: Results dataset.
         """
         LOGGER.info("Optimisation model | Resetting SPORES parameters.")
-        self.backend.update_parameter(
+        self.backend.update_input(
             "spores_score", self.math.build.parameters["spores_score"].default
         )
 
@@ -611,7 +611,7 @@ class Model:
                 f"Optimisation model | Restarting SPORES from SPORE {latest_spore} results."
             )
             baseline_results = self.results.sel(spores=latest_spore).drop_vars("spores")
-            self.backend.update_parameter(
+            self.backend.update_input(
                 "spores_score", baseline_results.spores_score_cumulative
             )
         else:
@@ -642,7 +642,7 @@ class Model:
         if not constraining_cost or constraining_cost == base_cost_default:
             # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
             constraining_cost = baseline_results[self.config.build.objective]
-        self.backend.update_parameter("spores_baseline_cost", constraining_cost)
+        self.backend.update_input("spores_baseline_cost", constraining_cost)
 
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
@@ -718,10 +718,7 @@ class Model:
 
             io.save_netcdf(results.expand_dims(spores=[spore]), "results", "w", outpath)
             io.save_netcdf(
-                xr.Dataset(attrs=self.dump_all_attrs().model_dump()),
-                "attrs",
-                "a",
-                outpath,
+                xr.Dataset(attrs=self.dump_all_attrs()), "attrs", "a", outpath
             )
             if spore == 0:
                 io.save_netcdf(
@@ -862,4 +859,4 @@ class Model:
             spores_techs, old_score
         )
 
-        self.backend.update_parameter("spores_score", new_score)
+        self.backend.update_input("spores_score", new_score)

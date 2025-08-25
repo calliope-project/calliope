@@ -1634,7 +1634,7 @@ class TestNewBackend:
         self, simple_supply: calliope.Model, dummy_int: int
     ) -> calliope.Model:
         simple_supply.backend.verbose_strings()
-        simple_supply.backend.update_parameter("cost_flow_cap", dummy_int)
+        simple_supply.backend.update_input("cost_flow_cap", dummy_int)
         return simple_supply
 
     @pytest.fixture

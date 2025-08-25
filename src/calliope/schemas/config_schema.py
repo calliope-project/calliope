@@ -39,6 +39,12 @@ class Resamples(CalliopeDictModel):
     root: dict[AttrStr, str | None] = Field(default_factory=dict)
 
 
+class MathPaths(CalliopeDictModel):
+    """Math paths settings."""
+
+    root: dict[AttrStr, Path] = Field(default_factory=dict)
+
+
 class Init(CalliopeBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
@@ -97,7 +103,7 @@ class Init(CalliopeBaseModel):
     Math order: base -> mode -> extra
     """
 
-    math_paths: dict = Field(default_factory=dict)
+    math_paths: MathPaths = MathPaths()
     """Dictionary with the names and paths of additional math files to add to the available math entries.
     Some math entry names are linked to specific functionality, so re-defining them here will overwrite the pre-defined math.:
     - `spores`/`operate`: replaces the respective pre-defined mode math.

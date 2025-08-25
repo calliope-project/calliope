@@ -13,6 +13,18 @@
 #
 # ---
 
+dimensions:
+  breakpoints:
+    dtype: integer
+    description: SOS2 piecewise breakpoints
+    iterator: breakpoint
+
+parameters:
+  piecewise_cost_investment_x:
+    description: Flow capacity values at each breakpoint
+  piecewise_cost_investment_y:
+    description: Investment cost values at each breakpoint
+
 variables:
   piecewise_cost_investment:
     description: Investment cost that increases monotonically

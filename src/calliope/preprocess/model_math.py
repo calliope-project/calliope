@@ -9,11 +9,7 @@ from pathlib import Path
 
 from calliope.attrdict import AttrDict
 from calliope.backend import parsing
-from calliope.exceptions import (
-    ModelError,
-    ModelWarning,
-    print_warnings_and_raise_errors,
-)
+from calliope.exceptions import ModelError, print_warnings_and_raise_errors
 from calliope.io import read_rich_yaml
 from calliope.schemas.math_schema import CalliopeBuildMath
 from calliope.util.tools import relative_path
@@ -53,10 +49,10 @@ def initialise_math_paths(
     if extra_math is not None:
         for name, path in extra_math.items():
             if name in math_dataset:
-                raise ModelWarning(
+                LOGGER.warning(
                     f"Math init | Overwriting pre-defined '{name}' math with {path}."
                 )
-            math_dataset.union({name: relative_path(model_def_path, path)})
+            math_dataset[name] = relative_path(model_def_path, path)
 
     return math_dataset
 

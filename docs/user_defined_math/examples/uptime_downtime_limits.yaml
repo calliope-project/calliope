@@ -22,6 +22,23 @@
 #
 # ---
 
+parameters:
+  capacity_factor_min:
+    description: Minimum capacity factor that a technology must achieve over the whole time horizon.
+    default: 0
+  capacity_factor_max:
+    description: Maximum capacity factor that a technology must remain below over the whole time horizon.
+    default: .inf
+  uptime_limit:
+    description: Upper bound on total number of timesteps that an asset may operate.
+    default: .inf
+
+lookups:
+  downtime_periods:
+    description: Downtime periods (when True) over the time horizon for a given technology.
+    dtype: bool
+    default: false
+
 constraints:
   annual_capacity_factor_min:
     description: >

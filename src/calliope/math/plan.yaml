@@ -490,12 +490,14 @@ lookups:
       Only `transmission`, `conversion`, `storage`, and `demand` technologies can define this parameter
     dtype: bool
     pivot_values_to_dim: carriers
+    default: False
 
   carrier_out:
     description: >-
       Carrier(s) produced by this technology.
       Only `transmission`, `conversion`, `storage`, and `supply` technologies can define this parameter
     dtype: bool
+    default: false
     pivot_values_to_dim: carriers
 
   carrier_export:
@@ -503,6 +505,7 @@ lookups:
       Carrier(s) produced by this technology that can be exported out of the system boundaries without having to go to a pre-defined `sink` (i.e., via a `demand` technology).
       Must be a subset of `carrier_out`.
     dtype: bool
+    default: false
     pivot_values_to_dim: carriers
 
   cap_method:
@@ -521,6 +524,7 @@ lookups:
 
   definition_matrix:
     dtype: bool
+    default: false
     description: >-
       Whether a technology is defined with particular carriers and at a particular node.
 
