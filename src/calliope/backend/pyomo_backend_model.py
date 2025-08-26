@@ -390,7 +390,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         obj_type_singular = obj_type.removesuffix("s")
 
         dataset_da = getattr(self, f"get_{obj_type_singular}")(name)
-        input_da = self.inputs.get(name, xr.DataArray(np.nan))
         missing_dims_in_new_vals = set(dataset_da.dims).difference(new_values.dims)
         missing_dims_in_orig_vals = set(new_values.dims).difference(dataset_da.dims)
         refs_to_update: set = set()
@@ -422,8 +421,8 @@ class PyomoBackendModel(backend_model.BackendModel):
             if name not in self.inputs:
                 self.inputs[name] = new_values
             else:
-                new_input_da = new_values.broadcast_like(input_da).fillna(input_da)
-                new_input_da.attrs = input_da.attrs
+                new_input_da = new_values.broadcast_like(dataset_da).fillna(dataset_da)
+                new_input_da.attrs = dataset_da.attrs
                 self.inputs[name] = new_input_da
 
             self.delete_component(name, obj_type)

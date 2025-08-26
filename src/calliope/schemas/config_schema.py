@@ -106,8 +106,9 @@ class Init(CalliopeBaseModel):
     math_paths: MathPaths = MathPaths()
     """Dictionary with the names and paths of additional math files to add to the available math entries.
     Some math entry names are linked to specific functionality, so re-defining them here will overwrite the pre-defined math.:
+    - `base`: replaces the pre-defined base math.
+    - `milp`: replaces the mixed integer math.
     - `spores`/`operate`: replaces the respective pre-defined mode math.
-    - `base`: replaces the pre-defined base math (which is also the `plan` mode math).
     - `storage_inter_cluster`: replaces the pre-defined storage inter-cluster math.
     """
 
@@ -179,7 +180,7 @@ class SolveSpores(CalliopeBaseModel):
 
     use_latest_results: bool = Field(default=False)
     """
-    If the model already contains `plan` mode results, use them as the baseline results and start with SPORES iterations immediately.
+    If the model already contains `base` mode results, use them as the baseline results and start with SPORES iterations immediately.
     If the model already contains `spores` mode results, use the most recent results and continue with the remaining SPORES iterations immediately.
     """
 

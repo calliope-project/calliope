@@ -16,7 +16,6 @@ from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
 MATH_FILE_DIR = resources.files("calliope.math")
-BASE_DEFAULT = "plan"
 ORDERED_COMPONENTS_T = typing.Literal[
     "variables",
     "global_expressions",
@@ -44,7 +43,6 @@ def initialise_math_paths(
     LOGGER.info("Math init | loading pre-defined math.")
 
     math_dataset = AttrDict({name.stem: str(name) for name in MATH_FILE_DIR.iterdir()})
-    math_dataset["base"] = math_dataset[BASE_DEFAULT]
 
     if extra_math is not None:
         for name, path in extra_math.items():

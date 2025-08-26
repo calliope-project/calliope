@@ -441,7 +441,7 @@ class TestSporesMode:
     def test_spores_constraining_cost_is_baseline_obj(
         self, request, simple_supply_spores_ready, fixture
     ):
-        """No matter how SPORES are initiated, the constraining cost (pre application of slack) should be the plan mode objective function value."""
+        """Ensure the constraining cost is the base mode objective function value."""
         model, _ = request.getfixturevalue(fixture)
         baseline = model.backend.get_parameter(
             "spores_baseline_cost", as_backend_objs=False

@@ -206,7 +206,7 @@ This is useful to further explore the option space, restart a run that was stopp
     ```python
     import calliope
 
-    # This model already has results from running in `plan` mode.
+    # This model already has results from running in `base` mode.
     model = calliope.Model(...)
 
     model.build(mode="spores")
@@ -222,7 +222,7 @@ This is useful to further explore the option space, restart a run that was stopp
     import calliope
     import xarray as xr
 
-    # This model already has results from running in `plan` mode.
+    # This model already has results from running in `base` mode.
     model = calliope.Model(...)
 
     model.build(mode="spores")

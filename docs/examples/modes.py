@@ -17,8 +17,8 @@
 #
 # Models can be built and solved in different modes:
 
-# - `plan` mode.
-# In `plan` mode, the user defines upper and lower boundaries for technology capacities and the model decides on an optimal system configuration.
+# - `base` mode.
+# In `base` mode, the user defines upper and lower boundaries for technology capacities and the model decides on an optimal system configuration.
 # In this configuration, the total cost of investing in technologies and then using them to meet demand in every _timestep_ (e.g., every hour) is as low as possible.
 # - `operate` mode.
 # In `operate` mode, all capacity constraints are fixed and the system is operated with a receding horizon control algorithm.
@@ -44,7 +44,7 @@ import calliope
 calliope.set_log_verbosity("INFO", include_solver_output=False)
 
 # %% [markdown]
-# ## Running in 'plan' mode.
+# ## Running in 'base' mode.
 
 # %%
 # We subset to the same time range as operate mode
@@ -75,7 +75,7 @@ model_operate.results
 # ## Running in 'spores' mode.
 
 # %%
-# We subset to the same time range as operate/plan mode
+# We subset to the same time range as operate/base mode
 model_spores = calliope.examples.national_scale(
     scenario="spores", subset={"timesteps": ["2005-01-01", "2005-01-10"]}
 )
@@ -170,7 +170,7 @@ def plot_capacity(results: xr.Dataset, **plotly_kwargs) -> go.Figure:
 # Here, we'll compare the result on `flow_cap` from running each.
 
 # %%
-# We subset to the same time range as operate/plan mode
+# We subset to the same time range as operate/base mode
 model_spores = calliope.examples.national_scale(
     scenario="spores", subset={"timesteps": ["2005-01-01", "2005-01-10"]}
 )
@@ -186,7 +186,7 @@ spores_results_da = xr.concat(spores_results, dim="algorithm")
 spores_results_da.flow_cap.to_series().dropna().unstack("spores")
 
 # %% [markdown]
-# ## 'plan' vs 'operate'
+# ## 'base' vs 'operate'
 # Here, we compare flows over the 10 days.
 # Note how flows do not match as the rolling horizon makes it difficult to make the correct storage charge/discharge decisions.
 
@@ -202,9 +202,9 @@ fig_flows_operate = plot_flows(model_operate.results)
 fig_flows_operate.update_layout(title="Operate mode flows")
 
 # %% [markdown]
-# ## 'plan' vs 'spores'
-# Here, we compare installed capacities between the baseline run (== `plan` mode) and the SPORES.
-# Note how the `0` SPORE is the same as `plan` mode and then results deviate considerably.
+# ## 'base' vs 'spores'
+# Here, we compare installed capacities between the baseline run (== `base` mode) and the SPORES.
+# Note how the `0` SPORE is the same as `base` mode and then results deviate considerably.
 
 # %%
 fig_flows_plan = plot_capacity(model_plan.results)

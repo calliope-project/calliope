@@ -14,7 +14,7 @@ from calliope.schemas import math_schema
 from ..common.util import build_test_model as build_model
 from ..common.util import check_error_or_warning
 
-PRE_DEFINED_MATH = ["plan", "operate", "spores", "storage_inter_cluster", "milp"]
+PRE_DEFINED_MATH = ["base", "operate", "spores", "storage_inter_cluster", "milp"]
 
 
 @pytest.fixture(scope="module")
@@ -59,9 +59,9 @@ class TestInitMath:
 
     def test_pre_defined_load(self, math_data):
         """Internal files should be loaded correctly."""
-        for filename in PRE_DEFINED_MATH:
-            expected = read_rich_yaml(filename)
-            math_data[filename] == expected
+        for file in model_math.MATH_FILE_DIR.iterdir():
+            expected = read_rich_yaml(file)
+            math_data[file.stem] == expected
 
     def test_extra_load(self, math_data, extra_math, user_math):
         """Extra math should be loaded with no alterations."""
@@ -70,11 +70,11 @@ class TestInitMath:
 
     def test_overwrite_warning(self, user_math_path, def_path):
         """Users should be warned when overwritting pre-defined math."""
-        extra_math = {"plan": user_math_path}
+        extra_math = {"base": user_math_path}
         with pytest.raises(
-            exceptions.ModelWarning, match="Overwriting pre-defined 'plan' math."
+            exceptions.ModelWarning, match="Overwriting pre-defined 'base' math."
         ):
-            model_math.initialise_math(extra_math, def_path)
+            model_math.initialise_math_paths(extra_math, def_path)
 
 
 class TestBuildMath:
@@ -83,7 +83,7 @@ class TestBuildMath:
         """Simulate users adding extra math using the urban example model."""
         calliope_dir = Path(calliope.__file__).parent
         additional = calliope_dir / "example_models/urban_scale/additional_math.yaml"
-        alternative_base = calliope_dir / "math/plan.yaml"
+        alternative_base = calliope_dir / "math/base.yaml"
 
         return calliope.examples.urban_scale(
             override_dict={
@@ -112,11 +112,11 @@ class TestBuildMath:
         "math_order",
         [
             # Default
-            ["plan"],
+            ["base"],
             # Default and extra
-            ["plan", "additional_math"],
+            ["base", "additional_math"],
             # Default, mode and extra
-            ["plan", "operate", "additional_math"],
+            ["base", "operate", "additional_math"],
             # Alternative base, mode and extra
             ["alternative_base", "operate", "additional_math"],
         ],

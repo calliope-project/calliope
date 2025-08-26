@@ -98,7 +98,7 @@ class InternalMathFiles(ABC):
 
     @pytest.fixture(scope="class")
     def full_math(self):
-        return create_full_math(["plan"] + self.EXTRA_MATH).model_dump()
+        return create_full_math(["base"] + self.EXTRA_MATH)
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, full_math, tmp_path_factory) -> str:
@@ -124,7 +124,7 @@ class InternalMathFiles(ABC):
 
 
 class TestBaseMath(InternalMathFiles):
-    FILENAME = "plan"
+    FILENAME = "base"
     TEST_REGISTER = set()
     EXTRA_MATH = []
 
@@ -361,7 +361,7 @@ class CustomMathExamples(ABC):
 
     @pytest.fixture(scope="class")
     def full_math(self, custom_math):
-        return create_full_math(["plan"] + self.EXTRA_MATH, custom_math).model_dump()
+        return create_full_math(["base"] + self.EXTRA_MATH, custom_math).model_dump()
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, tmp_path_factory, full_math) -> str:
@@ -540,7 +540,13 @@ class TestMaxTimeVarying(CustomMathExamples):
             }
         }
         build_and_compare(
-            "max_time_varying_flow_cap", "simple_supply,two_hours", overrides
+            "max_time_varying_flow_cap",
+            "simple_supply,two_hours",
+            overrides,
+            components={
+                "parameters": ["flow_cap_max_relative_per_ts"],
+                "constraints": ["max_time_varying_flow_cap"],
+            },
         )
 
 

@@ -12,7 +12,7 @@ A decision variable in Calliope math looks like this:
 
 ```yaml
 variables:
---8<-- "src/calliope/math/plan.yaml:variable"
+--8<-- "src/calliope/math/base.yaml:variable"
 ```
 
 1. It needs a unique name (`storage_cap` in the example above).
@@ -48,7 +48,7 @@ To not clutter the objective function with all combinations of variables and par
 
 ```yaml
 global_expressions:
---8<-- "src/calliope/math/plan.yaml:expression"
+--8<-- "src/calliope/math/base.yaml:expression"
 ```
 
 Global expressions are by no means necessary to include, but can make more complex linear expressions easier to keep track of and can reduce post-processing requirements.
@@ -111,7 +111,7 @@ Here is an example:
 
 ```yaml
 constraints:
---8<-- "src/calliope/math/plan.yaml:constraint"
+--8<-- "src/calliope/math/base.yaml:constraint"
 ```
 
 1. It needs a unique name (`set_storage_initial` in the above example).
@@ -175,7 +175,7 @@ With your constrained decision variables and a global expression that binds thes
 
 ```yaml
 objectives:
---8<-- "src/calliope/math/plan.yaml:objective"
+--8<-- "src/calliope/math/base.yaml:objective"
 ```
 
 1. It needs a unique name.

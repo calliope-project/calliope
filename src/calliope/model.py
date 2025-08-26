@@ -632,7 +632,7 @@ class Model:
             raise exceptions.ModelError(
                 "Cannot run SPORES without baseline results. "
                 "This issue may be caused by an infeasible baseline model."
-                "Ensure your baseline model can solve successfully by running it in `plan` mode."
+                "Ensure your baseline model can solve successfully by running it in `base` mode."
             )
 
         base_cost_default = self.math.build.parameters["spores_baseline_cost"].default
