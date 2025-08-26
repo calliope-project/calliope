@@ -647,7 +647,7 @@ class TestModelData:
         updated_ds = model_data_factory._update_dtypes(new_param.coords, "foo")
 
         assert (
-            "foo | dimensions | Updating `bar` dimension index values to integer type"
+            "foo | dimensions | Updating values of `bar` to integer type"
             in my_caplog.text
         )
         assert updated_ds["bar"].dtype.kind == "i"
