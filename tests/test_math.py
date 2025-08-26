@@ -108,7 +108,10 @@ class InternalMathFiles(ABC):
 
     @pytest.fixture(scope="class")
     def barebones_config(self, barebones_math_file):
-        return {"math_paths": {"base": barebones_math_file}}
+        return {
+            "math_paths": {"base": barebones_math_file},
+            "pre_validate_math_strings": False,
+        }
 
     @pytest.mark.order(-1)
     @pytest.mark.xfail(reason="math tests are not fully defined yet")

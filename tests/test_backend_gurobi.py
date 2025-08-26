@@ -135,7 +135,7 @@ class TestNewBackend:
     def test_new_objective_set_update(
         self, simple_supply_gurobi_func_new_objective, dummy_int
     ):
-        simple_supply_gurobi_func_new_objective.backend.update_parameter(
+        simple_supply_gurobi_func_new_objective.backend.update_input(
             "bigM", xr.DataArray(dummy_int)
         )
         obj_expr = simple_supply_gurobi_func_new_objective.backend.get_objective("foo")

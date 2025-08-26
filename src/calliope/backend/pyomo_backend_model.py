@@ -389,10 +389,10 @@ class PyomoBackendModel(backend_model.BackendModel):
         obj_type, math = self.math.find(name, subset={"parameters", "lookups"})
         obj_type_singular = obj_type.removesuffix("s")
 
-        input_da = getattr(self, f"get_{obj_type_singular}")(name)
+        dataset_da = getattr(self, f"get_{obj_type_singular}")(name)
         input_da = self.inputs.get(name, xr.DataArray(np.nan))
-        missing_dims_in_new_vals = set(input_da.dims).difference(new_values.dims)
-        missing_dims_in_orig_vals = set(new_values.dims).difference(input_da.dims)
+        missing_dims_in_new_vals = set(dataset_da.dims).difference(new_values.dims)
+        missing_dims_in_orig_vals = set(new_values.dims).difference(dataset_da.dims)
         refs_to_update: set = set()
 
         if missing_dims_in_new_vals:
@@ -404,12 +404,12 @@ class PyomoBackendModel(backend_model.BackendModel):
             )
 
         if (
-            (not input_da.shape and new_values.shape)
+            (not dataset_da.shape and new_values.shape)
             or missing_dims_in_orig_vals
-            or (input_da.isnull() & new_values.notnull()).any()
+            or (dataset_da.isnull() & new_values.notnull()).any()
             or obj_type == "lookups"
         ):
-            refs_to_update = self._find_all_references(input_da.attrs["references"])
+            refs_to_update = self._find_all_references(dataset_da.attrs["references"])
             if refs_to_update:
                 self.log(
                     "parameters",
@@ -433,7 +433,11 @@ class PyomoBackendModel(backend_model.BackendModel):
                 self.verbose_strings()
         elif obj_type == "parameters":
             self._apply_func(
-                self._update_pyomo_param, new_values.notnull(), 1, input_da, new_values
+                self._update_pyomo_param,
+                new_values.notnull(),
+                1,
+                dataset_da,
+                new_values,
             )
 
     def update_variable_bounds(  # noqa: D102, override
