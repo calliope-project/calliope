@@ -32,7 +32,9 @@ def create_full_math(internal_math: list[str], custom_math: dict | None = None):
     }
     if custom_math:
         math_dataset["custom_math"] = AttrDict(custom_math)
-    return model_math.build_applied_math(list(math_dataset.keys()), math_dataset)
+    build_math = model_math.build_applied_math(list(math_dataset.keys()), math_dataset)
+
+    return AttrDict(build_math.model_dump())
 
 
 def create_pruned_math_file(math: dict, filepath: str | Path):
@@ -98,7 +100,7 @@ class InternalMathFiles(ABC):
 
     @pytest.fixture(scope="class")
     def full_math(self):
-        return create_full_math(["base"] + self.EXTRA_MATH).model_dump()
+        return create_full_math(["base"] + self.EXTRA_MATH)
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, full_math, tmp_path_factory) -> str:
@@ -361,7 +363,7 @@ class CustomMathExamples(ABC):
 
     @pytest.fixture(scope="class")
     def full_math(self, custom_math):
-        return create_full_math(["base"] + self.EXTRA_MATH, custom_math).model_dump()
+        return create_full_math(["base"] + self.EXTRA_MATH, custom_math)
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, tmp_path_factory, full_math) -> str:

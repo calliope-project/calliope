@@ -86,7 +86,7 @@ class Lookup(MathComponent):
     """
 
 
-class MathIndexedComponent(CalliopeBaseModel):
+class MathIndexedComponent(MathComponent):
     """Generic indexed component class."""
 
     foreach: UniqueList[AttrStr] = Field(default_factory=list)
