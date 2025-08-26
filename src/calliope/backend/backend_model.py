@@ -324,9 +324,9 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 self.math[components].root.items(),
                 key=lambda item: getattr(item[1], "order", 0),
             )
-            for name, dict_ in ordered_items:
+            for name, definition in ordered_items:
                 start = time.time()
-                getattr(self, f"add_{component}")(name, dict_)
+                getattr(self, f"add_{component}")(name, definition)
                 end = time.time() - start
                 LOGGER.debug(
                     f"Optimisation Model | {components}:{name} | Built in {end:.4f}s"

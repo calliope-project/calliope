@@ -32,7 +32,6 @@ def create_full_math(internal_math: list[str], custom_math: dict | None = None):
     }
     if custom_math:
         math_dataset["custom_math"] = AttrDict(custom_math)
-
     return model_math.build_applied_math(list(math_dataset.keys()), math_dataset)
 
 
@@ -44,7 +43,7 @@ def create_pruned_math_file(math: dict, filepath: str | Path):
     - All variables and expressions in `math`.
     - A standard dummy objective.
     """
-    pruned_math = AttrDict({k: math[k].model_dump() for k in MATH_TO_KEEP})
+    pruned_math = AttrDict({k: math[k] for k in MATH_TO_KEEP})
     pruned_math.set_key(
         "objectives.dummy_obj",
         {"equations": [{"expression": "1 + 1"}], "sense": "minimize"},
@@ -99,7 +98,7 @@ class InternalMathFiles(ABC):
 
     @pytest.fixture(scope="class")
     def full_math(self):
-        return create_full_math(["plan"] + self.EXTRA_MATH)
+        return create_full_math(["plan"] + self.EXTRA_MATH).model_dump()
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, full_math, tmp_path_factory) -> str:
@@ -359,7 +358,7 @@ class CustomMathExamples(ABC):
 
     @pytest.fixture(scope="class")
     def full_math(self, custom_math):
-        return create_full_math(["plan"] + self.EXTRA_MATH, custom_math)
+        return create_full_math(["plan"] + self.EXTRA_MATH, custom_math).model_dump()
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, tmp_path_factory, full_math) -> str:
@@ -407,7 +406,15 @@ class CustomMathExamples(ABC):
                 objective = list(custom_math["objectives"].keys())[0]
 
             model = util.build_test_model(
-                {"config.init.math_paths": {"base": barebones_math_file}, **overrides},
+                {
+                    "config.init": {
+                        "math_paths.base": barebones_math_file,
+                        # reset extra math in case scenarios refer to it.
+                        # We handle extra math in these tests with self.EXTRA_MATH
+                        "extra_math": [],
+                    },
+                    **overrides,
+                },
                 scenario,
             )
             lp_file = lp_temp_path / f"{filename}.lp"
@@ -440,6 +447,10 @@ class TestAnnualEnergyBalance(CustomMathExamples):
             "annual_energy_balance_per_tech_and_node",
             "simple_supply,two_hours",
             overrides,
+            components={
+                "constraints": ["annual_energy_balance_per_tech_and_node"],
+                "parameters": ["annual_flow_max"],
+            },
         )
 
     def test_annual_energy_balance_global_per_tech(self, build_and_compare):
@@ -456,6 +467,10 @@ class TestAnnualEnergyBalance(CustomMathExamples):
             "annual_energy_balance_global_per_tech",
             "simple_supply,two_hours",
             overrides,
+            components={
+                "constraints": ["annual_energy_balance_global_per_tech"],
+                "parameters": ["annual_flow_max"],
+            },
         )
 
     def test_annual_energy_balance_global_multi_tech(self, build_and_compare):
@@ -473,6 +488,11 @@ class TestAnnualEnergyBalance(CustomMathExamples):
             "annual_energy_balance_global_multi_tech",
             "simple_supply_and_supply_plus,two_hours",
             overrides,
+            components={
+                "constraints": ["annual_energy_balance_global_multi_tech"],
+                "parameters": ["annual_flow_max"],
+                "lookups": ["flow_max_group"],
+            },
         )
 
     def test_annual_energy_balance_total_source_availability(self, build_and_compare):
@@ -481,6 +501,10 @@ class TestAnnualEnergyBalance(CustomMathExamples):
             "annual_energy_balance_total_source_availability",
             "simple_supply_and_supply_plus,two_hours",
             overrides,
+            components={
+                "constraints": ["annual_energy_balance_total_source_availability"],
+                "parameters": ["annual_source_max"],
+            },
         )
 
     def test_annual_energy_balance_total_sink_availability(self, build_and_compare):
@@ -489,6 +513,10 @@ class TestAnnualEnergyBalance(CustomMathExamples):
             "annual_energy_balance_total_sink_availability",
             "simple_supply,two_hours,demand_elec_max",
             overrides,
+            components={
+                "constraints": ["annual_energy_balance_total_sink_availability"],
+                "parameters": ["annual_sink_max"],
+            },
         )
 
 

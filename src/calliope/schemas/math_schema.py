@@ -113,7 +113,7 @@ class SubExpressions(CalliopeDictModel):
 class MathEquationComponent(CalliopeBaseModel):
     """Components necessary to generate math expressions."""
 
-    equations: Equations = Equations()
+    equations: Equations
     """Constraint math equations."""
     sub_expressions: SubExpressions = SubExpressions()
     """Named sub-expressions."""
@@ -172,7 +172,7 @@ class GlobalExpression(MathIndexedComponent, MathEquationComponent):
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
     default: NumericVal = float("nan")
     """If set, will be the default value for the expression."""
-    equations: Equations = Equations()
+    equations: Equations
     """Global expression math equations."""
     sub_expressions: SubExpressions = SubExpressions()
     """Global expression named sub-expressions."""
