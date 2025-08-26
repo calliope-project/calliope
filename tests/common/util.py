@@ -10,6 +10,7 @@ def build_test_model(
     scenario=None,
     model_file="model.yaml",
     data_table_dfs=None,
+    pre_validate_math_strings: bool = True,
     **init_kwargs,
 ):
     """Get the Calliope model object of a test model."""
@@ -18,6 +19,7 @@ def build_test_model(
         override_dict=override_dict,
         scenario=scenario,
         data_table_dfs=data_table_dfs,
+        pre_validate_math_strings=pre_validate_math_strings,
         **init_kwargs,
     )
 

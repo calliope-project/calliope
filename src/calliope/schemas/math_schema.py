@@ -3,9 +3,9 @@
 """Schema for Calliope mathematical definition."""
 
 from collections.abc import Iterable
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from calliope.schemas.general import (
     AttrStr,
@@ -86,7 +86,7 @@ class Lookup(MathComponent):
     """
 
 
-class MathIndexedComponent(MathComponent):
+class MathIndexedComponent(CalliopeBaseModel):
     """Generic indexed component class."""
 
     foreach: UniqueList[AttrStr] = Field(default_factory=list)
@@ -110,7 +110,7 @@ class SubExpressions(CalliopeDictModel):
     root: dict[AttrStr, Equations] = Field(default_factory=dict)
 
 
-class MathEquationComponent(CalliopeBaseModel):
+class MathEquationComponent(MathComponent):
     """Components necessary to generate math expressions."""
 
     equations: Equations = Equations()
@@ -119,6 +119,13 @@ class MathEquationComponent(CalliopeBaseModel):
     """Named sub-expressions."""
     slices: SubExpressions = SubExpressions()
     """Named index slices."""
+
+    @model_validator(mode="after")
+    def must_have_equations_if_active(self) -> Self:
+        """Ensure that equations are defined if the component is active."""
+        if self.active and not self.equations:
+            raise ValueError("Must have equations defined if component is active.")
+        return self
 
 
 class Constraint(MathIndexedComponent, MathEquationComponent):
@@ -195,7 +202,7 @@ class Bounds(CalliopeBaseModel):
     """Decision variable lower bound, either as a reference to an input parameter or as a number."""
 
 
-class Variable(MathIndexedComponent):
+class Variable(MathIndexedComponent, MathComponent):
     """Schema for optimisation problem variables.
 
     A decision variable must be referenced in at least one constraint or in the
@@ -227,7 +234,7 @@ class Variable(MathIndexedComponent):
         return SubExpressions()
 
 
-class Objective(MathComponent, MathEquationComponent):
+class Objective(MathEquationComponent):
     """Schema for optimisation problem objectives.
 
     Only one objective, the one referenced in model configuration `build.objective`

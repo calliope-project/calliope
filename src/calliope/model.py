@@ -282,7 +282,7 @@ class Model:
             backend_input = self.inputs
 
         self.backend = backend.get_model_backend(
-            self.config.build.update({"mode": mode}), backend_input, build_math
+            self.config.build, backend_input, build_math
         )
         self.backend.add_optimisation_components()
         self.math = self.math.update({"build": build_math.model_dump()})

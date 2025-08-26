@@ -6,7 +6,7 @@ overrides:
   milp:
     config:
       init.name: "Urban-scale example model with MILP"
-      build.extra_math: ["milp", "additional_math"]
+      init.extra_math: ["milp", "additional_math"]
       solve.solver_options: { mipgap: 0.05 }
     techs:
       # --8<-- [start:chp]
