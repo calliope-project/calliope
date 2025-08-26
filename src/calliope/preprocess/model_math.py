@@ -43,7 +43,9 @@ def initialise_math_paths(
     """
     LOGGER.info("Math init | loading pre-defined math.")
 
-    math_dataset = AttrDict({name.stem: str(name) for name in MATH_FILE_DIR.iterdir()})
+    math_dataset = AttrDict(
+        {Path(name).stem: str(name) for name in MATH_FILE_DIR.iterdir()}
+    )
     math_dataset["base"] = math_dataset[BASE_DEFAULT]
 
     if extra_math is not None:

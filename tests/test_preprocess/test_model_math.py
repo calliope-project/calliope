@@ -74,7 +74,7 @@ class TestInitMath:
         with pytest.raises(
             exceptions.ModelWarning, match="Overwriting pre-defined 'plan' math."
         ):
-            model_math.initialise_math(extra_math, def_path)
+            model_math.initialise_math_paths(extra_math, def_path)
 
 
 class TestBuildMath:
