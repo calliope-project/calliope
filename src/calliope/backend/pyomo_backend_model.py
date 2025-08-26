@@ -390,7 +390,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         obj_type_singular = obj_type.removesuffix("s")
 
         input_da = getattr(self, f"get_{obj_type_singular}")(name)
-        input_da = self.inputs.get(name, xr.DataArray(np.nan))
         missing_dims_in_new_vals = set(input_da.dims).difference(new_values.dims)
         missing_dims_in_orig_vals = set(new_values.dims).difference(input_da.dims)
         refs_to_update: set = set()

@@ -18,7 +18,6 @@ def build_test_model(
         override_dict=override_dict,
         scenario=scenario,
         data_table_dfs=data_table_dfs,
-        pre_validate_math_strings=False,
         **init_kwargs,
     )
 
