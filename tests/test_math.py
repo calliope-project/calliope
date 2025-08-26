@@ -378,6 +378,14 @@ class CustomMathExamples(ABC):
             f"lp_files_{self.YAML_FILEPATH.removesuffix('.yaml')}"
         )
 
+    @pytest.fixture(scope="class")
+    def all_custom_components(self, custom_math) -> dict[str, list[str]]:
+        """Per-component lists in a custom math file."""
+        custom_math_lists = {
+            component: list(custom_math[component]) for component in custom_math
+        }
+        return custom_math_lists
+
     @pytest.fixture
     def build_and_compare(self, full_math, barebones_math_file, lp_temp_path):
         def _build_and_compare(
@@ -528,7 +536,7 @@ class TestAnnualEnergyBalance(CustomMathExamples):
 class TestMaxTimeVarying(CustomMathExamples):
     YAML_FILEPATH = "max_time_varying.yaml"
 
-    def test_max_time_varying_flow_cap(self, build_and_compare):
+    def test_max_time_varying_flow_cap(self, build_and_compare, all_custom_components):
         overrides = {
             "parameters": {
                 "flow_cap_max_relative_per_ts": {
@@ -545,16 +553,10 @@ class TestMaxTimeVarying(CustomMathExamples):
             "max_time_varying_flow_cap",
             "simple_supply,two_hours",
             overrides,
-            components={
-                "parameters": ["flow_cap_max_relative_per_ts"],
-                "constraints": ["max_time_varying_flow_cap"],
-            },
+            components=all_custom_components,
         )
 
 
-@pytest.mark.filterwarnings(
-    "ignore:(?s).*defines unrecognised constraint `turbine_type`:calliope.exceptions.ModelWarning"
-)
 class TestCHPHTP(CustomMathExamples):
     YAML_FILEPATH = "chp_htp.yaml"
 
@@ -573,7 +575,13 @@ class TestCHPHTP(CustomMathExamples):
                     "chp_extraction_line",
                     "chp_backpressure_line_min",
                     "balance_conversion",
-                ]
+                ],
+                "lookups": ["turbine_type"],
+                "parameters": [
+                    "power_loss_factor",
+                    "power_to_heat_ratio",
+                    "boiler_eff",
+                ],
             },
         )
 
@@ -592,7 +600,9 @@ class TestCHPHTP(CustomMathExamples):
                     "chp_divert_fuel_to_boiler",
                     "chp_backpressure_line_max",
                     "balance_conversion",
-                ]
+                ],
+                "lookups": ["turbine_type"],
+                "parameters": ["power_to_heat_ratio", "boiler_eff"],
             },
         )
 
@@ -606,7 +616,9 @@ class TestCHPHTP(CustomMathExamples):
             "simple_chp,two_hours",
             overrides,
             components={
-                "constraints": ["chp_backpressure_line_equals", "balance_conversion"]
+                "constraints": ["chp_backpressure_line_equals", "balance_conversion"],
+                "lookups": ["turbine_type"],
+                "parameters": ["power_to_heat_ratio", "boiler_eff"],
             },
         )
 
@@ -614,9 +626,6 @@ class TestCHPHTP(CustomMathExamples):
 class TestShareAllTimesteps(CustomMathExamples):
     YAML_FILEPATH = "share_all_timesteps.yaml"
 
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*defines unrecognised constraint `demand_share_equals`:calliope.exceptions.ModelWarning"
-    )
     def test_demand_share_equals_per_tech(self, build_and_compare):
         overrides = {
             "nodes.a.techs.test_supply_elec.demand_share_equals": 0.5,
@@ -624,12 +633,16 @@ class TestShareAllTimesteps(CustomMathExamples):
             "parameters": {"demand_share_tech": "test_demand_elec"},
         }
         build_and_compare(
-            "demand_share_equals_per_tech", "simple_supply,two_hours", overrides
+            "demand_share_equals_per_tech",
+            "simple_supply,two_hours",
+            overrides,
+            components={
+                "constraints": ["demand_share_equals_per_tech"],
+                "parameters": ["demand_share_equals"],
+                "lookups": ["demand_share_tech"],
+            },
         )
 
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*defines unrecognised constraint `supply_share_equals`:calliope.exceptions.ModelWarning"
-    )
     def test_supply_share_equals_per_tech(self, build_and_compare):
         overrides = {
             "nodes.a.techs.test_supply_elec.supply_share_equals": 0.5,
@@ -640,15 +653,17 @@ class TestShareAllTimesteps(CustomMathExamples):
             "supply_share_equals_per_tech",
             "simple_supply_and_supply_plus,two_hours",
             overrides,
+            components={
+                "constraints": ["supply_share_equals_per_tech"],
+                "parameters": ["supply_share_equals"],
+                "lookups": ["supply_share_carrier"],
+            },
         )
 
 
 class TestSharePerTimestep(CustomMathExamples):
     YAML_FILEPATH = "share_per_timestep.yaml"
 
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*defines unrecognised constraint `demand_share_per_timestep_equals`:calliope.exceptions.ModelWarning"
-    )
     def test_demand_share_per_timestep_equals_per_tech(self, build_and_compare):
         overrides = {
             "nodes.a.techs.test_supply_elec.demand_share_per_timestep_equals": 0.5,
@@ -659,6 +674,11 @@ class TestSharePerTimestep(CustomMathExamples):
             "demand_share_per_timestep_equals_per_tech",
             "simple_supply,two_hours",
             overrides,
+            components={
+                "constraints": ["demand_share_per_timestep_equals_per_tech"],
+                "lookups": ["demand_share_tech"],
+                "parameters": ["demand_share_per_timestep_equals"],
+            },
         )
 
     @pytest.mark.filterwarnings(
@@ -674,6 +694,11 @@ class TestSharePerTimestep(CustomMathExamples):
             "supply_share_per_timestep_equals_per_tech",
             "simple_supply_and_supply_plus,two_hours",
             overrides,
+            components={
+                "constraints": ["supply_share_per_timestep_equals_per_tech"],
+                "lookups": ["supply_share_carrier"],
+                "parameters": ["supply_share_per_timestep_equals"],
+            },
         )
 
 
@@ -700,6 +725,8 @@ class TestDemandSharePerTimestepDecision(CustomMathExamples):
                     "demand_share_per_timestep_decision_main_min",
                     "demand_share_per_timestep_decision_main_max",
                 ],
+                "lookups": ["decide_demand_share", "demand_share_carrier"],
+                "parameters": ["demand_share_relaxation"],
                 "variables": ["demand_share_per_timestep_decision"],
             },
         )
@@ -719,6 +746,13 @@ class TestDemandSharePerTimestepDecision(CustomMathExamples):
             "demand_share_per_timestep_decision_sum",
             "conversion_and_conversion_plus,two_hours",
             overrides,
+            components={
+                "constraints": ["demand_share_per_timestep_decision_sum"],
+                "variables": ["demand_share_per_timestep_decision"],
+                "lookups": ["decide_demand_share"],
+                "parameters": ["demand_share_limit"],
+                "checks": ["demand_share_is_fraction"],
+            },
         )
 
 
@@ -726,7 +760,7 @@ class TestPiecewiseCosts(CustomMathExamples):
     YAML_FILEPATH = "piecewise_linear_costs.yaml"
     EXTRA_MATH = ["milp"]
 
-    def test_piecewise(self, build_and_compare):
+    def test_piecewise(self, build_and_compare, all_custom_components):
         overrides = {
             "techs.test_supply_elec.lifetime": 10,
             "techs.test_supply_elec.cost_interest_rate": {
@@ -751,18 +785,14 @@ class TestPiecewiseCosts(CustomMathExamples):
             "piecewise_cost_investment",
             "supply_purchase,two_hours",
             overrides,
-            components={
-                "constraints": ["piecewise_costs"],
-                "variables": ["piecewise_cost_investment"],
-                "global_expressions": ["cost_investment"],
-            },
+            components=all_custom_components,
         )
 
 
 class TestSOS2PiecewiseCosts(CustomMathExamples):
     YAML_FILEPATH = "sos2_piecewise_linear_costs.yaml"
 
-    def test_piecewise(self, build_and_compare):
+    def test_piecewise(self, build_and_compare, all_custom_components):
         overrides = {
             "techs.test_supply_elec.lifetime": 10,
             "techs.test_supply_elec.cost_interest_rate": {
@@ -787,10 +817,7 @@ class TestSOS2PiecewiseCosts(CustomMathExamples):
             "sos2_piecewise_cost_investment",
             "supply_purchase,two_hours",
             overrides,
-            components={
-                "piecewise_constraints": ["sos2_piecewise_costs"],
-                "variables": ["piecewise_cost_investment"],
-            },
+            components=all_custom_components,
         )
 
 
@@ -798,7 +825,7 @@ class TestPiecewiseEfficiency(CustomMathExamples):
     YAML_FILEPATH = "piecewise_linear_efficiency.yaml"
     EXTRA_MATH = ["milp"]
 
-    def test_piecewise(self, build_and_compare):
+    def test_piecewise(self, build_and_compare, all_custom_components):
         overrides = {
             "parameters": {
                 "flow_eff_piecewise_slopes": {
@@ -814,7 +841,10 @@ class TestPiecewiseEfficiency(CustomMathExamples):
             }
         }
         build_and_compare(
-            "piecewise_efficiency", "conversion_milp,two_hours", overrides
+            "piecewise_efficiency",
+            "conversion_milp,two_hours",
+            overrides,
+            components=all_custom_components,
         )
 
 
@@ -841,6 +871,7 @@ class TestFuelDist(CustomMathExamples):
             components={
                 "constraints": ["system_balance", "restrict_total_imports_and_exports"],
                 "variables": ["fuel_distributor"],
+                "lookups": ["allow_fuel_distribution"],
             },
         )
 
@@ -869,7 +900,12 @@ class TestFuelDist(CustomMathExamples):
             "fuel_distribution,two_hours",
             overrides,
             components={
-                "constraints": ["restrict_nodal_imports", "restrict_nodal_exports"]
+                "constraints": ["restrict_nodal_imports", "restrict_nodal_exports"],
+                "parameters": [
+                    "fuel_distributor",
+                    "fuel_import_max",
+                    "fuel_export_max",
+                ],
             },
         )
 
@@ -895,6 +931,7 @@ class TestFuelDist(CustomMathExamples):
             components={
                 "objectives": ["min_cost_optimisation"],
                 "global_expressions": ["cost_var_fuel_distribution"],
+                "parameters": ["cost_fuel_distribution"],
             },
         )
 
@@ -903,9 +940,6 @@ class TestUptimeDowntime(CustomMathExamples):
     YAML_FILEPATH = "uptime_downtime_limits.yaml"
     EXTRA_MATH = ["milp"]
 
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*defines unrecognised constraint `capacity_factor:calliope.exceptions.ModelWarning"
-    )
     def test_annual_capacity_factor(self, build_and_compare):
         overrides = {
             "techs.test_supply_elec.capacity_factor_min": 0.8,
@@ -919,15 +953,13 @@ class TestUptimeDowntime(CustomMathExamples):
                 "constraints": [
                     "annual_capacity_factor_min",
                     "annual_capacity_factor_max",
-                ]
+                ],
+                "parameters": ["capacity_factor_min", "capacity_factor_max"],
             },
         )
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*This parameter will only take effect if you have already defined:calliope.exceptions.ModelWarning"
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*Possibly missing data on the timesteps dimension:calliope.exceptions.ModelWarning"
     )
     def test_downtime(self, build_and_compare):
         overrides = {
@@ -943,16 +975,23 @@ class TestUptimeDowntime(CustomMathExamples):
             "downtime_period",
             "simple_supply,two_hours",
             overrides,
-            components={"constraints": ["downtime_period"]},
+            components={
+                "constraints": ["downtime_period"],
+                "lookups": ["downtime_periods"],
+            },
         )
 
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*defines unrecognised constraint `uptime_limit`:calliope.exceptions.ModelWarning"
-    )
     def test_downtime_decision(self, build_and_compare):
         overrides = {"techs.test_supply_elec.uptime_limit": 1}
         build_and_compare(
-            "downtime_period_decision", "supply_milp,two_hours", overrides
+            "downtime_period_decision",
+            "supply_milp,two_hours",
+            overrides,
+            components={
+                "constraints": ["downtime_period_decision"],
+                "lookups": ["downtime_periods"],
+                "parameters": ["uptime_limit"],
+            },
         )
 
 
@@ -996,6 +1035,7 @@ class TestNetImportShare(CustomMathExamples):
             components={
                 "constraints": ["net_import_share_max"],
                 "global_expressions": ["flow_out_transmission_techs"],
+                "parameters": ["net_import_share"],
             },
         )
 
@@ -1004,6 +1044,11 @@ class TestNetImportShare(CustomMathExamples):
             "net_annual_import_share_max",
             "simple_supply,two_hours",
             self.shared_overrides,
+            components={
+                "constraints": ["net_annual_import_share_max"],
+                "global_expressions": ["flow_out_transmission_techs"],
+                "parameters": ["net_import_share"],
+            },
         )
 
     def test_net_annual_import_share_max_node_group(self, build_and_compare):
@@ -1011,4 +1056,9 @@ class TestNetImportShare(CustomMathExamples):
             "net_annual_import_share_max_node_group",
             "simple_supply,two_hours",
             self.shared_overrides,
+            components={
+                "constraints": ["net_annual_import_share_max_node_group"],
+                "global_expressions": ["flow_out_transmission_techs"],
+                "parameters": ["net_import_share"],
+            },
         )
