@@ -14,7 +14,7 @@ from calliope.schemas import math_schema
 from ..common.util import build_test_model as build_model
 from ..common.util import check_error_or_warning
 
-PRE_DEFINED_MATH = ["plan", "operate", "spores", "storage_inter_cluster"]
+PRE_DEFINED_MATH = ["plan", "operate", "spores", "storage_inter_cluster", "milp"]
 
 
 @pytest.fixture(scope="module")

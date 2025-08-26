@@ -127,6 +127,8 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
         self.inputs = self._add_inputs(inputs)
+        self.objective: str = self.config.objective
+
         self._check_inputs()
 
     def add_lookup(

@@ -1520,19 +1520,15 @@ class TestClusteringConstraints:
         ]
 
     def cluster_model(
-        self,
-        how="mean",
-        storage_inter_cluster=True,
-        cyclic=False,
-        storage_initial=False,
+        self, storage_inter_cluster=True, cyclic=False, storage_initial=False
     ):
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
             "config.init.time_cluster": "cluster_days_param",
-            "config.build.extra_math": (
+            "config.init.extra_math": (
                 ["storage_inter_cluster"] if storage_inter_cluster else []
             ),
-            "config.build.cyclic_storage": cyclic,
+            "parameters.cyclic_storage": cyclic,
             "data_tables.cluster_days": {
                 "data": "data_tables/cluster_days.csv",
                 "rows": "timesteps",

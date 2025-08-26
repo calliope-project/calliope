@@ -7,7 +7,7 @@ from pathlib import Path
 
 from calliope.model import read_yaml
 
-_EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope") / "example_models")
+_EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope")) / "example_models"
 
 
 def national_scale(*args, **kwargs):
@@ -40,3 +40,8 @@ def milp(*args, **kwargs):
 def operate(*args, **kwargs):
     """Returns the built-in urban-scale example model in operate mode."""
     return urban_scale(scenario="operate", *args, **kwargs)
+
+
+def operate_milp(*args, **kwargs):
+    """Returns the built-in urban-scale example model in operate mode with MILP constraints enabled."""
+    return urban_scale(scenario="operate,milp", *args, **kwargs)
