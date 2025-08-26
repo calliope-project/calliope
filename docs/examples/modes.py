@@ -194,7 +194,7 @@ spores_results_da.flow_cap.to_series().dropna().unstack("spores")
 fig_flows_plan = plot_flows(
     model_plan.results.sel(timesteps=model_operate.results.timesteps)
 )
-fig_flows_plan.update_layout(title="Plan mode flows")
+fig_flows_plan.update_layout(title="Base mode flows")
 
 
 # %%
@@ -208,7 +208,7 @@ fig_flows_operate.update_layout(title="Operate mode flows")
 
 # %%
 fig_flows_plan = plot_capacity(model_plan.results)
-fig_flows_plan.update_layout(title="Plan mode capacities")
+fig_flows_plan.update_layout(title="Base mode capacities")
 
 # %%
 fig_flows_spores = plot_capacity(model_spores.results, facet_col="spores")

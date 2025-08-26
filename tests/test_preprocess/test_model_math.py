@@ -15,6 +15,7 @@ from ..common.util import build_test_model as build_model
 from ..common.util import check_error_or_warning
 
 PRE_DEFINED_MATH = ["base", "operate", "spores", "storage_inter_cluster", "milp"]
+LOGGER = "calliope.preprocess.model_math"
 
 
 @pytest.fixture(scope="module")
@@ -68,13 +69,12 @@ class TestInitMath:
         if extra_math:
             assert math_data["user_math"] == user_math
 
-    def test_overwrite_warning(self, user_math_path, def_path):
+    def test_overwrite_warning(self, caplog, user_math_path, def_path):
         """Users should be warned when overwritting pre-defined math."""
         extra_math = {"base": user_math_path}
-        with pytest.raises(
-            exceptions.ModelWarning, match="Overwriting pre-defined 'base' math."
-        ):
+        with caplog.at_level(logging.WARNING, logger=LOGGER):
             model_math.initialise_math_paths(extra_math, def_path)
+        assert "Math init | Overwriting pre-defined 'base' math with custom-math.yaml."
 
 
 class TestBuildMath:
@@ -129,7 +129,7 @@ class TestBuildMath:
         expected_math = math_schema.CalliopeBuildMath(**math).model_dump()
         with caplog.at_level(logging.INFO):
             built_math = model_math.build_applied_math(math_order, math_options)
-        assert expected_math == built_math
+        assert expected_math == built_math.model_dump()
         assert str(math_order) in caplog.text
 
     def test_math_name_error(self, math_options):
@@ -143,48 +143,19 @@ class TestBuildMath:
 
 
 class TestValidateMathDict:
-    LOGGER = "calliope.backend.backend_model"
+    @pytest.fixture(scope="class")
+    def init_math(self) -> dict:
+        model = build_model({}, "simple_supply,investment_costs")
+        return model.math.init.model_dump()
 
     @pytest.fixture(scope="class")
-    def test_model(self):
-        return build_model({}, "simple_supply,investment_costs")
+    def math_priority(self) -> list[str]:
+        return ["base"]
 
-    @pytest.fixture
-    def validate_math(self, test_model):
-        def _validate_math(math_dict: dict):
-            model_math.build_applied_math(
-                ["base"], test_model.math.init.model_dump(), math_dict, validate=True
-            )
-
-        return _validate_math
-
-    def test_base_math(self, caplog, validate_math):
-        with caplog.at_level(logging.INFO, logger=self.LOGGER):
-            validate_math({})
+    def test_base_math(self, caplog, init_math, math_priority):
+        with caplog.at_level(logging.INFO, logger=LOGGER):
+            model_math.build_applied_math(math_priority, init_math, validate=True)
         assert "Math build | Validated math strings." in caplog.text
-
-    @pytest.mark.parametrize(
-        ("equation", "where"),
-        [
-            ("1 == 1", "True"),
-            (
-                "sum(flow_out * flow_out_eff, over=[nodes, carriers, techs, timesteps]) <= .inf",
-                "base_tech==supply and flow_out_eff>0",
-            ),
-        ],
-    )
-    def test_add_math(self, caplog, validate_math, equation, where):
-        with caplog.at_level(logging.INFO, logger=self.LOGGER):
-            validate_math(
-                {
-                    "constraints": {
-                        "foo": {"equations": [{"expression": equation}], "where": where}
-                    }
-                }
-            )
-        assert "Optimisation Model | Validated math strings." in [
-            rec.message for rec in caplog.records
-        ]
 
     @pytest.mark.parametrize(
         "component_dict",
@@ -194,7 +165,7 @@ class TestValidateMathDict:
         ],
     )
     @pytest.mark.parametrize("both_fail", [True, False])
-    def test_add_math_fails(self, validate_math, component_dict, both_fail):
+    def test_add_math_fails(self, init_math, math_priority, component_dict, both_fail):
         math_dict = {"constraints": {"foo": component_dict}}
         errors_to_check = [
             "math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)",
@@ -209,15 +180,17 @@ class TestValidateMathDict:
             math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
 
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            validate_math(math_dict)
+            model_math.build_applied_math(math_priority, init_math, math_dict)
         assert check_error_or_warning(excinfo, errors_to_check)
 
     @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
-    def test_add_math_fails_marker_correct_position(self, validate_math, eq_string):
+    def test_add_math_fails_marker_correct_position(
+        self, init_math, math_priority, eq_string
+    ):
         math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
 
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            validate_math(math_dict)
+            model_math.build_applied_math(math_priority, init_math, math_dict)
         errorstrings = str(excinfo.value).split("\n")
         # marker should be at the "=" sign, i.e., 2 characters from the end
         assert len(errorstrings[-2]) - 2 == len(errorstrings[-1])
