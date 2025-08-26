@@ -99,7 +99,7 @@ class InternalMathFiles(ABC):
 
     @pytest.fixture(scope="class")
     def full_math(self):
-        return create_full_math(["plan"] + self.EXTRA_MATH)
+        return create_full_math(["base"] + self.EXTRA_MATH)
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, full_math, tmp_path_factory) -> str:
@@ -122,7 +122,7 @@ class InternalMathFiles(ABC):
 
 
 class TestBaseMath(InternalMathFiles):
-    FILENAME = "plan"
+    FILENAME = "base"
     TEST_REGISTER = set()
     EXTRA_MATH = []
 
@@ -359,7 +359,7 @@ class CustomMathExamples(ABC):
 
     @pytest.fixture(scope="class")
     def full_math(self, custom_math):
-        return create_full_math(["plan"] + self.EXTRA_MATH, custom_math)
+        return create_full_math(["base"] + self.EXTRA_MATH, custom_math)
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, tmp_path_factory, full_math) -> str:

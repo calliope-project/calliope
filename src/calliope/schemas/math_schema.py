@@ -321,7 +321,7 @@ class CalliopeBuildMath(CalliopeBaseModel):
 
     Contains mathematical programming components available for optimising with Calliope.
     Can contain partial definitions if they are meant to be layered on top of another.
-    E.g.: layering 'plan' and 'operate' math.
+    E.g.: layering 'base' and 'operate' math.
     """
 
     model_config = {"title": "Model math schema"}
