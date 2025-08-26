@@ -59,9 +59,9 @@ class TestInitMath:
 
     def test_pre_defined_load(self, math_data):
         """Internal files should be loaded correctly."""
-        for filename in PRE_DEFINED_MATH:
-            expected = read_rich_yaml(filename)
-            math_data[filename] == expected
+        for file in model_math.MATH_FILE_DIR.iterdir():
+            expected = read_rich_yaml(file)
+            math_data[file.stem] == expected
 
     def test_extra_load(self, math_data, extra_math, user_math):
         """Extra math should be loaded with no alterations."""
