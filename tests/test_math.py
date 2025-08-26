@@ -509,7 +509,13 @@ class TestMaxTimeVarying(CustomMathExamples):
             }
         }
         build_and_compare(
-            "max_time_varying_flow_cap", "simple_supply,two_hours", overrides
+            "max_time_varying_flow_cap",
+            "simple_supply,two_hours",
+            overrides,
+            components={
+                "parameters": ["flow_cap_max_relative_per_ts"],
+                "constraints": ["max_time_varying_flow_cap"],
+            },
         )
 
 
