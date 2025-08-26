@@ -98,7 +98,7 @@ class InternalMathFiles(ABC):
 
     @pytest.fixture(scope="class")
     def full_math(self):
-        return create_full_math(["base"] + self.EXTRA_MATH).model_dump()
+        return create_full_math(["base"] + self.EXTRA_MATH)
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, full_math, tmp_path_factory) -> str:
