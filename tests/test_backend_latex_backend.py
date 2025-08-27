@@ -516,9 +516,9 @@ class TestLatexBackendModel:
                     === "YAML"
 
                         ```yaml
+                        description: foobar
                         equations:
                         - expression: 1 + 2
-                        description: foobar
                         default: 0
                         ```
                     """
@@ -565,9 +565,9 @@ class TestLatexBackendModel:
                     === "YAML"
 
                         ```yaml
+                        description: foobar
                         equations:
                         - expression: no_dims + 1
-                        description: foobar
                         default: 0
                         ```
 
