@@ -16,7 +16,7 @@ class TestGlobalExpressions:
                 # default = 2
                 "expr2": {"equations": [{"expression": "x - y"}], "order": 1},
                 # default = 3
-                "expr3": {"equations": [{"expression": "x / y"}]},
+                "expr3": {"equations": [{"expression": "x / y"}], "order": 3},
             }
         }
         # Validate the schema
