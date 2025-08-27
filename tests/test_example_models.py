@@ -322,7 +322,9 @@ class TestUrbanScaleExampleModelSenseChecks:
     @pytest.mark.time_intensive
     def test_operate_milp_results(self):
         """Ensure mixing operate and MILP math works adequately."""
-        model = calliope.examples.operate_milp(time_subset=["2005-01-01", "2005-01-01"])
+        model = calliope.examples.operate_milp(
+            subset={"timesteps": ["2005-01-01", "2005-01-01"]}
+        )
 
         model.build()
         model.solve()
