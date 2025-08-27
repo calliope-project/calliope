@@ -48,11 +48,11 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 
 # %%
 # We subset to the same time range as operate mode
-model_plan = calliope.examples.national_scale(
+model_base = calliope.examples.national_scale(
     subset={"timesteps": ["2005-01-01", "2005-01-10"]}
 )
-model_plan.build()
-model_plan.solve()
+model_base.build()
+model_base.solve()
 
 # %% [markdown]
 # ## Running in 'operate' mode.
@@ -107,7 +107,7 @@ model_spores.results.spores_score_cumulative.to_series().where(
 # %%
 # We set the color mapping to use in all our plots by extracting the colors defined in the technology definitions of our model.
 # We also create some reusable plotting functions.
-colors = model_plan.inputs.color.to_series().to_dict()
+colors = model_base.inputs.color.to_series().to_dict()
 
 
 def plot_flows(results: xr.Dataset) -> go.Figure:
@@ -191,10 +191,10 @@ spores_results_da.flow_cap.to_series().dropna().unstack("spores")
 # Note how flows do not match as the rolling horizon makes it difficult to make the correct storage charge/discharge decisions.
 
 # %%
-fig_flows_plan = plot_flows(
-    model_plan.results.sel(timesteps=model_operate.results.timesteps)
+fig_flows_base = plot_flows(
+    model_base.results.sel(timesteps=model_operate.results.timesteps)
 )
-fig_flows_plan.update_layout(title="Base mode flows")
+fig_flows_base.update_layout(title="Base mode flows")
 
 
 # %%
@@ -207,8 +207,8 @@ fig_flows_operate.update_layout(title="Operate mode flows")
 # Note how the `0` SPORE is the same as `base` mode and then results deviate considerably.
 
 # %%
-fig_flows_plan = plot_capacity(model_plan.results)
-fig_flows_plan.update_layout(title="Base mode capacities")
+fig_flows_base = plot_capacity(model_base.results)
+fig_flows_base.update_layout(title="Base mode capacities")
 
 # %%
 fig_flows_spores = plot_capacity(model_spores.results, facet_col="spores")

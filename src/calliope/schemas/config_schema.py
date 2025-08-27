@@ -100,6 +100,7 @@ class Init(CalliopeBaseModel):
     extra_math: UniqueList[str] = Field(default_factory=list)
     """
     List of math entries to be applied on top of the `base` math and `mode` math.
+    The list items must have been defined as keys in `math_paths` (see below).
     Math order: base -> mode -> extra
     """
 

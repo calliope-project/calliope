@@ -45,7 +45,7 @@ class Dimension(MathComponent):
     """Schema for named dimension."""
 
     dtype: Literal["string", "datetime", "integer", "float"]
-    """The dimension items data type"""
+    """The data type of this dimension's items."""
     ordered: bool = False
     """If True, the order of the dimension items is meaningful (e.g. chronological time)."""
     iterator: str
