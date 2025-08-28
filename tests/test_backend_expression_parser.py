@@ -177,6 +177,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
         "where_array": xr.DataArray(True),
         "references": set(),
         "backend_interface": dummy_pyomo_backend_model,
+        "math": dummy_pyomo_backend_model.math,
         "input_data": dummy_pyomo_backend_model.inputs,
         "return_type": "array",
     }
@@ -881,7 +882,7 @@ class TestEquationParserComparison:
 
 class TestAsMathString:
     @pytest.fixture
-    def latex_eval_kwargs(self, dummy_latex_backend_model):
+    def latex_eval_kwargs(self, dummy_latex_backend_model, dummy_model_math):
         return {
             "helper_functions": helper_functions._registry["expression"],
             "return_type": "math_string",
@@ -891,6 +892,7 @@ class TestAsMathString:
             "where_array": None,
             "references": set(),
             "backend_interface": dummy_latex_backend_model,
+            "math": dummy_model_math,
             "input_data": dummy_latex_backend_model.inputs,
         }
 
@@ -919,27 +921,27 @@ class TestAsMathString:
             ),
             (
                 "sliced_param",
-                "with_inf[node=bar]",
+                "with_inf[nodes=bar]",
                 r"\textit{with_inf}_\text{node=bar,tech}",
             ),
             (
                 "sliced_param",
-                "only_techs[tech=foobar]",
+                "only_techs[techs=foobar]",
                 r"\textit{only_techs}_\text{tech=foobar}",
             ),
             (
                 "sliced_param",
-                "multi_dim_var[node=bar]",
+                "multi_dim_var[nodes=bar]",
                 r"\textbf{multi_dim_var}_\text{node=bar,tech}",
             ),
             (
                 "sliced_param",
-                "with_inf[node=bar, tech=foobar]",
+                "with_inf[nodes=bar, techs=foobar]",
                 r"\textit{with_inf}_\text{node=bar,tech=foobar}",
             ),
             (
                 "sliced_param",
-                "multi_dim_var[node=bar, tech=foobar]",
+                "multi_dim_var[nodes=bar, techs=foobar]",
                 r"\textbf{multi_dim_var}_\text{node=bar,tech=foobar}",
             ),
             ("helper_function", "dummy_func_1(1)", r"1 * 10"),
@@ -956,7 +958,7 @@ class TestAsMathString:
             ("arithmetic", "1 + with_inf", r"1 + \textit{with_inf}_\text{node,tech}"),
             (
                 "arithmetic",
-                "multi_dim_var[node=bar] + with_inf",
+                "multi_dim_var[nodes=bar] + with_inf",
                 r"\textbf{multi_dim_var}_\text{node=bar,tech} + \textit{with_inf}_\text{node,tech}",
             ),
             # We ignore zeros that make no difference

@@ -174,6 +174,8 @@ def generate_custom_math_documentation(
     full_del = []
     expr_del = []
     for component_group, component_group_dict in model.math.build.model_dump().items():
+        if component_group == "checks":
+            continue
         for name, component_dict in component_group_dict.items():
             if name in base_documentation.math[component_group]:
                 if not component_dict.get("active", True):

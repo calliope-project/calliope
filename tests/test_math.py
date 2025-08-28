@@ -53,10 +53,8 @@ def create_pruned_math_file(math: dict, filepath: str | Path):
     io.to_yaml(pruned_math, filepath)
 
 
-def build_lp_file(
-    model: Model, test_math: dict, outfile: str | Path, objective: str = "dummy_obj"
-):
-    model.build(add_math_dict=test_math, objective=objective)
+def build_lp_file(model: Model, outfile: str | Path, objective: str = "dummy_obj"):
+    model.build(objective=objective)
     model.backend.verbose_strings()
     model.backend.to_lp(outfile)
 
@@ -132,91 +130,100 @@ class TestBaseMath(InternalMathFiles):
 
     def test_storage_max(self, full_math, lp_temp_path, barebones_config):
         self.TEST_REGISTER.add("constraints.storage_max")
-        model = util.build_test_model(
-            scenario="simple_storage,two_hours,investment_costs", **barebones_config
-        )
         custom_math = {
             "constraints": {"storage_max": full_math.constraints["storage_max"]}
         }
+        model = util.build_test_model(
+            scenario="simple_storage,two_hours,investment_costs",
+            math_dict=custom_math,
+            **barebones_config,
+        )
         lp_file = lp_temp_path / "storage_max.lp"
-        build_lp_file(model, custom_math, lp_file)
+        build_lp_file(model, lp_file)
         compare_lps_new(lp_file)
 
     def test_flow_out_max(self, full_math, lp_temp_path, barebones_config):
         self.TEST_REGISTER.add("constraints.flow_out_max")
-        model = util.build_test_model(
-            {}, "simple_supply,two_hours,investment_costs", **barebones_config
-        )
-
         custom_math = {
             "constraints": {"flow_out_max": full_math.constraints["flow_out_max"]}
         }
+        model = util.build_test_model(
+            {},
+            "simple_supply,two_hours,investment_costs",
+            math_dict=custom_math,
+            **barebones_config,
+        )
+
         lp_file = lp_temp_path / "flow_out_max.lp"
-        build_lp_file(model, custom_math, lp_file)
+        build_lp_file(model, lp_file)
         compare_lps_new(lp_file)
 
     def test_balance_conversion(self, full_math, lp_temp_path, barebones_config):
         self.TEST_REGISTER.add("constraints.balance_conversion")
-
-        model = util.build_test_model(
-            scenario="simple_conversion,two_hours,investment_costs", **barebones_config
-        )
         custom_math = {
             "constraints": {
                 "balance_conversion": full_math.constraints["balance_conversion"]
             }
         }
+        model = util.build_test_model(
+            scenario="simple_conversion,two_hours,investment_costs",
+            math_dict=custom_math,
+            **barebones_config,
+        )
         lp_file = lp_temp_path / "balance_conversion.lp"
-        build_lp_file(model, custom_math, lp_file)
+        build_lp_file(model, lp_file)
         compare_lps_new(lp_file)
 
     def test_source_max(self, full_math, lp_temp_path, barebones_config):
         self.TEST_REGISTER.add("constraints.source_max")
-        model = util.build_test_model(
-            {},
-            "simple_supply_plus,resample_two_days,investment_costs",
-            **barebones_config,
-        )
         custom_math = {
             "constraints": {"my_constraint": full_math.constraints["source_max"]}
         }
+        model = util.build_test_model(
+            {},
+            "simple_supply_plus,resample_two_days,investment_costs",
+            math_dict=custom_math,
+            **barebones_config,
+        )
         lp_file = lp_temp_path / "source_max.lp"
-        build_lp_file(model, custom_math, lp_file)
+        build_lp_file(model, lp_file)
         compare_lps_new(lp_file)
 
     def test_balance_transmission(self, full_math, lp_temp_path, barebones_config):
         """Test with the electricity transmission tech being one way only, while the heat transmission tech is the default two-way."""
         self.TEST_REGISTER.add("constraints.balance_transmission")
-        model = util.build_test_model(
-            {"techs.test_link_a_b_elec.one_way": True},
-            "simple_conversion,two_hours",
-            **barebones_config,
-        )
         custom_math = {
             "constraints": {
                 "my_constraint": full_math.constraints["balance_transmission"]
             }
         }
+        model = util.build_test_model(
+            {"techs.test_link_a_b_elec.one_way": True},
+            "simple_conversion,two_hours",
+            math_dict=custom_math,
+            **barebones_config,
+        )
         lp_file = lp_temp_path / "balance_transmission.lp"
-        build_lp_file(model, custom_math, lp_file)
+        build_lp_file(model, lp_file)
         compare_lps_new(lp_file)
 
     def test_balance_storage(self, full_math, lp_temp_path, barebones_config):
         """Test balance storage with one tech having and one tech not having per-tech cyclic storage."""
         self.TEST_REGISTER.add("constraints.balance_storage")
+        custom_math = {
+            "constraints": {"my_constraint": full_math.constraints["balance_storage"]}
+        }
         model = util.build_test_model(
             {
                 "nodes.a.techs.test_storage.cyclic_storage": True,
                 "nodes.b.techs.test_storage.cyclic_storage": False,
             },
             "simple_storage,two_hours",
+            math_dict=custom_math,
             **barebones_config,
         )
-        custom_math = {
-            "constraints": {"my_constraint": full_math.constraints["balance_storage"]}
-        }
         lp_file = lp_temp_path / "balance_storage.lp"
-        build_lp_file(model, custom_math, lp_file)
+        build_lp_file(model, lp_file)
         compare_lps_new(lp_file)
 
     @pytest.mark.parametrize("with_export", [True, False])
@@ -256,11 +263,6 @@ class TestBaseMath(InternalMathFiles):
                     },
                 }
             )
-        model = util.build_test_model(
-            override,
-            "conversion_and_conversion_plus,var_costs,two_hours",
-            **barebones_config,
-        )
         custom_math = {
             # need the expression defined in a constraint/objective for it to appear in the LP file bounds
             "objectives": {
@@ -274,9 +276,15 @@ class TestBaseMath(InternalMathFiles):
                 }
             }
         }
+        model = util.build_test_model(
+            override,
+            "conversion_and_conversion_plus,var_costs,two_hours",
+            math_dict=custom_math,
+            **barebones_config,
+        )
         suffix = "_with_export" if with_export else ""
         lp_file = lp_temp_path / f"cost_operation_variable{suffix}.lp"
-        build_lp_file(model, custom_math, lp_file, objective="foo")
+        build_lp_file(model, lp_file, objective="foo")
         compare_lps_new(lp_file)
 
 
@@ -331,11 +339,12 @@ class TestMILPMath(InternalMathFiles):
                 **overrides,
             },
             "simple_supply,two_hours,investment_costs",
+            math_dict=custom_math,
             **barebones_config,
         )
-        # compare_lps(model, custom_math, variable)
+
         lp_file = lp_temp_path / (variable + ".lp")
-        build_lp_file(model, custom_math, lp_file, objective="foo")
+        build_lp_file(model, lp_file, objective="foo")
         compare_lps_new(lp_file)
 
 
@@ -429,9 +438,10 @@ class CustomMathExamples(ABC):
                     **overrides,
                 },
                 scenario,
+                math_dict=custom_math,
             )
             lp_file = lp_temp_path / f"{filename}.lp"
-            build_lp_file(model, custom_math, lp_file, objective)
+            build_lp_file(model, lp_file, objective)
             compare_lps_new(lp_file)
 
         return _build_and_compare

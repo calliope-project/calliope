@@ -119,10 +119,11 @@ class Init(CalliopeBaseModel):
     - `storage_inter_cluster`: replaces the pre-defined storage inter-cluster math.
     """
 
-    pre_validate_math_strings: bool = Field(default=True)
+    pre_validate_math_strings: bool = Field(default=False)
     """
-    If true, the Calliope math definition will be scanned for parsing errors _before_ undertaking the much more expensive operation of building the optimisation problem.
-    You can switch this off (e.g., if you know there are no parsing errors) to reduce overall build time.
+    If true, the Calliope math definition will be scanned for parsing errors at model initialisation,
+    i.e., _before_ undertaking the much more expensive operation of building the optimisation problem.
+    It is switched off by default to reduce overall build time.
     """
 
 

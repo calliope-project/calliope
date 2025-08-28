@@ -7,6 +7,7 @@ import xarray as xr
 
 import calliope
 import calliope.backend
+from calliope.util import DATETIME_DTYPE
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -99,8 +100,9 @@ def solved_model_cls_multi_type_global_expression(backend) -> calliope.Model:
     m = build_model(
         {"techs.test_link_a_b_heat.active": False},
         "simple_supply,two_hours,investment_costs",
+        math_dict=new_global_expression,
     )
-    m.build(backend=backend, add_math_dict=new_global_expression)
+    m.build(backend=backend)
     m.solve()
     return m
 
@@ -354,8 +356,14 @@ class TestGetters:
         assert (
             expr.where(expr != "nan").to_series().dropna().str.contains("2005-").all()
         )
-        assert built_model_cls_longnames.backend._dataset.timesteps.dtype.kind == "M"
-        assert built_model_cls_longnames.backend.inputs.timesteps.dtype.kind == "M"
+        assert (
+            built_model_cls_longnames.backend._dataset.timesteps.dtype.kind
+            == DATETIME_DTYPE
+        )
+        assert (
+            built_model_cls_longnames.backend.inputs.timesteps.dtype.kind
+            == DATETIME_DTYPE
+        )
 
     def test_get_constraint_attrs(self, constraint):
         """Check a constraint has all expected attributes."""
@@ -841,8 +849,12 @@ class TestPiecewiseConstraints:
 
     @pytest.fixture(scope="class")
     def working_model(self, backend, working_params, working_math, add_math):
-        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
-        m.build(backend=backend, add_math_dict=add_math)
+        m = build_model(
+            working_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
+        )
+        m.build(backend=backend)
         m.backend.add_piecewise_constraint("foo", working_math)
         return m
 
@@ -893,9 +905,11 @@ class TestPiecewiseConstraints:
     ):
         """Expected error when parameter defining breakpoints isn't indexed over `breakpoints`."""
         m = build_model(
-            missing_breakpoint_dims, "simple_supply,two_hours,investment_costs"
+            missing_breakpoint_dims,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
         )
-        m.build(backend=backend, add_math_dict=add_math)
+        m.build(backend=backend)
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:
             m.backend.add_piecewise_constraint("bar", working_math)
         assert check_error_or_warning(

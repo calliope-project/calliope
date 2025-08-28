@@ -31,7 +31,7 @@ class TestListify:
         ("init.datetime_format", "ISO8601"),
         ("build.backend", "pyomo"),
         ("build.operate.window", "24h"),
-        ("init.pre_validate_math_strings", True),
+        ("init.pre_validate_math_strings", False),
     ],
 )
 class TestDotAttr:

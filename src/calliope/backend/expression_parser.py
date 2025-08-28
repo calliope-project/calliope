@@ -47,6 +47,7 @@ from calliope.exceptions import BackendError
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
+    from calliope.schemas.math_schema import CalliopeBuildMath
 
 pp.ParserElement.enablePackrat()
 
@@ -61,6 +62,7 @@ class EvalAttrs(TypedDict):
     slice_dict: dict
     sub_expression_dict: dict
     backend_interface: BackendModel
+    math: CalliopeBuildMath
     input_data: xr.DataArray
     references: set[str]
     helper_functions: dict[str, Callable]
@@ -465,6 +467,8 @@ class EvalFunction(EvalToArrayStr):
             evaluated = arg[0].eval(return_type, **self.eval_attrs)
         elif isinstance(arg, list):
             evaluated = [self._arg_eval(return_type, arg_) for arg_ in arg]
+        elif isinstance(arg, ListParser):
+            evaluated = arg.eval("array", **self.eval_attrs)
         else:
             evaluated = arg.eval(return_type, **self.eval_attrs)
         if isinstance(evaluated, xr.DataArray) and isinstance(arg, EvalGenericString):
@@ -609,7 +613,9 @@ class EvalSlicedComponent(EvalToArrayStr):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         evaluated, slices = self._eval("math_string")
-        singular_slice_refs = {k.removesuffix("s"): v for k, v in slices.items()}
+        singular_slice_refs = {
+            self.eval_attrs["math"].dimensions[k].iterator: v for k, v in slices.items()
+        }
         id_ = pp.Combine(
             pp.Word(pp.alphas, pp.alphanums)
             + pp.ZeroOrMore("_" + pp.Word(pp.alphanums))

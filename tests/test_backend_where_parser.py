@@ -95,10 +95,11 @@ def dummy_build_config():
 
 
 @pytest.fixture
-def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config):
+def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config, dummy_model_math):
     return {
         "input_data": dummy_pyomo_backend_model.inputs,
         "backend_interface": dummy_pyomo_backend_model,
+        "math": dummy_model_math,
         "helper_functions": helper_functions._registry["where"],
         "equation_name": "foo",
         "return_type": "array",
@@ -576,9 +577,12 @@ class TestParserMasking:
 
 class TestAsMathString:
     @pytest.fixture
-    def latex_eval_kwargs(self, eval_kwargs, dummy_latex_backend_model):
+    def latex_eval_kwargs(
+        self, eval_kwargs, dummy_latex_backend_model, dummy_model_math
+    ):
         eval_kwargs["return_type"] = "math_string"
         eval_kwargs["backend_interface"] = dummy_latex_backend_model
+        eval_kwargs["math"] = dummy_model_math
         return eval_kwargs
 
     @pytest.mark.parametrize(
@@ -594,7 +598,7 @@ class TestAsMathString:
                 "with_inf==True",
                 r"\textit{with_inf}_\text{node,tech}\mathord{==}\text{true}",
             ),
-            ("subset", "[foo, bar] in foos", r"\text{foo} \in \text{[foo,bar]}"),
+            ("subset", "[foo, bar] in techs", r"\text{tech} \in \text{[foo,bar]}"),
             ("where", "NOT no_dims", r"\neg (\exists (\textit{no_dims}))"),
             (
                 "where",

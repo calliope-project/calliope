@@ -3,6 +3,7 @@ import pytest  # noqa: F401
 
 from calliope import exceptions
 from calliope.io import read_rich_yaml
+from calliope.preprocess import time
 
 from .common.util import build_test_model
 
@@ -55,6 +56,52 @@ class TestTimeFormat:
             match="Time data 02/01/2005 00:00 is not ISO8601 format",
         ):
             build_test_model(override_dict=override, scenario="simple_conversion")
+
+
+class TestSubsetTime:
+    @pytest.fixture(scope="class")
+    def ts_index(self):
+        return pd.date_range("2005-01-01", "2005-01-05", freq="h")
+
+    @pytest.mark.parametrize(
+        "time_subset",
+        [
+            ["2005", "2005"],
+            ["2005-01", "2005-01"],
+            ["2005-01-02", "2005-01-04"],
+            ["2005-01-02 00", "2005-01-04 00"],
+            ["2005-01-02 00:00", "2005-01-04 00:00"],
+            ["2005-01-02 00:00:00", "2005-01-04 00:00:00"],
+        ],
+    )
+    def test_check_time_subset_all_good(self, ts_index, time_subset):
+        """A nicely format subset raises no errors."""
+        time.check_time_subset(ts_index, time_subset)
+
+    def test_check_time_subset_no_overlap(self, ts_index):
+        """The subset must overlap at least partially with the timeseries index."""
+        time_subset = ["2005-01-06", "2005-01-07"]
+        with pytest.raises(exceptions.ModelError, match="subset time range"):
+            time.check_time_subset(ts_index, time_subset)
+
+    def test_check_time_subset_too_many_list_items(self, ts_index):
+        """Subset must be a slice of two timestamps."""
+        time_subset = ["2005-01-02", "2005-01-04", "2005-01-05"]
+        with pytest.raises(
+            exceptions.ModelError, match="subset must be a list of two timestamps"
+        ):
+            time.check_time_subset(ts_index, time_subset)
+
+    @pytest.mark.parametrize(
+        "time_subset",
+        [["01/01/2005", "03/01/2005"], ["01/01/2005 00:00", "03/01/2005 00:00"]],
+    )
+    def test_check_time_format(self, ts_index, time_subset):
+        """Subset must be in ISO format"""
+        with pytest.raises(
+            exceptions.ModelError, match="Timeseries subset must be in ISO format"
+        ):
+            time.check_time_subset(ts_index, time_subset)
 
 
 class TestClustering:
@@ -162,6 +209,15 @@ class TestResamplingAndCluster:
 
 
 class TestResampling:
+    def test_resampling_unknown_format(self):
+        with pytest.raises(
+            exceptions.ModelError,
+            match="Unknown `timesteps` resampling frequency: unknown",
+        ):
+            build_test_model(
+                {}, scenario="simple_supply", resample={"timesteps": "unknown"}
+            )
+
     def test_15min_resampling_to_6h(self):
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'

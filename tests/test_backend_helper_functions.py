@@ -66,12 +66,26 @@ def expression_where(expression, parsing_kwargs):
 
 @pytest.fixture(scope="class")
 def expression_group_sum(expression, parsing_kwargs):
-    return expression["group_sum"](**parsing_kwargs)
+    func = expression["group_sum"](**parsing_kwargs)
+    func._math = func._math.update(
+        {"dimensions": {"new_dim": {"iterator": "nd", "dtype": "string"}}}
+    )
+    return func
 
 
 @pytest.fixture(scope="class")
 def expression_group_datetime(expression, parsing_kwargs):
-    return expression["group_datetime"](**parsing_kwargs)
+    func = expression["group_datetime"](**parsing_kwargs)
+    func._math = func._math.update(
+        {
+            "dimensions": {
+                "date": {"iterator": "d", "dtype": "string"},
+                "time": {"iterator": "t", "dtype": "string"},
+                "hour": {"iterator": "h", "dtype": "integer"},
+            }
+        }
+    )
+    return func
 
 
 @pytest.fixture(scope="class")
@@ -81,11 +95,12 @@ def expression_sum_next_n(expression, parsing_kwargs):
 
 class TestAsArray:
     @pytest.fixture(scope="class")
-    def parsing_kwargs(self, dummy_model_data):
+    def parsing_kwargs(self, dummy_model_data, dummy_model_math):
         return {
             "input_data": dummy_model_data,
             "equation_name": "foo",
             "return_type": "array",
+            "math": dummy_model_math,
         }
 
     @pytest.fixture
@@ -488,11 +503,12 @@ class TestAsArray:
 
 class TestAsMathString:
     @pytest.fixture(scope="class")
-    def parsing_kwargs(self, dummy_model_data):
+    def parsing_kwargs(self, dummy_model_data, dummy_model_math):
         return {
             "input_data": dummy_model_data,
             "return_type": "math_string",
             "equation_name": "foo",
+            "math": dummy_model_math,
         }
 
     def test_any_not_exists(self, where_any):
@@ -588,16 +604,16 @@ class TestAsMathString:
     @pytest.mark.parametrize(
         ("instring", "expected_substring"),
         [
-            (r"\textit{foo}_\text{foo}", r"foo+1"),
+            (r"\textit{foo}_\text{tech}", r"tech+1"),
             (r"\textit{foo}_\text{bar}", r"bar"),
-            (r"\textit{foo}_\text{foo,bar}", r"foo+1,bar"),
-            (r"\textit{foo}_\text{foobar,bar_foo,foo}", r"foobar,bar_foo,foo+1"),
-            (r"\textit{foo}_\text{foo=bar,foo}", r"foo=bar,foo+1"),
-            (r"\textit{foo}_\text{baz,foo,bar,foo}", r"baz,foo+1,bar,foo+1"),
+            (r"\textit{foo}_\text{tech,bar}", r"tech+1,bar"),
+            (r"\textit{foo}_\text{foobar,bar_foo,tech}", r"foobar,bar_foo,tech+1"),
+            (r"\textit{foo}_\text{foo=bar,tech}", r"foo=bar,tech+1"),
+            (r"\textit{foo}_\text{baz,tech,bar,tech}", r"baz,tech+1,bar,tech+1"),
         ],
     )
     def test_roll(self, expression_roll, instring, expected_substring):
-        rolled_string = expression_roll(instring, foo="-1")
+        rolled_string = expression_roll(instring, techs="-1")
         assert rolled_string == rf"\textit{{foo}}_\text{{{expected_substring}}}"
 
     def test_default_if_empty_non_existent_int(self, expression_default_if_empty):
@@ -631,7 +647,7 @@ class TestAsMathString:
         )
         assert (
             expression_group_sum_string
-            == r"\sum\limits_{\substack{\text{tech} \in \text{techs} \\ \text{ if } \textit{bar}_\text{tech} = \text{new_dim}}} (\textbf{foo}_\text{tech,node,carrier})"
+            == r"\sum\limits_{\substack{\text{tech} \in \text{techs} \\ \text{ if } \textit{bar}_\text{tech} = \text{nd}}} (\textbf{foo}_\text{tech,node,carrier})"
         )
 
     def test_expression_group_sum_multidim(self, expression_group_sum):
@@ -642,7 +658,7 @@ class TestAsMathString:
         )
         assert (
             expression_group_sum_string
-            == r"\sum\limits_{\substack{\text{tech} \in \text{techs} \\ \text{node} \in \text{nodes} \\ \text{ if } \textit{bar}_\text{tech,node} = \text{new_dim}}} (\textbf{foo}_\text{tech,node,carrier})"
+            == r"\sum\limits_{\substack{\text{tech} \in \text{techs} \\ \text{node} \in \text{nodes} \\ \text{ if } \textit{bar}_\text{tech,node} = \text{nd}}} (\textbf{foo}_\text{tech,node,carrier})"
         )
 
     def test_expression_group_datetime_hour(self, expression_group_datetime):

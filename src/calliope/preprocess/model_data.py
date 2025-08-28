@@ -9,7 +9,6 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 from geographiclib import geodesic
@@ -20,23 +19,12 @@ from calliope.attrdict import AttrDict
 from calliope.preprocess import data_tables, model_math, time
 from calliope.schemas import dimension_data_schema, math_schema
 from calliope.schemas.config_schema import Init
+from calliope.util import DATETIME_DTYPE, DTYPE_OPTIONS
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
 
 DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
-
-DTYPE_OPTIONS = {
-    "string": str,
-    "float": float,
-    "bool": bool,
-    "datetime": np.datetime64,
-    "date": np.datetime64,
-    "integer": int,
-}
-
-DATETIME_DTYPE = "M"
-"""Numpy type kind for datetime arrays"""
 
 
 class Param(TypedDict):
@@ -97,7 +85,11 @@ class ModelDataFactory:
             attributes (dict): Attributes to attach to the model Dataset.
         """
         self.config: Init = init_config
-        self.math = model_math.build_applied_math(self.math_priority, math.model_dump())
+        self.math = model_math.build_applied_math(
+            self.math_priority,
+            math.model_dump(),
+            validate=init_config.pre_validate_math_strings,
+        )
         self.definition_path: str | Path | None = definition_path
         self.tech_data_from_tables = AttrDict()
 
@@ -812,13 +804,16 @@ class ModelDataFactory:
         selectors = {}
 
         for dim_name, subset in self.config.subset.root.items():
-            if subset is None or dim_name not in self.dataset.coords:
+            if subset is None:
+                continue
+            elif dim_name not in self.dataset.coords:
+                LOGGER.debug(f"Skipping subsetting for undefined dimension: {dim_name}")
                 continue
             is_ordered = self.math.dimensions[dim_name].ordered
             dim_vals = self.dataset.coords[dim_name]
 
             if dim_vals.dtype.kind == DATETIME_DTYPE:
-                time._check_time_subset(dim_vals.to_index(), subset)
+                time.check_time_subset(dim_vals.to_index(), subset)
 
             if is_ordered:
                 selectors[dim_name] = slice(*subset)
@@ -830,7 +825,10 @@ class ModelDataFactory:
     def _resample_dims(self):
         ds = self.dataset
         for dim_name, resampler in self.config.resample.root.items():
-            if resampler is None or dim_name not in ds.coords:
+            if resampler is None:
+                continue
+            elif dim_name not in ds.coords:
+                LOGGER.debug(f"Skipping resampling for undefined dimension: {dim_name}")
                 continue
             if ds.coords[dim_name].dtype.kind != DATETIME_DTYPE:
                 raise exceptions.ModelError(

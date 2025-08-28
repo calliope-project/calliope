@@ -664,7 +664,7 @@ class TestLatexBackendModel:
         ("instring", "kwargs", "expected"),
         [
             ("{{ foo }}", {"foo": 1}, "1"),
-            ("{{ foo|removesuffix('s') }}", {"foo": "bars"}, "bar"),
+            ("{{ foo|iterator }}", {"foo": "techs"}, "tech"),
             ("{{ foo }} + {{ bar }}", {"foo": "1", "bar": "2"}, "1 + 2"),
             (
                 "{{ foo|escape_underscores }}",

@@ -19,6 +19,7 @@ from calliope.util import tools
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
+    from calliope.schemas.math_schema import CalliopeBuildMath
 
 
 pp.ParserElement.enablePackrat()
@@ -30,6 +31,7 @@ class EvalAttrs(TypedDict):
 
     equation_name: str
     backend_interface: BackendModel
+    math: CalliopeBuildMath
     input_data: xr.Dataset
     helper_functions: dict[str, Callable]
     apply_where: NotRequired[bool]
@@ -313,9 +315,9 @@ class SubsetParser(EvalWhere):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         subset = self._eval()
-        set_singular = self.set_name.removesuffix("s")
+        iterator = self.eval_attrs["math"].dimensions[self.set_name].iterator
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
-        return rf"\text{{{set_singular}}} \in \text{{{subset_string}}}"
+        return rf"\text{{{iterator}}} \in \text{{{subset_string}}}"
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         subset = self._eval()
