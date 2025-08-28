@@ -1531,7 +1531,7 @@ class TestClusteringConstraints:
             "parameters.cyclic_storage": cyclic,
             "data_tables.cluster_days": {
                 "data": "data_tables/cluster_days.csv",
-                "rows": "timesteps",
+                "rows": "datesteps",
                 "add_dims": {"parameters": "cluster_days_param"},
             },
         }

@@ -132,38 +132,28 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         self._check_inputs()
 
     def add_lookup(
-        self,
-        lookup_name: str,
-        lookup_values: xr.DataArray,
-        definition: math_schema.Lookup,
+        self, name: str, values: xr.DataArray, definition: math_schema.Lookup
     ) -> None:
         """Add input lookup array to backend model in-place.
 
         This directly passes a copy of the input lookup array to the backend.
 
         Args:
-            lookup_name (str): Name of lookup.
-            lookup_values (xr.DataArray): Array of lookup values.
+            name (str): Name of lookup.
+            values (xr.DataArray): Array of lookup values.
             definition (math_schema.Lookup): Lookup math definition.
         """
-        self._raise_error_on_preexistence(lookup_name, "lookups")
+        self._raise_error_on_preexistence(name, "lookups")
 
-        if lookup_values.isnull().all():
-            self.log(
-                "lookups", lookup_name, "Component not added; no data found in array."
-            )
-            lookup_values = lookup_values.astype(float)
+        if values.isnull().all():
+            self.log("lookups", name, "Component not added; no data found in array.")
+            values = values.astype(float)
 
-        self._add_to_dataset(
-            lookup_name, lookup_values, "lookups", definition.model_dump()
-        )
+        self._add_to_dataset(name, values, "lookups", definition.model_dump())
 
     @abstractmethod
     def add_parameter(
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        definition: math_schema.Parameter,
+        self, name: str, values: xr.DataArray, definition: math_schema.Parameter
     ) -> None:
         """Add input parameter to backend model in-place.
 
@@ -172,8 +162,8 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         In either case, NaN values are filled with the given parameter default value.
 
         Args:
-            parameter_name (str): Name of parameter.
-            parameter_values (xr.DataArray): Array of parameter values.
+            name (str): Name of parameter.
+            values (xr.DataArray): Array of parameter values.
             definition (math_schema.Parameter): Parameter math definition.
         """
 
@@ -282,7 +272,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 attrs: dict = {"obj_type": obj_type, **config.model_dump()}
                 default = config.default if obj_type == "lookups" else np.nan
                 data = inputs.get(name, xr.DataArray(default))
-                if obj_type == "dimensions":
+                if obj_type == "dimensions" and name in inputs.dims:
                     new_inputs.coords[name] = data.assign_attrs(**attrs)
                 else:
                     new_inputs[name] = data.assign_attrs(**attrs)
@@ -977,6 +967,67 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             new_values (xr.DataArray | SupportsFloat): New values to apply. Any
                 empty (NaN) elements in the array will be skipped.
         """
+
+    def _update_input(
+        self, name: str, new_values: xr.DataArray | SupportsFloat, mutable: bool
+    ) -> tuple[xr.DataArray, xr.DataArray, bool]:
+        """Update the input array with new values.
+
+        Args:
+            name (str): Name of the input array to update.
+            new_values (xr.DataArray | SupportsFloat): New values to apply.
+            mutable (bool): Whether the array being updated contains mutable objects or not.
+
+        Returns:
+            tuple[xr.DataArray, xr.DataArray, bool]:
+                The original and new values and a flag for whether the original are mutable object that need updating with a backend-specific method.
+        """
+        new_values = xr.DataArray(new_values)
+        obj_type, math = self.math.find(name, subset={"parameters", "lookups"})
+        obj_type_singular = obj_type.removesuffix("s")
+        dataset_da = getattr(self, f"get_{obj_type_singular}")(name)
+        input_da = self.inputs[name]
+        missing_dims_in_new_vals = set(dataset_da.dims).difference(new_values.dims)
+        missing_dims_in_orig_vals = set(new_values.dims).difference(dataset_da.dims)
+
+        if missing_dims_in_new_vals:
+            self.log(
+                obj_type,
+                name,
+                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
+                "info",
+            )
+        new_input_da = new_values.broadcast_like(input_da).fillna(input_da)
+        new_input_da.attrs = input_da.attrs
+        self.inputs[name] = new_input_da
+
+        if (
+            (not dataset_da.shape and new_values.shape)
+            or missing_dims_in_orig_vals
+            or (dataset_da.isnull() & new_values.notnull()).any()
+            or obj_type == "lookups"
+            or not mutable
+        ):
+            self.delete_component(name, obj_type)
+            getattr(self, f"add_{obj_type_singular}")(name, new_input_da, math)
+
+            refs_to_update = self._find_all_references(dataset_da.attrs["references"])
+
+            if refs_to_update:
+                self.log(
+                    obj_type,
+                    name,
+                    f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
+                    "info",
+                )
+            self._rebuild_references(refs_to_update)
+
+            if self._has_verbose_strings:
+                self.verbose_strings()
+            update_mutable = False
+        else:
+            update_mutable = True
+        return dataset_da, new_values, update_mutable
 
     @abstractmethod
     def update_variable_bounds(

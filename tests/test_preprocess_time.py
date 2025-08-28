@@ -64,15 +64,23 @@ class TestClustering:
     def clustered_model(self, request):
         cluster_init = {
             "subset": {"timesteps": ["2005-01-01", "2005-01-04"]},
-            "resample": {"timesteps": f"data_tables/{request.param}.csv"},
+            "time_cluster": request.param,
+            "override_dict": {
+                "data_tables": {
+                    "clustering": {
+                        "data": f"data_tables/{request.param}.csv",
+                        "rows": "datesteps",
+                        "add_dims": {"parameters": request.param},
+                    }
+                }
+            },
         }
         if "diff_dateformat" in request.param:
-            cluster_init["override_dict"] = {
-                "data_tables": {
-                    "demand_elec.data": "data_tables/demand_heat_diff_dateformat.csv"
-                }
+            cluster_init["override_dict"]["data_tables.demand_elec"] = {
+                "data": "data_tables/demand_heat_diff_dateformat.csv"
             }
             cluster_init["datetime_format"] = "%d/%m/%Y %H:%M"
+            cluster_init["date_format"] = "%d/%m/%Y"
 
         return build_test_model(scenario="simple_supply", **cluster_init)
 
@@ -131,7 +139,7 @@ class TestResamplingAndCluster:
             override_dict={
                 "data_tables.cluster_days": {
                     "data": "data_tables/cluster_days.csv",
-                    "rows": "timesteps",
+                    "rows": "datesteps",
                     "add_dims": {"parameters": "cluster_days_param"},
                 }
             },

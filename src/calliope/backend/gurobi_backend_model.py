@@ -76,25 +76,15 @@ class GurobiBackendModel(backend_model.BackendModel):
         self.shadow_prices = GurobiShadowPrices(self)
 
     def add_parameter(  # noqa: D102, override
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        definition: math_schema.Parameter,
+        self, name: str, values: xr.DataArray, definition: math_schema.Parameter
     ) -> None:
-        self._raise_error_on_preexistence(parameter_name, "parameters")
+        self._raise_error_on_preexistence(name, "parameters")
 
-        parameter_da = parameter_values
-        if parameter_da.isnull().all():
-            self.log(
-                "parameters",
-                parameter_name,
-                "Component not added; no data found in array.",
-            )
-            parameter_da = xr.DataArray(np.nan, attrs=parameter_values.attrs)
+        if values.isnull().all():
+            self.log("parameters", name, "Component not added; no data found in array.")
+            values = xr.DataArray(np.nan, attrs=values.attrs)
 
-        self._add_to_dataset(
-            parameter_name, parameter_da, "parameters", definition.model_dump()
-        )
+        self._add_to_dataset(name, values, "parameters", definition.model_dump())
 
     def add_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.Constraint
@@ -340,40 +330,7 @@ class GurobiBackendModel(backend_model.BackendModel):
     def update_input(  # noqa: D102, override
         self, name: str, new_values: xr.DataArray | SupportsFloat
     ) -> None:
-        new_values = xr.DataArray(new_values)
-        obj_type, math = self.math.find(name, subset={"parameters", "lookups"})
-        obj_type_singular = obj_type.removesuffix("s")
-        input_da = getattr(self, f"get_{obj_type_singular}")(name)
-        missing_dims_in_new_vals = set(input_da.dims).difference(new_values.dims)
-
-        if missing_dims_in_new_vals:
-            self.log(
-                obj_type,
-                name,
-                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
-                "info",
-            )
-        new_input_da = new_values.broadcast_like(input_da).fillna(input_da)
-        new_input_da.attrs = input_da.attrs
-        self.inputs[name] = new_input_da
-
-        self.delete_component(name, obj_type)
-        getattr(self, f"add_{obj_type_singular}")(name, new_input_da, math)
-
-        refs_to_update = self._find_all_references(input_da.attrs["references"])
-
-        if refs_to_update:
-            self.log(
-                obj_type,
-                name,
-                f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
-                "info",
-            )
-        self._rebuild_references(refs_to_update)
-
-        if self._has_verbose_strings:
-            self.verbose_strings()
-
+        self._update_input(name, new_values, mutable=False)
         self._instance.update()
 
     def update_variable_bounds(  # noqa: D102, override

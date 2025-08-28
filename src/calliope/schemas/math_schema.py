@@ -16,6 +16,17 @@ from calliope.schemas.general import (
     UniqueList,
 )
 
+COMPONENTS_T = Literal[
+    "dimensions",
+    "parameters",
+    "lookups",
+    "variables",
+    "global_expressions",
+    "constraints",
+    "piecewise_constraints",
+    "objectives",
+]
+
 
 class ExpressionItem(CalliopeBaseModel):
     """Schema for equations, subexpressions and slices."""
@@ -44,7 +55,7 @@ class MathComponent(CalliopeBaseModel):
 class Dimension(MathComponent):
     """Schema for named dimension."""
 
-    dtype: Literal["string", "datetime", "integer", "float"]
+    dtype: Literal["string", "datetime", "date", "integer", "float"]
     """The data type of this dimension's items."""
     ordered: bool = False
     """If True, the order of the dimension items is meaningful (e.g. chronological time)."""
@@ -73,7 +84,7 @@ class Lookup(MathComponent):
 
     default: AttrStr | float | int | bool = float("nan")
     """The default value for the lookup, if not set in the data."""
-    dtype: Literal["integer", "float", "string", "bool", "datetime"]
+    dtype: Literal["integer", "float", "string", "bool", "datetime", "date"]
     """The lookup data type."""
     resample_method: Literal["mean", "sum", "first"] = "first"
     """If resampling is applied over any of the lookup's dimensions, the method to use to aggregate the data."""
@@ -353,8 +364,8 @@ class CalliopeBuildMath(CalliopeBaseModel):
     """Checks to apply before building the optimisation problem."""
 
     def find(
-        self, component: str, subset: Iterable[str] | None = None
-    ) -> tuple[str, CalliopeDictModel]:
+        self, component: str, subset: Iterable[COMPONENTS_T] | None = None
+    ) -> tuple[str, MathComponent]:
         """Find a component in the math schema."""
         to_search = subset or self.model_fields_set - {"checks"}
         found = {

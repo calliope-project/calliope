@@ -324,17 +324,21 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self.include = include
 
     def add_parameter(  # noqa: D102, override
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        definition: math_schema.Parameter,
+        self, name: str, values: xr.DataArray, definition: math_schema.Parameter
     ) -> None:
         attrs = definition.model_dump() | {
-            "math_repr": rf"\textit{{{parameter_name}}}"
-            + self._dims_to_var_string(parameter_values)
+            "math_repr": rf"\textit{{{name}}}" + self._dims_to_var_string(values)
         }
 
-        self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
+        self._add_to_dataset(name, values, "parameters", attrs)
+
+    def add_lookup(  # noqa: D102, override
+        self, name: str, values: xr.DataArray, definition: math_schema.Lookup
+    ) -> None:
+        super().add_lookup(name, values, definition)
+        self._dataset[name].attrs["math_repr"] = (
+            rf"\textit{{{name}}}" + self._dims_to_var_string(values)
+        )
 
     def add_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.Constraint

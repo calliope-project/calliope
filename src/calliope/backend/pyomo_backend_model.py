@@ -76,32 +76,21 @@ class PyomoBackendModel(backend_model.BackendModel):
         self.shadow_prices = PyomoShadowPrices(self._instance.dual, self)
 
     def add_parameter(  # noqa: D102, override
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        definition: math_schema.Parameter,
+        self, name: str, values: xr.DataArray, definition: math_schema.Parameter
     ) -> None:
-        self._raise_error_on_preexistence(parameter_name, "parameters")
-        if parameter_values.isnull().all():
+        self._raise_error_on_preexistence(name, "parameters")
+        if values.isnull().all():
             self.log(
-                "parameters",
-                parameter_name,
-                "Empty component added; no data found in array.",
+                "parameters", name, "Empty component added; no data found in array."
             )
-            parameter_da = xr.DataArray(np.nan, attrs=parameter_values.attrs)
+            values = xr.DataArray(np.nan, attrs=values.attrs)
         else:
-            self._create_obj_list(parameter_name, "parameters")
-            parameter_da = self._apply_func(
-                self._to_pyomo_param,
-                parameter_values.notnull(),
-                1,
-                parameter_values,
-                name=parameter_name,
+            self._create_obj_list(name, "parameters")
+            values = self._apply_func(
+                self._to_pyomo_param, values.notnull(), 1, values, name=name
             )
 
-        self._add_to_dataset(
-            parameter_name, parameter_da, "parameters", definition.model_dump()
-        )
+        self._add_to_dataset(name, values, "parameters", definition.model_dump())
 
     def add_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.Constraint
@@ -385,59 +374,9 @@ class PyomoBackendModel(backend_model.BackendModel):
     def update_input(  # noqa: D102, override
         self, name: str, new_values: xr.DataArray | SupportsFloat
     ) -> None:
-        new_values = xr.DataArray(new_values)
-        obj_type, math = self.math.find(name, subset={"parameters", "lookups"})
-        obj_type_singular = obj_type.removesuffix("s")
-
-        dataset_da = getattr(self, f"get_{obj_type_singular}")(name)
-        missing_dims_in_new_vals = set(dataset_da.dims).difference(new_values.dims)
-        missing_dims_in_orig_vals = set(new_values.dims).difference(dataset_da.dims)
-        refs_to_update: set = set()
-
-        if missing_dims_in_new_vals:
-            self.log(
-                "parameters",
-                name,
-                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
-                "info",
-            )
-
-        if (
-            (not dataset_da.shape and new_values.shape)
-            or missing_dims_in_orig_vals
-            or (dataset_da.isnull() & new_values.notnull()).any()
-            or obj_type == "lookups"
-        ):
-            refs_to_update = self._find_all_references(dataset_da.attrs["references"])
-            if refs_to_update:
-                self.log(
-                    "parameters",
-                    name,
-                    "Defining values for a previously fully/partially undefined parameter. "
-                    f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
-                    "info",
-                )
-
-            if name not in self.inputs:
-                self.inputs[name] = new_values
-            else:
-                new_input_da = new_values.broadcast_like(dataset_da).fillna(dataset_da)
-                new_input_da.attrs = dataset_da.attrs
-                self.inputs[name] = new_input_da
-
-            self.delete_component(name, obj_type)
-            getattr(self, f"add_{obj_type_singular}")(name, new_input_da, math)
-            self._rebuild_references(refs_to_update)
-            if self._has_verbose_strings:
-                self.verbose_strings()
-        elif obj_type == "parameters":
-            self._apply_func(
-                self._update_pyomo_param,
-                new_values.notnull(),
-                1,
-                dataset_da,
-                new_values,
-            )
+        orig, new, update = self._update_input(name, new_values, mutable=True)
+        if update:
+            self._apply_func(self._update_pyomo_param, new.notnull(), 1, orig, new)
 
     def update_variable_bounds(  # noqa: D102, override
         self,

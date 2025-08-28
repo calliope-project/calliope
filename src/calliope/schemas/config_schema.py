@@ -81,8 +81,14 @@ class Init(CalliopeBaseModel):
 
     datetime_format: str = Field(default="ISO8601")
     """
-    Timestamp format of all time series data when read from file.
+    Timestamp format of all time series data with `datetime` dtype when read from file.
     'ISO8601' means '%Y-%m-%d %H:%M:%S'.
+    """
+
+    date_format: str = Field(default="ISO8601")
+    """
+    Datestamp format of all time series data with `date` dtype when read from file.
+    'ISO8601' means '%Y-%m-%d'.
     """
 
     distance_unit: Literal["km", "m"] = Field(default="km")

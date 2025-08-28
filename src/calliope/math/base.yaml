@@ -24,6 +24,18 @@ dimensions:
     dtype: datetime
     ordered: true
     iterator: timestep
+  clusters:
+    title: "Date clusters"
+    dtype: integer
+    ordered: true
+    iterator: cluster
+  datesteps:
+    title: "Date steps"
+    dtype: date
+    ordered: true
+    iterator: datestep
+
+
 
 parameters:
   area_use_max:
@@ -593,6 +605,11 @@ lookups:
     default: false
     title: One way transmission.
     description: Forces a transmission technology to only move flow in one direction on the link, i.e. from `from` to `to`.
+
+  lookup_cluster_last_timestep:
+    description: The last timestep of each cluster.
+    dtype: datetime
+    resample_method: first
 
 
 constraints:

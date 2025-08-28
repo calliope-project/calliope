@@ -31,6 +31,7 @@ DTYPE_OPTIONS = {
     "float": float,
     "bool": bool,
     "datetime": np.datetime64,
+    "date": np.datetime64,
     "integer": int,
 }
 
@@ -787,6 +788,10 @@ class ModelDataFactory:
                     updated_var = time._datetime_index(
                         var_data.to_series(), self.config.datetime_format
                     ).to_xarray()
+                case "date":
+                    updated_var = time._datetime_index(
+                        var_data.to_series(), self.config.date_format
+                    ).to_xarray()
                 case "bool":
                     updated_var = var_data.fillna(False).astype(dtype)
                 case _:
@@ -831,7 +836,7 @@ class ModelDataFactory:
                 raise exceptions.ModelError(
                     f"Cannot resample a non-datetime dimension, received `{dim_name}`"
                 )
-            ds = time.resample(ds, dim_name, resampler)
+            ds = time.resample(ds, self.math, dim_name, resampler)
         self.dataset = ds
 
     def _raise_error_on_transmission_tech_def(

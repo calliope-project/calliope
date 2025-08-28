@@ -182,7 +182,7 @@ class TestChecks:
             "config.build.cyclic_storage": True,
             "data_tables.cluster_days": {
                 "data": "data_tables/cluster_days.csv",
-                "rows": "timesteps",
+                "rows": "datesteps",
                 "add_dims": {"parameters": "cluster_days_param"},
             },
         }

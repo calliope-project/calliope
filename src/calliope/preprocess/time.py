@@ -10,6 +10,7 @@ import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
+from calliope.schemas.math_schema import CalliopeBuildMath
 
 LOGGER = logging.getLogger(__name__)
 
@@ -84,13 +85,16 @@ def subset_timeseries(ds: xr.Dataset, time_subset: list[str]) -> xr.Dataset:
     return ds
 
 
-def resample(data: xr.Dataset, dim: str, resolution: str) -> xr.Dataset:
+def resample(
+    data: xr.Dataset, math: CalliopeBuildMath, dim: str, resolution: str
+) -> xr.Dataset:
     """Function to resample timeseries data.
 
     Transforms the input resolution (e.g. 1h), to the given resolution (e.g. 2h).
 
     Args:
         data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
+        math (CalliopeBuildMath): Calliope math object to access input resampling methods.
         dim (str):
             Name of the dimension to resample. This should be a time dimension, e.g.
             "timesteps" or "datesteps". It is assumed that the dimension contains datetime values
@@ -117,26 +121,19 @@ def resample(data: xr.Dataset, dim: str, resolution: str) -> xr.Dataset:
 
     for var_name, var_data in data_ts.data_vars.items():
         resampler = var_data.resample(**resample_kwargs)
-        resample_method = var_data.attrs.get("resample_method")
-        if var_name == "timestep_resolution":
-            method = "sum"
-        elif resample_method is not None:
-            method = resample_method
-        elif var_data.dtype.kind in ["f", "i"]:
-            method = "mean"
-        else:
-            method = "first"
+        var_math = math.find(var_name, subset=["parameters", "lookups"])[1]
+        resample_method = var_math["resample_method"]
 
-        if method == "sum":
+        if resample_method == "sum":
             method_kwargs = {"min_count": 1}
         else:
             method_kwargs = {}
 
-        data_ts_resampled[var_name] = getattr(resampler, method)(
+        data_ts_resampled[var_name] = getattr(resampler, resample_method)(
             keep_attrs=True, **method_kwargs
         )
         LOGGER.debug(
-            f"Time Resampling | {var_name} | resampling function used: {method}"
+            f"Time Resampling | {var_name} | resampling function used: {resample_method}"
         )
 
     data_new = xr.merge([data_non_ts, data_ts_resampled])
