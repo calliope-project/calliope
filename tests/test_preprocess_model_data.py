@@ -14,12 +14,13 @@ from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def model_def(minimal_test_model_path):
     model_def_override = prepare_model_definition(
         io.read_rich_yaml(minimal_test_model_path),
         scenario="simple_supply,empty_tech_node",
         definition_path=minimal_test_model_path,
+        pre_validate_math_strings=False,
     )
     # Erase data tables for simplicity
     # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
@@ -27,7 +28,7 @@ def model_def(minimal_test_model_path):
     return model_def_override
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def init_config(default_config, model_def):
     updated_config = default_config.update(model_def.config.model_dump())
     return updated_config.init
@@ -53,6 +54,26 @@ def model_data_factory_w_params(model_data_factory: ModelDataFactory):
 def my_caplog(caplog):
     caplog.set_level(logging.DEBUG, logger="calliope.preprocess")
     return caplog
+
+
+@pytest.fixture
+def model_data_factory_with_time(model_data_factory_w_params):
+    time_da = pd.Series(
+        1,
+        index=pd.date_range(
+            "2005-01-01", "2005-01-04 23:59", freq="h", name="timesteps"
+        ),
+    )
+    model_data_factory_w_params._add_to_dataset(
+        time_da.to_xarray().to_dataset(name="time_data"), ""
+    )
+    model_data_factory_w_params.config = model_data_factory_w_params.config.update(
+        {"subset": {"timesteps": None}}
+    )
+    model_data_factory_w_params.math = model_data_factory_w_params.math.update(
+        {"parameters.time_data": {"resample_method": "sum"}}
+    )
+    return model_data_factory_w_params
 
 
 @pytest.mark.filterwarnings("ignore:(?s).*Converting non-nanosecond precision datetime")
@@ -983,3 +1004,157 @@ class TestActiveFalse:
         # Ensure what should be gone is gone
         assert not (model.inputs.base_tech == "transmission").any()
         assert "(techs, test_link_a_b_elec) | Deactivated." in my_caplog.text
+
+
+class TestSubset:
+    @pytest.fixture
+    def model_data_factory_with_int_dim(self, model_data_factory_w_params):
+        time_da = pd.Series(1, index=pd.Index(range(6), dtype=int, name="int_dim"))
+        model_data_factory_w_params._add_to_dataset(
+            time_da.to_xarray().to_dataset(name="int_dim_data"), ""
+        )
+        model_data_factory_w_params.math = model_data_factory_w_params.math.update(
+            {
+                "dimensions.int_dim": {
+                    "dtype": "integer",
+                    "ordered": True,
+                    "iterator": "id",
+                }
+            }
+        )
+        return model_data_factory_w_params
+
+    def test_subset_time(self, model_data_factory_with_time: ModelDataFactory):
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"subset": {"timesteps": ["2005-01-01", "2005-01-02"]}}
+            )
+        )
+        model_data_factory_with_time._subset_dims()
+        expected = pd.date_range(
+            "2005-01-01", "2005-01-02 23:59", freq="h", name="timesteps"
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.timesteps.to_index(), expected
+        )
+
+    def test_subset_nodes(self, model_data_factory_with_time: ModelDataFactory):
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update({"subset": {"nodes": ["a"]}})
+        )
+        model_data_factory_with_time._subset_dims()
+        # no change in time subset
+        expected = pd.date_range(
+            "2005-01-01", "2005-01-04 23:59", freq="h", name="timesteps"
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.timesteps.to_index(), expected
+        )
+        # only a change in node subset
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.nodes.to_index(),
+            pd.Index(["a"], name="nodes"),
+        )
+
+    def test_subset_time_and_nodes(
+        self, model_data_factory_with_time: ModelDataFactory
+    ):
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"subset": {"timesteps": ["2005-01-01", "2005-01-02"], "nodes": ["a"]}}
+            )
+        )
+        model_data_factory_with_time._subset_dims()
+        expected = pd.date_range(
+            "2005-01-01", "2005-01-02 23:59", freq="h", name="timesteps"
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.timesteps.to_index(), expected
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.nodes.to_index(),
+            pd.Index(["a"], name="nodes"),
+        )
+
+    def test_numeric_ordered(self, model_data_factory_with_int_dim):
+        model_data_factory_with_int_dim.config = (
+            model_data_factory_with_int_dim.config.update(
+                {"subset": {"int_dim": [1, 3]}}
+            )
+        )
+        model_data_factory_with_int_dim._subset_dims()
+        pd.testing.assert_index_equal(
+            model_data_factory_with_int_dim.dataset.int_dim.to_index(),
+            pd.RangeIndex(start=1, stop=4, step=1, name="int_dim"),
+        )
+
+    def test_numeric_unordered(self, model_data_factory_with_int_dim):
+        model_data_factory_with_int_dim.math = (
+            model_data_factory_with_int_dim.math.update(
+                {"dimensions.int_dim": {"ordered": False}}
+            )
+        )
+        model_data_factory_with_int_dim.config = (
+            model_data_factory_with_int_dim.config.update(
+                {"subset": {"int_dim": [1, 3]}}
+            )
+        )
+        model_data_factory_with_int_dim._subset_dims()
+        pd.testing.assert_index_equal(
+            model_data_factory_with_int_dim.dataset.int_dim.to_index(),
+            pd.Index([1, 3], name="int_dim"),
+        )
+
+    def test_subset_undefined_dim(
+        self, model_data_factory_with_time: ModelDataFactory, my_caplog
+    ):
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"subset": {"undefined": ["foo"]}}
+            )
+        )
+        model_data_factory_with_time._subset_dims()
+        assert "undefined" not in model_data_factory_with_time.dataset.dims
+        assert (
+            "Skipping subsetting for undefined dimension: undefined" in my_caplog.text
+        )
+
+
+class TestResample:
+    def test_resample(self, model_data_factory_with_time: ModelDataFactory):
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"resample": {"timesteps": "1D"}}
+            )
+        )
+        model_data_factory_with_time._resample_dims()
+        expected = pd.date_range(
+            "2005-01-01", "2005-01-04 23:59", freq="D", name="timesteps"
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.timesteps.to_index(), expected
+        )
+        assert (model_data_factory_with_time.dataset.time_data == 24).all()
+
+    def test_resample_fails_non_datetime(
+        self, model_data_factory_with_time: ModelDataFactory
+    ):
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update({"resample": {"nodes": "1D"}})
+        )
+        with pytest.raises(exceptions.ModelError, match="Cannot resample"):
+            model_data_factory_with_time._resample_dims()
+
+    def test_resample_undefined_dim(
+        self, model_data_factory_with_time: ModelDataFactory, my_caplog
+    ):
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"resample": {"undefined": "1D"}}
+            )
+        )
+        model_data_factory_with_time._resample_dims()
+        assert "undefined" not in model_data_factory_with_time.dataset.dims
+        assert (
+            "Skipping resampling for undefined dimension: undefined" in my_caplog.text
+        )

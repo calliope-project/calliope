@@ -800,7 +800,10 @@ class ModelDataFactory:
         selectors = {}
 
         for dim_name, subset in self.config.subset.root.items():
-            if subset is None or dim_name not in self.dataset.coords:
+            if subset is None:
+                continue
+            elif dim_name not in self.dataset.coords:
+                LOGGER.debug(f"Skipping subsetting for undefined dimension: {dim_name}")
                 continue
             is_ordered = self.math.dimensions[dim_name].ordered
             dim_vals = self.dataset.coords[dim_name]
@@ -818,7 +821,10 @@ class ModelDataFactory:
     def _resample_dims(self):
         ds = self.dataset
         for dim_name, resampler in self.config.resample.root.items():
-            if resampler is None or dim_name not in ds.coords:
+            if resampler is None:
+                continue
+            elif dim_name not in ds.coords:
+                LOGGER.debug(f"Skipping resampling for undefined dimension: {dim_name}")
                 continue
             if ds.coords[dim_name].dtype.kind != DATETIME_DTYPE:
                 raise exceptions.ModelError(
