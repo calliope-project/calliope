@@ -183,7 +183,7 @@ def _datetime_index(
         return dt
 
 
-def _check_time_subset(ts_index: pd.Index, time_subset: list[str]):
+def check_time_subset(ts_index: pd.Index, time_subset: list[str]):
     """Check if the user-configured time subset is in the correct format and it matches the range of the input data.
 
     We do not allow the time subset to have _no_ overlap with a timeseries index.

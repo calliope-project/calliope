@@ -806,7 +806,7 @@ class ModelDataFactory:
             dim_vals = self.dataset.coords[dim_name]
 
             if dim_vals.dtype.kind == DATETIME_DTYPE:
-                time._check_time_subset(dim_vals.to_index(), subset)
+                time.check_time_subset(dim_vals.to_index(), subset)
 
             if is_ordered:
                 selectors[dim_name] = slice(*subset)
