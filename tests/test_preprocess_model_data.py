@@ -1025,6 +1025,7 @@ class TestSubset:
         return model_data_factory_w_params
 
     def test_subset_time(self, model_data_factory_with_time: ModelDataFactory):
+        """Subsetting time dimension works as expected as a time slice"""
         model_data_factory_with_time.config = (
             model_data_factory_with_time.config.update(
                 {"subset": {"timesteps": ["2005-01-01", "2005-01-02"]}}
@@ -1039,6 +1040,7 @@ class TestSubset:
         )
 
     def test_subset_nodes(self, model_data_factory_with_time: ModelDataFactory):
+        """Subsetting node dimension works as expected as an intersection with the subset list."""
         model_data_factory_with_time.config = (
             model_data_factory_with_time.config.update({"subset": {"nodes": ["a"]}})
         )
@@ -1059,6 +1061,7 @@ class TestSubset:
     def test_subset_time_and_nodes(
         self, model_data_factory_with_time: ModelDataFactory
     ):
+        """Subsetting two dimensions works as expected."""
         model_data_factory_with_time.config = (
             model_data_factory_with_time.config.update(
                 {"subset": {"timesteps": ["2005-01-01", "2005-01-02"], "nodes": ["a"]}}
@@ -1077,6 +1080,7 @@ class TestSubset:
         )
 
     def test_numeric_ordered(self, model_data_factory_with_int_dim):
+        """Subsetting an integer, ordered dimension uses a slicer."""
         model_data_factory_with_int_dim.config = (
             model_data_factory_with_int_dim.config.update(
                 {"subset": {"int_dim": [1, 3]}}
@@ -1089,6 +1093,7 @@ class TestSubset:
         )
 
     def test_numeric_unordered(self, model_data_factory_with_int_dim):
+        """Subsetting an integer, unordered dimension uses an intersection with the subset list."""
         model_data_factory_with_int_dim.math = (
             model_data_factory_with_int_dim.math.update(
                 {"dimensions.int_dim": {"ordered": False}}
@@ -1108,6 +1113,7 @@ class TestSubset:
     def test_subset_undefined_dim(
         self, model_data_factory_with_time: ModelDataFactory, my_caplog
     ):
+        """Subsetting an undefined dimensions does nothing but logs a debug message."""
         model_data_factory_with_time.config = (
             model_data_factory_with_time.config.update(
                 {"subset": {"undefined": ["foo"]}}
@@ -1122,6 +1128,7 @@ class TestSubset:
 
 class TestResample:
     def test_resample(self, model_data_factory_with_time: ModelDataFactory):
+        """Resampling a datetime dimension works as expected."""
         model_data_factory_with_time.config = (
             model_data_factory_with_time.config.update(
                 {"resample": {"timesteps": "1D"}}
@@ -1139,6 +1146,7 @@ class TestResample:
     def test_resample_fails_non_datetime(
         self, model_data_factory_with_time: ModelDataFactory
     ):
+        """Cannot resample non-datetime dimensions"""
         model_data_factory_with_time.config = (
             model_data_factory_with_time.config.update({"resample": {"nodes": "1D"}})
         )
@@ -1148,6 +1156,7 @@ class TestResample:
     def test_resample_undefined_dim(
         self, model_data_factory_with_time: ModelDataFactory, my_caplog
     ):
+        """Resampling an undefined dimensions does nothing but logs a debug message."""
         model_data_factory_with_time.config = (
             model_data_factory_with_time.config.update(
                 {"resample": {"undefined": "1D"}}
