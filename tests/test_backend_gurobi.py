@@ -253,6 +253,9 @@ class TestNewBackend:
         assert not fixed.sel(techs="test_demand_elec", carriers="electricity").any()
         assert fixed.where(where, other=True).all()
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
+    )
     def test_fix_variable_before_optimal_solve(self, simple_supply_gurobi_func):
         simple_supply_gurobi_func.backend.update_input("flow_cap_max", xr.DataArray(0))
         simple_supply_gurobi_func.solve(force=True)

@@ -85,7 +85,11 @@ class ModelDataFactory:
             attributes (dict): Attributes to attach to the model Dataset.
         """
         self.config: Init = init_config
-        self.math = model_math.build_applied_math(self.math_priority, math.model_dump())
+        self.math = model_math.build_applied_math(
+            self.math_priority,
+            math.model_dump(),
+            validate=init_config.pre_validate_math_strings,
+        )
         self.definition_path: str | Path | None = definition_path
         self.tech_data_from_tables = AttrDict()
 

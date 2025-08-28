@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| pre-validation of math strings, in search of parsing errors, is undertaken at model instantiation and defaults to _not_ run to reduce model init time.
+
 |changed| Math dictionaries can be injected on loading a model from YAML/dict when using the Python API (`calliope.read_yaml(...)`/`calliope.Model.from_dict(...)`) using the `math_dict` argument.
 This replaces `add_math_dict` in `calliope.Model.build`.
 
