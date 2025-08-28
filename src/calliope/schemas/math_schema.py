@@ -376,7 +376,7 @@ class CalliopeBuildMath(CalliopeBaseModel):
                 (varparam,),
                 (
                     set(getattr(self, n).root)
-                    for n in self.model_fields_set
+                    for n in type(self).model_fields
                     if n not in {"variables", "parameters"}
                 ),
             ),
