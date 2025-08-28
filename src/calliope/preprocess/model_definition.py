@@ -19,6 +19,7 @@ def prepare_model_definition(
     model_definition: dict,
     scenario: str | None = None,
     override_dict: dict | None = None,
+    math_dict: dict | None = None,
     definition_path: Path | None = None,
     **kwargs,
 ) -> CalliopeAttrs:
@@ -33,6 +34,9 @@ def prepare_model_definition(
         model_definition (str | Path | dict): model data file or dictionary.
         scenario (str | None, optional): scenario to run. Defaults to None.
         override_dict (dict | None, optional): additional overrides. Defaults to None.
+        math_dict (dict | None, optional):
+            Additional math definitions to apply after loading the math paths.
+            Defaults to None.
         definition_path (Path | None): If given, path relative to which referenced files will be loaded.
         **kwargs: Initialisation overrides.
 
@@ -54,6 +58,8 @@ def prepare_model_definition(
         config.init.get("math_paths"), definition_path
     )
     math = load_math(config.init["math_paths"])
+    if math_dict:
+        math.union(math_dict, allow_override=True)
 
     inputs = {
         "config": config,

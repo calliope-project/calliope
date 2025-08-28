@@ -47,6 +47,7 @@ def read_yaml(
     file: str | Path,
     scenario: str | None = None,
     override_dict: dict | None = None,
+    math_dict: dict | None = None,
     data_table_dfs: dict[str, pd.DataFrame] | None = None,
     **kwargs,
 ) -> Model:
@@ -63,10 +64,13 @@ def read_yaml(
             Additional overrides to apply to `config`.
             These will be applied *after* applying any defined `scenario` overrides.
             Defaults to None.
+        math_dict (dict | None, optional):
+            Additional math definitions to apply after loading the math paths.
+            Defaults to None.
         data_table_dfs (dict[str, pd.DataFrame] | None, optional):
             Model definition `data_table` entries can reference in-memory pandas DataFrames.
             The referenced data must be supplied here as a dictionary of those DataFrames.
-            Defaults to None.None.
+            Defaults to None.
         **kwargs: initialisation overrides.
 
     Returns:
@@ -75,7 +79,13 @@ def read_yaml(
     raw_data = io.read_rich_yaml(file)
     definition_path = Path(file)
     return Model.from_dict(
-        raw_data, scenario, override_dict, data_table_dfs, definition_path, **kwargs
+        raw_data,
+        scenario,
+        override_dict,
+        math_dict,
+        data_table_dfs,
+        definition_path,
+        **kwargs,
     )
 
 
@@ -161,6 +171,7 @@ class Model:
         model_definition: dict,
         scenario: str | None = None,
         override_dict: dict | None = None,
+        math_dict: dict | None = None,
         data_table_dfs: dict[str, pd.DataFrame] | None = None,
         definition_path: Path | None = None,
         **kwargs,
@@ -176,15 +187,23 @@ class Model:
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.
                 Defaults to None.
+            math_dict (dict | None, optional):
+                Additional math definitions to apply after loading the math paths.
+                Defaults to None.
             data_table_dfs (dict[str, pd.DataFrame] | None, optional):
                 Model definition `data_table` entries can reference in-memory pandas DataFrames.
                 The referenced data must be supplied here as a dictionary of those DataFrames.
-                Defaults to None.None.
+                Defaults to None.
             definition_path (Path | None): If given, the path relative to which all path references in `model_definition` will be taken.
             **kwargs: initialisation overrides.
         """
         model_def = preprocess.prepare_model_definition(
-            model_definition, scenario, override_dict, definition_path, **kwargs
+            model_definition,
+            scenario,
+            override_dict,
+            math_dict,
+            definition_path,
+            **kwargs,
         )
 
         log_time(
@@ -246,18 +265,13 @@ class Model:
         """Dump of all class pydantic model attributes as a single dictionary."""
         return self.all_attrs.model_dump()
 
-    def build(
-        self, force: bool = False, add_math_dict: dict | None = None, **kwargs
-    ) -> None:
+    def build(self, force: bool = False, **kwargs) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
             force (bool, optional):
                 If ``force`` is True, any existing results will be overwritten.
                 Defaults to False.
-            add_math_dict (dict | None, optional):
-                Additional math to apply on top of the YAML base / additional math files.
-                Content of this dictionary will override any matching key:value pairs in the loaded math files.
             **kwargs: build configuration overrides.
         """
         if self._is_built and not force:
@@ -273,7 +287,6 @@ class Model:
         )
 
         self.config = self.config.update({"build": kwargs})
-        build_math = self.math.build.update(add_math_dict if add_math_dict else {})
 
         mode = self.config.init.mode
         if mode == "operate":
@@ -282,10 +295,9 @@ class Model:
             backend_input = self.inputs
 
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, build_math
+            self.config.build, backend_input, self.math.build
         )
         self.backend.add_optimisation_components()
-        self.math = self.math.update({"build": build_math.model_dump()})
 
         log_time(
             LOGGER,

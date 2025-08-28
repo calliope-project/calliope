@@ -413,8 +413,12 @@ class TestPiecewiseConstraints:
 
     @pytest.fixture(scope="class")
     def working_model(self, working_params, working_math, add_math):
-        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
-        m.build(backend="gurobi", add_math_dict=add_math)
+        m = build_model(
+            working_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
+        )
+        m.build(backend="gurobi")
         m.backend.add_piecewise_constraint("foo", working_math)
         return m
 
@@ -444,9 +448,11 @@ class TestPiecewiseConstraints:
     ):
         """Expected error when number of breakpoints on X and Y don't match."""
         m = build_model(
-            length_mismatch_params, "simple_supply,two_hours,investment_costs"
+            length_mismatch_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
         )
-        m.build(backend="gurobi", add_math_dict=add_math)
+        m.build(backend="gurobi")
         with pytest.raises(exceptions.BackendError) as excinfo:
             m.backend.add_piecewise_constraint("foo", working_math)
         assert check_error_or_warning(
@@ -456,8 +462,12 @@ class TestPiecewiseConstraints:
 
     def test_expressions_not_allowed(self, working_params, failing_math, add_math):
         """Expected error when using an expression instead of a decision variable (gurobi-specific error)."""
-        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
-        m.build(backend="gurobi", add_math_dict=add_math)
+        m = build_model(
+            working_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
+        )
+        m.build(backend="gurobi")
         with pytest.raises(exceptions.BackendError) as excinfo:
             m.backend.add_piecewise_constraint("foo", failing_math)
         assert check_error_or_warning(
