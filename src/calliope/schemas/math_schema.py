@@ -3,9 +3,10 @@
 """Schema for Calliope mathematical definition."""
 
 from collections.abc import Iterable
-from typing import Literal, Self
+from typing import Literal
 
 from pydantic import Field, model_validator
+from typing_extensions import Self
 
 from calliope.schemas.general import (
     AttrStr,

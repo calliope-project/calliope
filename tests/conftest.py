@@ -294,7 +294,13 @@ def dummy_model_math(dummy_model_data):
         "only_techs": 5,
         "no_dims": 0,
     }
-    dtype_translator = {"U": "string", "b": "bool", "O": "string", "M": "datetime"}
+    dtype_translator = {
+        "U": "string",
+        "b": "bool",
+        "O": "string",
+        "M": "datetime",
+        "i": "integer",
+    }
     dtypes = {k: v.kind for k, v in dummy_model_data.dtypes.items()}
     params = {
         k: {"default": defaults.get(k, np.nan)}
@@ -307,6 +313,7 @@ def dummy_model_math(dummy_model_data):
         if v in ["U", "b", "O"]
     }
     dim_dtypes = {k: v.kind for k, v in dummy_model_data.coords.dtypes.items()}
+    dim_dtypes["breakpoints"] = "i"
     dims = {
         k: {"dtype": dtype_translator[v], "iterator": k.removesuffix("s")}
         for k, v in dim_dtypes.items()

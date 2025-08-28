@@ -274,8 +274,10 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 data = inputs.get(name, xr.DataArray(default))
                 if obj_type == "dimensions" and name in inputs.dims:
                     new_inputs.coords[name] = data.assign_attrs(**attrs)
-                else:
+                elif obj_type != "dimensions":
                     new_inputs[name] = data.assign_attrs(**attrs)
+                else:
+                    continue
 
         return new_inputs
 
@@ -285,6 +287,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         parser_ = parsing.where_parser.generate_where_string_parser()
         eval_kwargs = {
             "backend_interface": self,
+            "math": self.math,
             "input_data": self.inputs,
             "build_config": self.config,
             "helper_functions": helper_functions._registry["where"],
@@ -1268,15 +1271,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             data (Union[xr.DataArray, xr.Dataset]): xarray object on whose coordinates the conversion will take place.
         """
         datetime_coords = set()
-        for name_, vals_ in data.coords.items():
-            if vals_.dtype.kind == "M":
-                data.coords[name_] = data.coords[name_].dt.strftime("%Y-%m-%d %H:%M")
-                datetime_coords.add(name_)
+        for name in data.coords:
+            if self.math.dimensions[name].dtype in ["date", "datetime"]:
+                data.coords[name] = data.coords[name].dt.strftime("%Y-%m-%d %H:%M")
+                datetime_coords.add(name)
         try:
             yield
         finally:
-            for name_ in datetime_coords:
-                data.coords[name_] = data.coords[name_].astype("datetime64[ns]")
+            for name in datetime_coords:
+                data.coords[name] = data.coords[name].astype("datetime64[ns]")
 
 
 class ShadowPrices:

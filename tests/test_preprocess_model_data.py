@@ -8,6 +8,7 @@ import xarray as xr
 from calliope import AttrDict, exceptions, io
 from calliope.preprocess import prepare_model_definition
 from calliope.preprocess.model_data import ModelDataFactory
+from calliope.util import DATETIME_DTYPE
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -602,7 +603,9 @@ class TestModelData:
             f"foo | dimensions | Updating values of `{coord_name}` to datetime type"
             in my_caplog.text
         )
-        assert model_data_factory.dataset.coords[coord_name].dtype.kind == "M"
+        assert (
+            model_data_factory.dataset.coords[coord_name].dtype.kind == DATETIME_DTYPE
+        )
         assert "ts_data" in model_data_factory.dataset
 
     def test_add_to_dataset_no_timeseries(

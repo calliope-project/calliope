@@ -9,7 +9,6 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 from geographiclib import geodesic
@@ -20,23 +19,12 @@ from calliope.attrdict import AttrDict
 from calliope.preprocess import data_tables, model_math, time
 from calliope.schemas import dimension_data_schema, math_schema
 from calliope.schemas.config_schema import Init
+from calliope.util import DATETIME_DTYPE, DTYPE_OPTIONS
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
 
 DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
-
-DTYPE_OPTIONS = {
-    "string": str,
-    "float": float,
-    "bool": bool,
-    "datetime": np.datetime64,
-    "date": np.datetime64,
-    "integer": int,
-}
-
-DATETIME_DTYPE = "M"
-"""Numpy type kind for datetime arrays"""
 
 
 class Param(TypedDict):

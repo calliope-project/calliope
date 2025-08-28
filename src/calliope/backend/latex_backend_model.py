@@ -30,7 +30,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         {% if sets is defined and sets %}
             \forall{}
         {% for set in sets %}
-            \text{ {{set|removesuffix("s")}} }\negthickspace \in \negthickspace\text{ {{set + "," if not loop.last else set }} }
+            \text{ {{set|iterator}} }\negthickspace \in \negthickspace\text{ {{set + "," if not loop.last else set }} }
         {% endfor %}
         {% if (where is defined and where and where != "") or (sense is defined and sense) %}
             \!\!,\\
@@ -615,8 +615,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             )
             where_array.attrs.update({"math_string": equation_element_string})
 
-    @staticmethod
-    def _render(template: str, **kwargs) -> str:
+    def _render(self, template: str, **kwargs) -> str:
         text_starter = r"\\text(?:bf|it)?"  # match one of `\text`, `\textit`, `\textbf`
 
         def __escape_underscore(instring):
@@ -638,8 +637,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 instring,
             )
 
+        def __iterator(instring):
+            """Get the iterator name for a given dimension name."""
+            return self.math.dimensions[instring].iterator
+
         jinja_env = jinja2.Environment(trim_blocks=True, autoescape=False)
-        jinja_env.filters["removesuffix"] = lambda val, remove: val.removesuffix(remove)
+        jinja_env.filters["iterator"] = __iterator
         jinja_env.filters["escape_underscores"] = __escape_underscore
         jinja_env.filters["mathify_text_in_text"] = __mathify_text_in_text
         return jinja_env.from_string(template).render(**kwargs)
@@ -667,9 +670,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             for eq in equations
         )
 
-    @staticmethod
-    def _dims_to_var_string(da: xr.DataArray) -> str:
+    def _dims_to_var_string(self, da: xr.DataArray) -> str:
         if da.shape:
-            return rf"_\text{{{','.join(str(i).removesuffix('s') for i in da.dims)}}}"
+            iterators = ",".join(self.math.dimensions[dim].iterator for dim in da.dims)
+            return rf"_\text{{{iterators}}}"
         else:
             return ""

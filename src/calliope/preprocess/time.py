@@ -67,24 +67,6 @@ def timeseries_to_datetime(ds: xr.Dataset, time_format: str, id: str) -> xr.Data
     return ds
 
 
-def subset_timeseries(ds: xr.Dataset, time_subset: list[str]) -> xr.Dataset:
-    """Subset all timeseries dimensions according to an input slice of start and end times.
-
-    Args:
-        ds (xr.Dataset): Dataset containing timeseries data to subset.
-        time_subset (list[str]): List of length 2, containing start and end times to subset on.
-
-    Returns:
-        xr.Dataset: Input `ds` with subset timeseries coordinates.
-    """
-    datetime_dims = [k for k, v in ds.coords.items() if v.dtype.kind == "M"]
-    for dim_name in datetime_dims:
-        _check_time_subset(ds.coords[dim_name].to_index(), time_subset)
-        ds = ds.sel(**{dim_name: slice(*time_subset)})
-        _check_missing_data(ds, dim_name)
-    return ds
-
-
 def resample(
     data: xr.Dataset, math: CalliopeBuildMath, dim: str, resolution: str
 ) -> xr.Dataset:

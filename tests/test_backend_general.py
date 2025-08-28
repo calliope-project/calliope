@@ -7,6 +7,7 @@ import xarray as xr
 
 import calliope
 import calliope.backend
+from calliope.util import DATETIME_DTYPE
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -354,8 +355,14 @@ class TestGetters:
         assert (
             expr.where(expr != "nan").to_series().dropna().str.contains("2005-").all()
         )
-        assert built_model_cls_longnames.backend._dataset.timesteps.dtype.kind == "M"
-        assert built_model_cls_longnames.backend.inputs.timesteps.dtype.kind == "M"
+        assert (
+            built_model_cls_longnames.backend._dataset.timesteps.dtype.kind
+            == DATETIME_DTYPE
+        )
+        assert (
+            built_model_cls_longnames.backend.inputs.timesteps.dtype.kind
+            == DATETIME_DTYPE
+        )
 
     def test_get_constraint_attrs(self, constraint):
         """Check a constraint has all expected attributes."""
