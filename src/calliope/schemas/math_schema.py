@@ -134,7 +134,7 @@ class MathEquationComponent(MathComponent):
     @model_validator(mode="after")
     def must_have_equations_if_active(self) -> Self:
         """Ensure that equations are defined if the component is active."""
-        if self.active and not self.equations:
+        if self.active and not self.equations.root:
             raise ValueError("Must have equations defined if component is active.")
         return self
 
