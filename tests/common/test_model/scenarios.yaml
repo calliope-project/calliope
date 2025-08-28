@@ -452,7 +452,7 @@ overrides:
   var_costs:
     templates:
       test_controller:
-        cost_flow_out:
+        cost_flow_in:
           data: 0.1
           index: monetary
           dims: costs
