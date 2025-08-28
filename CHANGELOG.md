@@ -2,6 +2,9 @@
 
 ### User-facing changes
 
+|changed| Math dictionaries can be injected on loading a model from YAML/dict when using the Python API (`calliope.read_yaml(...)`/`calliope.Model.from_dict(...)`) using the `math_dict` argument.
+This replaces `add_math_dict` in `calliope.Model.build`.
+
 |changed| MILP math formulation now has its own file (`milp.yaml`), which can be requested via `extra_math` (#749).
 
 |fixed| Updates to the expression underlying the Gurobi backend objective function make their way through to the objective function before solving (#797).

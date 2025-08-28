@@ -81,14 +81,6 @@ new_params = f"""
       dims: "breakpoints"
 """
 print(new_params)
-new_params_as_dict = read_rich_yaml(new_params)
-m = calliope.examples.national_scale(override_dict=new_params_as_dict)
-
-# %%
-m.inputs.capacity_steps
-
-# %%
-m.inputs.cost_steps
 
 # %% [markdown]
 # ## Creating our piecewise constraint
@@ -104,6 +96,16 @@ m.inputs.cost_steps
 
 # %%
 new_math = """
+  dimensions:
+    breakpoints:
+      dtype: integer
+      ordered: true
+      iterator: breakpoint
+  parameters:
+    capacity_steps:
+      description: Capacity at each piecewise curve breakpoint
+    cost_steps:
+      description: Investment cost at each piecewise curve breakpoint
   variables:
     piecewise_cost_investment:
       description: "Investment cost that increases monotonically"
@@ -135,11 +137,24 @@ new_math = """
 # %% [markdown]
 # # Building and checking the piecewise constraint
 #
-# With our piecewise constraint defined, we can build our optimisation problem and inject this new math.
+# With our inputs and piecewise constraint defined, we can build our optimisation problem and inject this new math.
 
 # %%
+new_params_as_dict = read_rich_yaml(new_params)
 new_math_as_dict = read_rich_yaml(new_math)
-m.build(add_math_dict=new_math_as_dict)
+
+m = calliope.examples.national_scale(
+    override_dict=new_params_as_dict,
+    math_dict={"piecewise_math": new_math_as_dict},
+    extra_math=["piecewise_math"],
+)
+# %%
+m.inputs.capacity_steps
+
+# %%
+m.inputs.cost_steps
+
+m.build()
 
 # %% [markdown]
 # And we can see that our piecewise constraint exists in the built optimisation problem "backend"

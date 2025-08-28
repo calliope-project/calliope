@@ -1642,8 +1642,13 @@ class TestNewBackend:
         caplog.set_level(logging.DEBUG)
         custom_math = {"constraints": {"force_zero_area_use": {"active": True}}}
 
-        m = build_model({}, "simple_supply,two_hours,investment_costs", mode="operate")
-        m.build(operate={"window": "12h", "horizon": "12h"}, add_math_dict=custom_math)
+        m = build_model(
+            {},
+            "simple_supply,two_hours,investment_costs",
+            mode="operate",
+            math_dict=custom_math,
+        )
+        m.build(operate={"window": "12h", "horizon": "12h"})
 
         # operate mode set it to false, then our math set it back to active
         assert m.math.build.constraints["force_zero_area_use"].active
@@ -1956,16 +1961,17 @@ class TestNewBackend:
                 {"techs.test_supply_elec.cost_new": new_cost},
                 "simple_supply,two_hours,investment_costs",
                 pre_validate_math_strings=False,
+                math_dict=updated_math,
             )
-            return m, updated_math
+            return m
 
         return _new_global_expr_math
 
     def test_add_reordered_global_expression(self, new_global_expr_math):
         """Adding a new global expression with an appropriately small order should be added before a pre-defined global expression."""
 
-        m, updated_math = new_global_expr_math(-1)
-        m.build(add_math_dict=updated_math, backend="pyomo")
+        m = new_global_expr_math(-1)
+        m.build(backend="pyomo")
         m.backend.verbose_strings()
         expr_to_check = (
             m.backend.get_global_expression(
@@ -1983,12 +1989,12 @@ class TestNewBackend:
     def test_add_reordered_global_expression_fails(self, new_global_expr_math, order):
         """Adding a new global expression without reordering will cause an error to be raised when evaluating the other global expression in which it has been referenced."""
 
-        m, updated_math = new_global_expr_math(order)
+        m = new_global_expr_math(order)
         with pytest.raises(
             exceptions.BackendError,
             match="Trying to access a math component that is not yet defined: new_expr.",
         ):
-            m.build(add_math_dict=updated_math, backend="pyomo")
+            m.build(backend="pyomo")
 
 
 class TestVerboseStrings:
@@ -2150,8 +2156,12 @@ class TestPiecewiseConstraints:
 
     @pytest.fixture(scope="class")
     def working_model(self, working_params, working_math, add_math):
-        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
-        m.build(add_math_dict=add_math)
+        m = build_model(
+            working_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
+        )
+        m.build()
         m.backend.add_piecewise_constraint("foo_piecewise", working_math)
         return m
 
@@ -2181,9 +2191,11 @@ class TestPiecewiseConstraints:
     ):
         """Expected error when number of breakpoints on X and Y don't match."""
         m = build_model(
-            length_mismatch_params, "simple_supply,two_hours,investment_costs"
+            length_mismatch_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
         )
-        m.build(add_math_dict=add_math)
+        m.build()
         with pytest.raises(exceptions.BackendError) as excinfo:
             m.backend.add_piecewise_constraint("foo_piecewise_fails", working_math)
         assert check_error_or_warning(
@@ -2198,8 +2210,9 @@ class TestPiecewiseConstraints:
         m = build_model(
             not_reaching_var_bound_with_breakpoint_params,
             "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
         )
-        m.build(add_math_dict=add_math)
+        m.build()
         with pytest.raises(exceptions.BackendError) as excinfo:
             m.backend.add_piecewise_constraint("foo_piecewise_fails", working_math)
         assert check_error_or_warning(

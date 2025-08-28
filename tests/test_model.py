@@ -118,19 +118,15 @@ class TestModelInit:
 
 
 class TestModelBuild:
-    @pytest.fixture
-    def init_model(self):
-        return build_model({}, "simple_supply,two_hours,investment_costs")
-
-    def test_add_math_dict_with_mode_math(self, init_model):
-        init_model.build(
-            add_math_dict={"constraints": {"system_balance": {"active": False}}},
-            force=True,
+    def test_add_math_dict_with_mode_math(self):
+        model = build_model(
+            {},
+            "simple_supply,two_hours,investment_costs",
+            math_dict={"constraints": {"system_balance": {"active": False}}},
         )
-        assert len(init_model.backend.constraints) > 0
-        assert init_model.backend.constraints.system_balance.equals(
-            xr.DataArray(np.nan)
-        )
+        model.build(force=True)
+        assert len(model.backend.constraints) > 0
+        assert model.backend.constraints.system_balance.equals(xr.DataArray(np.nan))
 
 
 class TestModelSolve:
@@ -380,18 +376,20 @@ class TestSporesMode:
 
     @pytest.fixture
     def spores_infeasible_model(self):
-        model = build_model({}, self.SPORES_OVERRIDES)
         # Add a negation, which makes the problem infeasible due to it being a minimisation problem that goes to minus infinity.
         infeasible_expression = (
             "sum(flow_cap * -1 * spores_score, over=[nodes, techs, carriers])"
         )
-        model.build(
-            add_math_dict={
+        model = build_model(
+            {},
+            self.SPORES_OVERRIDES,
+            math_dict={
                 "objectives.min_spores.equations": [
                     {"expression": infeasible_expression}
                 ]
-            }
+            },
         )
+        model.build()
         return model
 
     def test_backend_build_mode(self, spores_model_and_log):
