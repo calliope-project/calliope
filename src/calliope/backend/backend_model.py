@@ -298,12 +298,14 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             "references": set(),
         }
         for name, check in data_checks.root.items():
-            if check.errors == "ignore":
-                continue
-            parsed_ = parser_.parse_string(check.where, parse_all=True)
-            evaluated = parsed_[0].eval("array", equation_name=name, **eval_kwargs)
-            if evaluated.any() and (evaluated & self.inputs.definition_matrix).any():
-                check_results[check.errors].append(check.message)
+            if check.active:
+                parsed_ = parser_.parse_string(check.where, parse_all=True)
+                evaluated = parsed_[0].eval("array", equation_name=name, **eval_kwargs)
+                if (
+                    evaluated.any()
+                    and (evaluated & self.inputs.definition_matrix).any()
+                ):
+                    check_results[check.errors].append(check.message)
 
         exceptions.print_warnings_and_raise_errors(
             check_results["warn"], check_results["raise"]

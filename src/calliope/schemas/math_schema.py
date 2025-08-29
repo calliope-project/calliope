@@ -275,7 +275,7 @@ class Check(CalliopeBaseModel):
     """Top-level condition to check"""
     message: str
     """Message to display when the `where` array returns True, if raising or warning on error."""
-    errors: Literal["raise", "warn", "ignore"] = "raise"
+    errors: Literal["raise", "warn"] = "raise"
     """How to respond to any instances in which the `where` array returns True."""
     active: bool = True
     """If False, this check will be ignored during the build phase."""
