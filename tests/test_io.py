@@ -254,6 +254,7 @@ c:  # a comment inline with `c`
         I: 1
         II: 2
 d:
+e: False
 """,
         "nested_string": "a.b.c: 1\na.b.foo: 2\nb.a.c.bar: foo",
     }
@@ -266,6 +267,7 @@ d:
             "b": 2,
             "c": {"x": "foo", "y": "bar", "z": {"I": 1, "II": 2}},
             "d": None,
+            "e": False,
         },
         "nested_string": {
             "a": {"b": {"c": 1, "foo": 2}},
