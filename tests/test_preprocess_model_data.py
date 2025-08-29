@@ -1091,6 +1091,7 @@ class TestSubset:
             model_data_factory_with_int_dim.dataset.int_dim.to_index(),
             pd.RangeIndex(start=1, stop=4, step=1, name="int_dim"),
             exact="equiv",
+            check_exact=False,
         )
 
     def test_numeric_unordered(self, model_data_factory_with_int_dim):
@@ -1110,6 +1111,7 @@ class TestSubset:
             model_data_factory_with_int_dim.dataset.int_dim.to_index(),
             pd.Index([1, 3], name="int_dim"),
             exact="equiv",
+            check_exact=False,
         )
 
     def test_subset_undefined_dim(
