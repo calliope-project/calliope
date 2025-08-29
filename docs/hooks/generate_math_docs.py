@@ -20,6 +20,10 @@ TEMPDIR = tempfile.TemporaryDirectory()
 
 MODEL_PATH = Path(__file__).parent / "dummy_model" / "model.yaml"
 
+BASE_MATH_NAV_PATH = ["Math", "Built-in base math"]
+OTHER_MATH_NAV_PATH = ["Math", "Other built-in math"]
+AUTO_POP_MARKER = "this will be auto-populated"
+
 PREPEND_SNIPPET = """
 # {title}
 {description}
@@ -57,6 +61,7 @@ def on_files(files: list, config: dict, **kwargs):
         base_documentation,
         files,
         config,
+        base_math=True,
     )
 
     for override in model_config["overrides"].keys():
@@ -89,6 +94,7 @@ def write_file(
     math_documentation: MathDocumentation,
     files: list[File],
     config: dict,
+    base_math: bool = False,
 ) -> None:
     """Parse math files and produce markdown documentation.
 
@@ -121,13 +127,28 @@ def write_file(
             use_directory_urls=config["use_directory_urls"],
         )
     )
-    nav_reference = [
+    if base_math:
+        top_level_page_name, second_level_page_name = BASE_MATH_NAV_PATH
+    else:
+        top_level_page_name, second_level_page_name = OTHER_MATH_NAV_PATH
+
+    top_level_nav_reference = [
         idx
         for idx in config["nav"]
-        if isinstance(idx, dict) and set(idx.keys()) == {"Pre-defined math"}
+        if isinstance(idx, dict) and set(idx.keys()) == {top_level_page_name}
+    ][0]
+    nav_reference = [
+        idx
+        for idx in top_level_nav_reference[top_level_page_name]
+        if isinstance(idx, dict) and set(idx.keys()) == {second_level_page_name}
     ][0]
 
-    nav_reference["Pre-defined math"].append(output_file.as_posix())
+    if base_math:
+        nav_reference[second_level_page_name] = output_file.as_posix()
+    else:
+        if AUTO_POP_MARKER in nav_reference[second_level_page_name]:
+            nav_reference[second_level_page_name].remove(AUTO_POP_MARKER)
+        nav_reference[second_level_page_name].append(output_file.as_posix())
 
     title = math_documentation.name
     math_doc = math_documentation.write(format="md", mkdocs_features=True)

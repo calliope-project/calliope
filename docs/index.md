@@ -1,5 +1,9 @@
 # Calliope: energy system modelling made simple
 
+!!! tip
+
+    If you are new to Calliope, we recommend that you first read through the [getting started guide](getting_started/concepts.md), then review the [examples and tutorials](examples/overview.md). The remaining sections primarily contain reference material that is most useful if you already know the basics and need to look up something.
+
 !!! warning
 
     Calliope version 0.7 is available as a pre-release with the purpose of gathering feedback from users.

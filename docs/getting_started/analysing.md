@@ -6,7 +6,24 @@ Whatever software you prefer to use for data processing, either the NetCDF or CS
 !!! example
     Refer to the [examples and tutorials section](examples/index.md) section for a more practical look at how to analyse model results.
 
-## Accessing model data and results
+## Easiest approach: Using Calligraph
+
+The most straightforward approach to analysing model results is to use [Calligraph](https://calligraph.readthedocs.io/), our separate tool for visualising Calliope results:
+
+<video controls>
+    <source src="https://spontaneous-choux-e05fa1.netlify.app/calligraph.mp4" type="video/mp4">
+</video>
+
+After having run your model and saved its results to NetCDF (e.g., `calliope run my_model.yaml --save_netcdf=results.nc`), you can open the resulting NetCDF file with Calligraph simply by running:
+
+```shell
+$ calligraph results.nc
+```
+
+This will open up Calligraph's interactive in-browser interface.
+For more, see the [Calligraph documentation](https://calligraph.readthedocs.io/).
+
+## Accessing model data and results within Python
 
 A model which solved successfully has two primary [xarray.Dataset][]s with data of interest:
 
