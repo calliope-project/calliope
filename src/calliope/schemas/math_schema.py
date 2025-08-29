@@ -56,11 +56,11 @@ class MathComponent(CalliopeBaseModel):
 class Dimension(MathComponent):
     """Schema for named dimension."""
 
-    dtype: Literal["string", "datetime", "date", "integer", "float"]
+    dtype: Literal["string", "datetime", "date", "integer", "float"] = "string"
     """The data type of this dimension's items."""
     ordered: bool = False
     """If True, the order of the dimension items is meaningful (e.g. chronological time)."""
-    iterator: str
+    iterator: str = "NEEDS_ITERATOR"
     """The name of the iterator to use in the LaTeX math formulation for this dimension."""
 
 
@@ -85,7 +85,7 @@ class Lookup(MathComponent):
 
     default: AttrStr | float | int | bool = float("nan")
     """The default value for the lookup, if not set in the data."""
-    dtype: Literal["integer", "float", "string", "bool", "datetime", "date"]
+    dtype: Literal["integer", "float", "string", "bool", "datetime", "date"] = "string"
     """The lookup data type."""
     resample_method: Literal["mean", "sum", "first"] = "first"
     """If resampling is applied over any of the lookup's dimensions, the method to use to aggregate the data."""
@@ -135,7 +135,7 @@ class MathEquationComponent(MathComponent):
     @model_validator(mode="after")
     def must_have_equations_if_active(self) -> Self:
         """Ensure that equations are defined if the component is active."""
-        if self.active and not self.equations:
+        if self.active and not self.equations.root:
             raise ValueError("Must have equations defined if component is active.")
         return self
 
@@ -364,24 +364,56 @@ class CalliopeBuildMath(CalliopeBaseModel):
     checks: Checks = Checks()
     """Checks to apply before building the optimisation problem."""
 
+    @model_validator(mode="after")
+    def unique_component_names(self):
+        """Ensure all component names are unique."""
+        groups = sorted(
+            (
+                {
+                    name
+                    for name, values in getattr(self, field).root.items()
+                    if values.active
+                }
+                for field in type(self).model_fields
+            ),
+            key=len,
+        )
+        seen = set()
+        duplicates = set()
+        for field_names in groups:
+            duplicates |= field_names & seen
+            seen |= field_names
+        if duplicates:
+            raise ValueError(
+                f"Non-unique names in math components: {sorted(duplicates)}."
+            )
+
+        return self
+
     def find(
         self, component: str, subset: Iterable[COMPONENTS_T] | None = None
     ) -> tuple[str, MathComponent]:
         """Find a component in the math schema."""
-        to_search = subset or self.model_fields_set - {"checks"}
+        fields = (
+            set(subset)
+            if subset is not None
+            else set(type(self).model_fields) - {"checks"}
+        )
+
         found = {
-            field: item
-            for field in to_search
-            if (item := getattr(self, field).root.get(component)) is not None
-            and item.active
+            f
+            for f in fields
+            if (values := getattr(self, f).root.get(component)) is not None
+            and values.active
         }
+        if not found:
+            raise KeyError(f"Component name `{component}` not found in math schema.")
         if len(found) > 1:
             raise ValueError(
-                f"Component name `{component}` found in multiple places: {found.keys()}."
+                f"Component name `{component}` found in multiple places: {found}."
             )
-        if len(found) == 0:
-            raise KeyError(f"Component name `{component}` not found in math schema.")
-        return list(found.items())[0]
+        field = found.pop()
+        return field, getattr(self, field).root[component]
 
 
 class CalliopeInputMath(CalliopeDictModel):
