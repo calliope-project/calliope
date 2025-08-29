@@ -1087,11 +1087,9 @@ class TestSubset:
             )
         )
         model_data_factory_with_int_dim._subset_dims()
-        pd.testing.assert_index_equal(
-            model_data_factory_with_int_dim.dataset.int_dim.to_index(),
-            pd.RangeIndex(start=1, stop=4, step=1, name="int_dim"),
-            exact="equiv",
-        )
+        idx = model_data_factory_with_int_dim.dataset.int_dim.to_index()
+        expected = pd.Index(np.arange(1, 4, dtype=idx.dtype), name="int_dim")
+        pd.testing.assert_index_equal(idx, expected, exact="equiv")
 
     def test_numeric_unordered(self, model_data_factory_with_int_dim):
         """Subsetting an integer, unordered dimension uses an intersection with the subset list."""
@@ -1106,11 +1104,9 @@ class TestSubset:
             )
         )
         model_data_factory_with_int_dim._subset_dims()
-        pd.testing.assert_index_equal(
-            model_data_factory_with_int_dim.dataset.int_dim.to_index(),
-            pd.Index([1, 3], name="int_dim"),
-            exact="equiv",
-        )
+        idx = model_data_factory_with_int_dim.dataset.int_dim.to_index()
+        expected = pd.Index([1, 3], dtype=idx.dtype, name="int_dim")
+        pd.testing.assert_index_equal(idx, expected, exact="equiv")
 
     def test_subset_undefined_dim(
         self, model_data_factory_with_time: ModelDataFactory, my_caplog
