@@ -3,7 +3,6 @@
 """Schema for Calliope mathematical definition."""
 
 from collections.abc import Iterable
-from itertools import chain
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -86,7 +85,7 @@ class Lookup(MathComponent):
 
     default: AttrStr | float | int | bool = float("nan")
     """The default value for the lookup, if not set in the data."""
-    dtype: Literal["integer", "float", "string", "bool", "datetime", "date"]
+    dtype: Literal["integer", "float", "string", "bool", "datetime", "date"] = "string"
     """The lookup data type."""
     resample_method: Literal["mean", "sum", "first"] = "first"
     """If resampling is applied over any of the lookup's dimensions, the method to use to aggregate the data."""
@@ -368,26 +367,22 @@ class CalliopeBuildMath(CalliopeBaseModel):
     @model_validator(mode="after")
     def unique_component_names(self):
         """Ensure all component names are unique."""
-        # Variables and Parameters can be swapped, so duplicates are allowed.
-        varparam = set(self.variables.root) | set(self.parameters.root)
-
-        # All other components must not share names with each other or with var/param.
         groups = sorted(
-            chain(
-                (varparam,),
-                (
-                    set(getattr(self, n).root)
-                    for n in type(self).model_fields
-                    if n not in {"variables", "parameters"}
-                ),
+            (
+                {
+                    name
+                    for name, values in getattr(self, field).root.items()
+                    if values.active
+                }
+                for field in type(self).model_fields
             ),
             key=len,
         )
         seen = set()
         duplicates = set()
-        for items in groups:
-            duplicates |= items & seen
-            seen |= items
+        for field_names in groups:
+            duplicates |= field_names & seen
+            seen |= field_names
         if duplicates:
             raise ValueError(
                 f"Non-unique names in math components: {sorted(duplicates)}."
@@ -399,25 +394,26 @@ class CalliopeBuildMath(CalliopeBaseModel):
         self, component: str, subset: Iterable[COMPONENTS_T] | None = None
     ) -> tuple[str, MathComponent]:
         """Find a component in the math schema."""
-        to_search = (
+        fields = (
             set(subset)
             if subset is not None
             else set(type(self).model_fields) - {"checks"}
         )
 
         found = {
-            field: item
-            for field in to_search
-            if (item := getattr(self, field).root.get(component)) is not None
-            and item.active
+            f
+            for f in fields
+            if (values := getattr(self, f).root.get(component)) is not None
+            and values.active
         }
         if not found:
             raise KeyError(f"Component name `{component}` not found in math schema.")
         if len(found) > 1:
             raise ValueError(
-                f"Component name `{component}` found in multiple places: {found.keys()}."
+                f"Component name `{component}` found in multiple places: {found}."
             )
-        return next(iter(found.items()))
+        field = found.pop()
+        return field, getattr(self, field).root[component]
 
 
 class CalliopeInputMath(CalliopeDictModel):

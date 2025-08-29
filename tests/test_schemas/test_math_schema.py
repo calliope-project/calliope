@@ -95,13 +95,21 @@ class TestCalliopeBuildMath:
     def base_math_validated(self, base_math_raw) -> AttrDict:
         """Validated Calliope base math.
 
-        Includes valid edge-cases:
-        - Duplicates in vars/params (emulates mode switching where variables become parameters).
-        - Deactivated components.
+        Includes edge-cases:
+        - Duplicates in several sections (with only one active).
+        - Moving variables to parameters (common in operate mode).
+        - Fully deactivated components.
         """
+        # Duplicates with only one active
         base_math_raw["variables"]["foo"] = math_schema.Variable().model_dump()
         base_math_raw["parameters"]["foo"] = math_schema.Parameter().model_dump()
+        base_math_raw["lookups"]["foo"] = math_schema.Lookup().model_dump()
+        base_math_raw["parameters"]["foo"]["active"] = False
+        base_math_raw["lookups"]["foo"]["active"] = False
+        # Simulate variable -> parameter (common case)
         base_math_raw["parameters"]["flow_cap"] = math_schema.Parameter().model_dump()
+        base_math_raw["variables"]["flow_cap"]["active"] = False
+        # Full deactivation
         base_math_raw["global_expressions"]["flow_in_inc_eff"]["active"] = False
         base_math_raw["dimensions"]["datesteps"]["active"] = False
         return math_schema.CalliopeBuildMath.model_validate(base_math_raw)
@@ -123,11 +131,13 @@ class TestCalliopeBuildMath:
     @pytest.mark.parametrize(
         ("to_search", "component"),
         [
-            ("timesteps", "dimensions"),
+            ("foo", "variables"),
+            ("flow_out", "variables"),
+            ("flow_cap", "parameters"),
             ("bigM", "parameters"),
+            ("timesteps", "dimensions"),
             ("cap_method", "lookups"),
             ("force_zero_area_use", "constraints"),
-            ("link_flow_cap", "variables"),
             ("min_cost_optimisation", "objectives"),
             ("cost_operation_variable", "global_expressions"),
         ],
@@ -138,19 +148,37 @@ class TestCalliopeBuildMath:
         assert location == component
         assert data == base_math_validated[location][to_search]
 
-    @pytest.mark.parametrize("to_search", ["foo", "flow_cap"])
-    def test_find_duplicate_error(self, to_search, base_math_validated):
+    def test_find_duplicate_error(self, base_math_validated):
         """Finding duplicate parameters should return an error."""
-        with pytest.raises(
-            ValueError, match=f"Component name `{to_search}` found in multiple"
-        ):
-            base_math_validated.find(to_search)
+        m = base_math_validated
+
+        # Brute force a duplicate addition
+        foo_active = m.parameters.root["foo"].model_copy(update={"active": True})
+        new_param_root = dict(m.parameters.root)
+        new_param_root["foo"] = foo_active
+        new_params = m.parameters.model_copy(update={"root": new_param_root})
+        m_dupe = m.model_copy(update={"parameters": new_params})
+
+        with pytest.raises(ValueError, match=r"found in multiple"):
+            m_dupe.find("foo")
 
     @pytest.mark.parametrize(
-        "to_search", ["flow_in_inc_eff", "datesteps", "non_existent", 3, True, 1.0]
+        ("to_search", "subset"),
+        [
+            ("flow_in_inc_eff", None),
+            ("datesteps", None),
+            ("non_existent", None),
+            (3, None),
+            (True, None),
+            (1.0, None),
+            # explicit subset cases
+            ("foo", {"parameters", "lookups", "global_expressions"}),
+            ("flow_cap", {"variables", "objectives"}),
+        ],
     )
-    def test_find_not_found_error(self, to_search, base_math_validated):
+    def test_find_not_found_error(self, to_search, subset, base_math_validated):
+        """Requesting components that are not there should raise an error."""
         with pytest.raises(
             KeyError, match=f"Component name `{to_search}` not found in math schema"
         ):
-            base_math_validated.find(to_search)
+            base_math_validated.find(to_search, subset)
