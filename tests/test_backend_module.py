@@ -12,10 +12,7 @@ def test_valid_model_backend(simple_supply, valid_backend):
     """Requesting a valid model backend must result in a backend instance."""
     build_config = simple_supply.config.build.update({"backend": valid_backend})
     backend_obj = backend.get_model_backend(
-        build_config,
-        simple_supply.inputs,
-        AttrDict(simple_supply.math.build.model_dump()),
-        simple_supply.runtime.defaults,
+        build_config, simple_supply.inputs, simple_supply.math.build
     )
     assert isinstance(backend_obj, BackendModel)
 
@@ -26,8 +23,5 @@ def test_invalid_model_backend(spam, simple_supply):
     invalid_config = AttrDict({"backend": spam})
     with pytest.raises(BackendError):
         backend.get_model_backend(
-            invalid_config,
-            simple_supply.inputs,
-            AttrDict(simple_supply.math.build.model_dump()),
-            simple_supply.runtime.defaults,
+            invalid_config, simple_supply.inputs, simple_supply.math.build
         )

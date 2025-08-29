@@ -100,7 +100,7 @@ m.backend.get_constraint(
 # If we want to update a parameter value or fix a decision variable, we can do so now that we have built the optimisation problem
 
 # %%
-m.backend.update_parameter("flow_cap_max", m.inputs.flow_cap_max * 2)
+m.backend.update_input("flow_cap_max", m.inputs.flow_cap_max * 2)
 m.backend.get_parameter("flow_cap_max", as_backend_objs=False).sel(
     techs="pv"
 ).to_series().dropna()

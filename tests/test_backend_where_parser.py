@@ -95,15 +95,15 @@ def dummy_build_config():
 
 
 @pytest.fixture
-def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config):
+def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config, dummy_model_math):
     return {
         "input_data": dummy_pyomo_backend_model.inputs,
         "backend_interface": dummy_pyomo_backend_model,
+        "math": dummy_model_math,
         "helper_functions": helper_functions._registry["where"],
         "equation_name": "foo",
         "return_type": "array",
         "references": set(),
-        "defaults": dummy_pyomo_backend_model.defaults,
         "build_config": dummy_build_config,
     }
 
@@ -126,7 +126,7 @@ class TestParserElements:
         self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
-        default = eval_kwargs["defaults"][expected]
+        default = eval_kwargs["input_data"][expected].attrs["default"]
         assert (
             parsed_[0]
             .eval(apply_where=False, **eval_kwargs)
@@ -179,8 +179,11 @@ class TestParserElements:
     @pytest.mark.parametrize("data_var_string", ["foo", "with_INF", "all_infs"])
     def test_data_var_fail_not_in_model(self, data_var, data_var_string, eval_kwargs):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
-        assert not evaluated_
+        with pytest.raises(
+            BackendError,
+            match=f"Data variable `{data_var_string}` not found in model dataset",
+        ):
+            parsed_[0].eval(**eval_kwargs)
 
     @pytest.mark.parametrize(
         "data_var_string", ["multi_dim_var", "no_dim_var", "multi_dim_expr"]
@@ -189,7 +192,7 @@ class TestParserElements:
         self, data_var, data_var_string, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(BackendError) as excinfo:
             parsed_[0].eval(apply_where=False, **eval_kwargs)
         assert check_error_or_warning(
             excinfo,
@@ -198,7 +201,7 @@ class TestParserElements:
 
     def test_data_var_fail_cannot_handle_constraint(self, data_var, eval_kwargs):
         parsed_ = data_var.parse_string("no_dim_constr", parse_all=True)
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(BackendError) as excinfo:
             parsed_[0].eval(**eval_kwargs)
         assert check_error_or_warning(
             excinfo, ["Cannot check values", "Received constraint: `no_dim_constr`"]
@@ -574,16 +577,18 @@ class TestParserMasking:
 
 class TestAsMathString:
     @pytest.fixture
-    def latex_eval_kwargs(self, eval_kwargs, dummy_latex_backend_model):
+    def latex_eval_kwargs(
+        self, eval_kwargs, dummy_latex_backend_model, dummy_model_math
+    ):
         eval_kwargs["return_type"] = "math_string"
         eval_kwargs["backend_interface"] = dummy_latex_backend_model
+        eval_kwargs["math"] = dummy_model_math
         return eval_kwargs
 
     @pytest.mark.parametrize(
         ("parser", "instring", "expected"),
         [
             ("data_var", "with_inf", r"\exists (\textit{with_inf}_\text{node,tech})"),
-            ("data_var", "foo", r"\exists (\text{foo})"),
             ("data_var", "no_dims", r"\exists (\textit{no_dims})"),
             ("config_option", "config.foo", r"\text{config.foo}"),
             ("bool_operand", "True", "true"),
@@ -593,7 +598,7 @@ class TestAsMathString:
                 "with_inf==True",
                 r"\textit{with_inf}_\text{node,tech}\mathord{==}\text{true}",
             ),
-            ("subset", "[foo, bar] in foos", r"\text{foo} \in \text{[foo,bar]}"),
+            ("subset", "[foo, bar] in techs", r"\text{tech} \in \text{[foo,bar]}"),
             ("where", "NOT no_dims", r"\neg (\exists (\textit{no_dims}))"),
             (
                 "where",

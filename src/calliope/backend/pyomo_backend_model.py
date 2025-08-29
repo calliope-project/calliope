@@ -27,12 +27,11 @@ from pyomo.core.kernel.piecewise_library.transforms import (
 from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
-from calliope.attrdict import AttrDict
 from calliope.backend import backend_model, parsing
 from calliope.backend.backend_model import ALL_COMPONENTS_T
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, math_schema
 from calliope.util.logging import LogWriter
 
 LOGGER = logging.getLogger(__name__)
@@ -53,9 +52,8 @@ class PyomoBackendModel(backend_model.BackendModel):
     def __init__(
         self,
         inputs: xr.Dataset,
-        math: AttrDict,
+        math: math_schema.CalliopeBuildMath,
         build_config: config_schema.Build,
-        defaults: dict,
     ) -> None:
         """Pyomo solver interface class.
 
@@ -65,7 +63,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             build_config (config_schema.Build): Build configuration options.
             defaults (dict): Parameter defaults.
         """
-        super().__init__(inputs, math, build_config, defaults, pmo.block())
+        super().__init__(inputs, math, build_config, pmo.block())
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
@@ -78,38 +76,24 @@ class PyomoBackendModel(backend_model.BackendModel):
         self.shadow_prices = PyomoShadowPrices(self._instance.dual, self)
 
     def add_parameter(  # noqa: D102, override
-        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
+        self, name: str, values: xr.DataArray, definition: math_schema.Parameter
     ) -> None:
-        self._raise_error_on_preexistence(parameter_name, "parameters")
-        if parameter_values.isnull().all():
+        self._raise_error_on_preexistence(name, "parameters")
+        if values.isnull().all():
             self.log(
-                "parameters",
-                parameter_name,
-                "Component not added; no data found in array.",
+                "parameters", name, "Empty component added; no data found in array."
             )
-            parameter_da = parameter_values.astype(float)
+            values = xr.DataArray(np.nan, attrs=values.attrs)
         else:
-            self._create_obj_list(parameter_name, "parameters")
-            parameter_da = self._apply_func(
-                self._to_pyomo_param,
-                parameter_values.notnull(),
-                1,
-                parameter_values,
-                name=parameter_name,
+            self._create_obj_list(name, "parameters")
+            values = self._apply_func(
+                self._to_pyomo_param, values.notnull(), 1, values, name=name
             )
 
-        attrs = {
-            "title": self._PARAM_TITLES.get(parameter_name, None),
-            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
-            "unit": self._PARAM_UNITS.get(parameter_name, None),
-            "default": default,
-            "original_dtype": parameter_values.dtype.name,
-        }
-
-        self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
+        self._add_to_dataset(name, values, "parameters", definition.model_dump())
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraint
+        self, name: str, definition: math_schema.Constraint
     ) -> None:
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -129,10 +113,10 @@ class PyomoBackendModel(backend_model.BackendModel):
 
             return to_fill
 
-        self._add_component(name, constraint_dict, _constraint_setter, "constraints")
+        self._add_component(name, definition, _constraint_setter, "constraints")
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpression
+        self, name: str, definition: math_schema.GlobalExpression
     ) -> None:
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -144,18 +128,16 @@ class PyomoBackendModel(backend_model.BackendModel):
 
             return to_fill
 
-        self._add_component(
-            name, expression_dict, _expression_setter, "global_expressions"
-        )
+        self._add_component(name, definition, _expression_setter, "global_expressions")
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariable
+        self, name: str, definition: math_schema.Variable
     ) -> None:
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
 
         def _variable_setter(where, references):
-            domain_type = domain_dict[variable_dict["domain"]]
-            bounds = variable_dict["bounds"]
+            domain_type = domain_dict[definition.domain]
+            bounds = definition.bounds
             lb = self._get_variable_bound(bounds["min"], name, references)
             ub = self._get_variable_bound(bounds["max"], name, references)
             var = self._apply_func(
@@ -170,14 +152,14 @@ class PyomoBackendModel(backend_model.BackendModel):
             var.attrs = {}
             return var
 
-        self._add_component(name, variable_dict, _variable_setter, "variables")
+        self._add_component(name, definition, _variable_setter, "variables")
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjective
+        self, name: str, definition: math_schema.Objective
     ) -> None:
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
 
-        sense = sense_dict[objective_dict["sense"]]
+        sense = sense_dict[definition.sense]
 
         def _objective_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -195,7 +177,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             self._instance.objectives[name].append(objective)
             return xr.DataArray(objective)
 
-        self._add_component(name, objective_dict, _objective_setter, "objectives")
+        self._add_component(name, definition, _objective_setter, "objectives")
 
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         self.objectives[self.objective].item().deactivate()
@@ -218,9 +200,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         param_as_vals = self._apply_func(
             self._from_pyomo_param, parameter.notnull(), 1, parameter
         )
-        orig_dtype = parameter.original_dtype
-        self.log("parameters", name, f"Converting Pyomo object to {orig_dtype} dtype.")
-        return param_as_vals.astype(orig_dtype).where(param_as_vals.notnull())
+        return param_as_vals.where(param_as_vals.notnull()).astype(float)
 
     @overload
     def get_constraint(  # noqa: D102, override
@@ -391,61 +371,12 @@ class PyomoBackendModel(backend_model.BackendModel):
         if key in self._dataset and self._dataset[key].obj_type == component_type:
             del self._dataset[key]
 
-    def update_parameter(  # noqa: D102, override
+    def update_input(  # noqa: D102, override
         self, name: str, new_values: xr.DataArray | SupportsFloat
     ) -> None:
-        new_values = xr.DataArray(new_values)
-        parameter_da = self.get_parameter(name)
-        input_da = self.inputs.get(name, xr.DataArray(np.nan))
-        missing_dims_in_new_vals = set(parameter_da.dims).difference(new_values.dims)
-        missing_dims_in_orig_vals = set(new_values.dims).difference(parameter_da.dims)
-        refs_to_update: set = set()
-
-        if missing_dims_in_new_vals:
-            self.log(
-                "parameters",
-                name,
-                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
-                "info",
-            )
-
-        if (
-            (not parameter_da.shape and new_values.shape)
-            or missing_dims_in_orig_vals
-            or (parameter_da.isnull() & new_values.notnull()).any()
-        ):
-            refs_to_update = self._find_all_references(parameter_da.attrs["references"])
-            if refs_to_update:
-                self.log(
-                    "parameters",
-                    name,
-                    "Defining values for a previously fully/partially undefined parameter. "
-                    f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
-                    "info",
-                )
-
-            if name not in self.inputs:
-                self.inputs[name] = new_values
-            else:
-                new_input_da = new_values.broadcast_like(input_da).fillna(input_da)
-                new_input_da.attrs = input_da.attrs
-                self.inputs[name] = new_input_da
-
-            self.delete_component(name, "parameters")
-            self.add_parameter(
-                name, self.inputs[name], default=self.defaults.get(name, np.nan)
-            )
-            self._rebuild_references(refs_to_update)
-            if self._has_verbose_strings:
-                self.verbose_strings()
-        else:
-            self._apply_func(
-                self._update_pyomo_param,
-                new_values.notnull(),
-                1,
-                parameter_da,
-                new_values,
-            )
+        orig, new, update = self._update_input(name, new_values, mutable=True)
+        if update:
+            self._apply_func(self._update_pyomo_param, new.notnull(), 1, orig, new)
 
     def update_variable_bounds(  # noqa: D102, override
         self,
@@ -466,13 +397,11 @@ class PyomoBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.math.get_key(
-                f"variables.{name}.bounds.{bound_name}", None
-            )
+            existing_bound_param = self.math.variables[name].bounds[bound_name]
             if existing_bound_param in self.parameters:
                 raise BackendError(
                     "Cannot update variable bounds that have been set by parameters. "
-                    f"Use `update_parameter('{existing_bound_param}')` to update the {bound_name} bound of {name}."
+                    f"Use `update_input('{existing_bound_param}')` to update the {bound_name} bound of {name}."
                 )
 
             bound_da = xr.DataArray(new_bounds)

@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -17,14 +17,8 @@ from calliope import _version, backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import (
-    config_schema,
-    math_schema,
-    model_def_schema,
-    runtime_attrs_schema,
-)
+from calliope.schemas import CalliopeAttrs, config_schema
 from calliope.util.logging import log_time
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -43,7 +37,9 @@ def read_netcdf(path: str | Path) -> Model:
     """
     model_data = io.read_netcdf(path)
     return Model(
-        model_data["inputs"], model_data["results"], **model_data["attrs"].attrs
+        model_data["inputs"],
+        CalliopeAttrs(**model_data["attrs"].attrs),
+        model_data["results"],
     )
 
 
@@ -51,6 +47,7 @@ def read_yaml(
     file: str | Path,
     scenario: str | None = None,
     override_dict: dict | None = None,
+    math_dict: dict | None = None,
     data_table_dfs: dict[str, pd.DataFrame] | None = None,
     **kwargs,
 ) -> Model:
@@ -67,10 +64,13 @@ def read_yaml(
             Additional overrides to apply to `config`.
             These will be applied *after* applying any defined `scenario` overrides.
             Defaults to None.
+        math_dict (dict | None, optional):
+            Additional math definitions to apply after loading the math paths.
+            Defaults to None.
         data_table_dfs (dict[str, pd.DataFrame] | None, optional):
             Model definition `data_table` entries can reference in-memory pandas DataFrames.
             The referenced data must be supplied here as a dictionary of those DataFrames.
-            Defaults to None.None.
+            Defaults to None.
         **kwargs: initialisation overrides.
 
     Returns:
@@ -79,7 +79,13 @@ def read_yaml(
     raw_data = io.read_rich_yaml(file)
     definition_path = Path(file)
     return Model.from_dict(
-        raw_data, scenario, override_dict, data_table_dfs, definition_path, **kwargs
+        raw_data,
+        scenario,
+        override_dict,
+        math_dict,
+        data_table_dfs,
+        definition_path,
+        **kwargs,
     )
 
 
@@ -87,13 +93,13 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    _SAVE_ATTRS_T = Literal["definition", "config", "math", "runtime"]
 
     def __init__(
         self,
         inputs: xr.Dataset,
+        attrs: CalliopeAttrs,
         results: xr.Dataset | None = None,
-        **kwargs: dict[_SAVE_ATTRS_T, dict],
+        **kwargs,
     ) -> None:
         """Returns a instantiated Calliope Model.
 
@@ -101,9 +107,11 @@ class Model:
             inputs (xr.Dataset): Input dataset.
             results (xr.Dataset | None, optional):
                 If given, the results dataset. Defaults to None.
-            **kwargs (dict[_SAVE_ATTRS_T, dict]):
+            attrs (CalliopeAttrs):
                 Model attributes & properties.
                 Any of _SAVE_ATTRS_T that are not given here will be initialised with default values.
+            **kwargs:
+                initialisation keyword arguments
 
         See Also:
             `calliope.Model.from_dict`: Initialise from a model YAML loaded into memory.
@@ -111,25 +119,28 @@ class Model:
             `calliope.read_yaml`: Read from YAML definition.
             `calliope.read_netcdf`: Read from a calliope model saved to NetCDF.
         """
-        self.inputs = inputs
         self.results = xr.Dataset() if results is None else results
         self.backend: BackendModel
-        self.definition = model_def_schema.CalliopeModelDef.model_validate(
-            kwargs.get("definition", {})
-        )
-        self.config = config_schema.CalliopeConfig.model_validate(
-            kwargs.get("config", {})
-        )
-        self.math = math_schema.CalliopeMath.model_validate(kwargs.get("math", {}))
-        self.runtime = runtime_attrs_schema.CalliopeRuntime.model_validate(
-            kwargs.get("runtime", {})
-        )
+
+        self.definition = attrs.definition
+        self.config = attrs.config
+        self.math = attrs.math
+        self.runtime = attrs.runtime
 
         self._start_window_idx: int = 0
         self._is_built: bool = False
         self._is_solved: bool = False if results is None else True
 
+        self.config = self.config.update({"init": kwargs})
         self._check_versions()
+
+        model_data_factory = ModelDataFactory(self.config.init, inputs, self.math.init)
+
+        model_data_factory.clean()
+        self.inputs = model_data_factory.dataset
+
+        self.math = self.math.update({"build": model_data_factory.math.model_dump()})
+
         log_time(
             LOGGER,
             self.runtime.timings,
@@ -160,6 +171,7 @@ class Model:
         model_definition: dict,
         scenario: str | None = None,
         override_dict: dict | None = None,
+        math_dict: dict | None = None,
         data_table_dfs: dict[str, pd.DataFrame] | None = None,
         definition_path: Path | None = None,
         **kwargs,
@@ -175,30 +187,37 @@ class Model:
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.
                 Defaults to None.
+            math_dict (dict | None, optional):
+                Additional math definitions to apply after loading the math paths.
+                Defaults to None.
             data_table_dfs (dict[str, pd.DataFrame] | None, optional):
                 Model definition `data_table` entries can reference in-memory pandas DataFrames.
                 The referenced data must be supplied here as a dictionary of those DataFrames.
-                Defaults to None.None.
+                Defaults to None.
             definition_path (Path | None): If given, the path relative to which all path references in `model_definition` will be taken.
             **kwargs: initialisation overrides.
         """
-        def_dict = preprocess.prepare_model_definition(
-            model_definition, scenario, override_dict, definition_path, **kwargs
+        model_def = preprocess.prepare_model_definition(
+            model_definition,
+            scenario,
+            override_dict,
+            math_dict,
+            definition_path,
+            **kwargs,
         )
 
         log_time(
             LOGGER,
-            def_dict.runtime.timings,
+            model_def.runtime.timings,
             "model_data_creation",
             comment="Model: preprocessing stage 2 (data)",
         )
-
         model_data_factory = ModelDataFactory(
-            def_dict.config.init,
-            AttrDict(def_dict.definition.model_dump(exclude_defaults=True)),
+            model_def.config.init,
+            AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
+            model_def.math.init,
             definition_path,
             data_table_dfs,
-            {"default": def_dict.runtime.defaults},
         )
         model_data_factory.build()
 
@@ -207,15 +226,15 @@ class Model:
         inputs_attrs = list(model_data_factory.dataset.attrs.keys())
         to_update = {k: model_data_factory.dataset.attrs.pop(k) for k in inputs_attrs}
 
-        def_dict = def_dict.update({"runtime": to_update})
+        model_def = model_def.update({"runtime": to_update})
 
         log_time(
             LOGGER,
-            def_dict.runtime.timings,
+            model_def.runtime.timings,
             "model_preprocessing_complete",
             comment="Model: preprocessing complete",
         )
-        return cls(inputs, **def_dict.model_dump())
+        return cls(inputs=inputs, attrs=model_def)
 
     @property
     def name(self) -> str | None:
@@ -233,30 +252,26 @@ class Model:
         return self._is_solved
 
     @property
-    def math_priority(self) -> list[str]:
-        """Order of math formulations, with the last overwriting previous ones."""
-        names = [self.config.init.base_math]
-        if self.config.build.mode != "base":
-            names.append(self.config.build.mode)
-        names += self.config.build.extra_math
-        return names
+    def all_attrs(self) -> CalliopeAttrs:
+        """Get all model attributes as a CalliopeAttrs object."""
+        return CalliopeAttrs(
+            **{
+                k: getattr(self, k).model_dump()
+                for k in CalliopeAttrs.model_fields.keys()
+            }
+        )
 
     def dump_all_attrs(self) -> dict:
         """Dump of all class pydantic model attributes as a single dictionary."""
-        return {k: getattr(self, k).model_dump() for k in get_args(self._SAVE_ATTRS_T)}
+        return self.all_attrs.model_dump()
 
-    def build(
-        self, force: bool = False, add_math_dict: dict | None = None, **kwargs
-    ) -> None:
+    def build(self, force: bool = False, **kwargs) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
             force (bool, optional):
                 If ``force`` is True, any existing results will be overwritten.
                 Defaults to False.
-            add_math_dict (dict | None, optional):
-                Additional math to apply on top of the YAML base / additional math files.
-                Content of this dictionary will override any matching key:value pairs in the loaded math files.
             **kwargs: build configuration overrides.
         """
         if self._is_built and not force:
@@ -273,25 +288,16 @@ class Model:
 
         self.config = self.config.update({"build": kwargs})
 
-        mode = self.config.build.mode
+        mode = self.config.init.mode
         if mode == "operate":
-            if not self.runtime.allow_operate_mode:
-                raise exceptions.ModelError(
-                    "Unable to run this model in operate (i.e. dispatch) mode, probably because "
-                    "there exist non-uniform timesteps (e.g. from time clustering)"
-                )
             backend_input = self._prepare_operate_mode_inputs(self.config.build.operate)
         else:
             backend_input = self.inputs
 
-        applied_math = preprocess.build_applied_math(
-            self.math_priority, self.math.init.model_dump(), add_math_dict
-        )
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, applied_math, self.runtime.defaults
+            self.config.build, backend_input, self.math.build
         )
         self.backend.add_optimisation_components()
-        self.math = self.math.update({"build": applied_math})
 
         log_time(
             LOGGER,
@@ -342,7 +348,7 @@ class Model:
 
         self.backend.shadow_prices.track_constraints(self.config.solve.shadow_prices)
 
-        mode = self.config.build.mode
+        mode = self.config.init.mode
         log_time(
             LOGGER,
             self.runtime.timings,
@@ -370,7 +376,7 @@ class Model:
                 results, self.inputs, self.config.solve.zero_threshold
             )
 
-        self.math = self.math.update({"build": results.attrs.pop("applied_math", {})})
+        self.math = self.math.update({"build": self.backend.math.model_dump()})
         self.runtime = self.runtime.update(
             {"termination_condition": results.attrs.pop("termination_condition")}
         )
@@ -465,6 +471,11 @@ class Model:
         Returns:
             xr.Dataset: Slice of input data.
         """
+        if self.config.init.time_cluster is not None:
+            # TODO: Consider moving this to validator in config schema
+            raise exceptions.ModelError(
+                "Unable to run this model in operate (i.e. dispatch) mode because time clustering is in use"
+            )
         self.inputs.coords["windowsteps"] = pd.date_range(
             self.inputs.timesteps[0].item(),
             self.inputs.timesteps[-1].item(),
@@ -486,16 +497,6 @@ class Model:
                 self.inputs.horizonsteps[self._start_window_idx],
             )
         )
-        if operate_config.use_cap_results:
-            to_parameterise = extract_from_schema(MODEL_SCHEMA, "x-operate-param")
-            if not self._is_solved:
-                raise exceptions.ModelError(
-                    "Cannot use base mode capacity results in operate mode if a solution does not yet exist for the model."
-                )
-            for parameter in to_parameterise.keys():
-                if parameter in self.results:
-                    self.inputs[parameter] = self.results[parameter]
-
         return sliced_inputs
 
     def _solve_operate(self, solver_config: config_schema.Solve) -> xr.Dataset:
@@ -510,8 +511,9 @@ class Model:
         Returns:
             xr.Dataset: Results dataset.
         """
-        if self.backend.inputs.timesteps[0] != self.inputs.timesteps[0]:
+        if self._start_window_idx != 0:
             LOGGER.info("Optimisation model | Resetting model to first time window.")
+            self._start_window_idx = 0
             self.build(force=True)
 
         LOGGER.info("Optimisation model | Running first time window.")
@@ -521,6 +523,7 @@ class Model:
         results_list = []
 
         for idx, windowstep in enumerate(self.inputs.windowsteps[1:]):
+            self._start_window_idx = idx + 1
             windowstep_as_string = windowstep.dt.strftime("%Y-%m-%d %H:%M:%S").item()
             LOGGER.info(
                 f"Optimisation model | Running time window starting at {windowstep_as_string}."
@@ -535,31 +538,34 @@ class Model:
             new_inputs = self.inputs.sel(
                 timesteps=slice(windowstep, horizonstep)
             ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
+            new_ts = new_inputs.timesteps.copy()
 
             if len(new_inputs.timesteps) != len(iteration_results.timesteps):
                 LOGGER.info(
                     "Optimisation model | Reaching the end of the timeseries. "
                     "Re-building model with shorter time horizon."
                 )
-                self._start_window_idx = idx + 1
                 self.build(force=True)
             else:
-                self.backend._dataset.coords["timesteps"] = new_inputs.timesteps
-                self.backend.inputs.coords["timesteps"] = new_inputs.timesteps
+                new_inputs.coords["timesteps"] = self.backend.inputs.coords["timesteps"]
                 for param_name, param_data in new_inputs.data_vars.items():
-                    if "timesteps" in param_data.dims:
-                        self.backend.update_parameter(param_name, param_data)
+                    if (
+                        "timesteps" in param_data.dims
+                        and param_name in self.backend.parameters
+                        and not param_data.equals(self.backend.inputs[param_name])
+                    ):
+                        self.backend.update_input(param_name, param_data)
                         self.backend.inputs[param_name] = param_data
 
             if "storage" in iteration_results:
-                self.backend.update_parameter(
+                self.backend.update_input(
                     "storage_initial",
                     self._recalculate_storage_initial(previous_iteration_results),
                 )
 
             iteration_results = self.backend._solve(solver_config, warmstart=False)
+            iteration_results.coords["timesteps"] = new_ts
 
-        self._start_window_idx = 0
         results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
         results = xr.concat(results_list, dim="timesteps", combine_attrs="drop")
         results.attrs["termination_condition"] = ",".join(
@@ -584,7 +590,9 @@ class Model:
         """
         end_storage = results.storage.isel(timesteps=-1).drop_vars("timesteps")
 
-        new_initial_storage = end_storage / self.inputs.storage_cap
+        new_initial_storage = end_storage / self.inputs.storage_cap.where(
+            lambda x: x > 0
+        )
         return new_initial_storage
 
     def _solve_spores(self, solver_config: config_schema.Solve) -> xr.Dataset:
@@ -597,8 +605,8 @@ class Model:
             xr.Dataset: Results dataset.
         """
         LOGGER.info("Optimisation model | Resetting SPORES parameters.")
-        self.backend.update_parameter(
-            "spores_score", self.backend.defaults["spores_score"]
+        self.backend.update_input(
+            "spores_score", self.math.build.parameters["spores_score"].default
         )
 
         spores_config: config_schema.SolveSpores = solver_config.spores
@@ -615,7 +623,7 @@ class Model:
                 f"Optimisation model | Restarting SPORES from SPORE {latest_spore} results."
             )
             baseline_results = self.results.sel(spores=latest_spore).drop_vars("spores")
-            self.backend.update_parameter(
+            self.backend.update_input(
                 "spores_score", baseline_results.spores_score_cumulative
             )
         else:
@@ -636,17 +644,17 @@ class Model:
             raise exceptions.ModelError(
                 "Cannot run SPORES without baseline results. "
                 "This issue may be caused by an infeasible baseline model."
-                "Ensure your baseline model can solve successfully by running it in `plan` mode."
+                "Ensure your baseline model can solve successfully by running it in `base` mode."
             )
 
-        base_cost_default = self.backend.defaults["spores_baseline_cost"]
+        base_cost_default = self.math.build.parameters["spores_baseline_cost"].default
         constraining_cost = baseline_results.get(
             "spores_baseline_cost_tracked", self.inputs.get("spores_baseline_cost")
         )
         if not constraining_cost or constraining_cost == base_cost_default:
             # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
             constraining_cost = baseline_results[self.config.build.objective]
-        self.backend.update_parameter("spores_baseline_cost", constraining_cost)
+        self.backend.update_input("spores_baseline_cost", constraining_cost)
 
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
@@ -863,4 +871,4 @@ class Model:
             spores_techs, old_score
         )
 
-        self.backend.update_parameter("spores_score", new_score)
+        self.backend.update_input("spores_score", new_score)

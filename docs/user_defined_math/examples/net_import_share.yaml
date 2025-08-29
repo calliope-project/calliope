@@ -17,6 +17,11 @@
 #
 # ---
 
+parameters:
+  net_import_share:
+    description: The share of carrier out/inflows that transmission import/export at a node can account for.
+    default: 1
+
 constraints:
   net_import_share_max:
     description: Limit upper bound on electricity imports within nodes as a share of all electricity flows at each node.

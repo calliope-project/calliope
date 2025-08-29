@@ -6,17 +6,16 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.backend import latex_backend_model
+from calliope.schemas import math_schema
 
 from .common.util import check_error_or_warning
 
 
 @pytest.fixture
-def temp_dummy_latex_backend_model(
-    dummy_model_data, dummy_model_math, default_config, model_defaults
-):
+def temp_dummy_latex_backend_model(dummy_model_data, dummy_model_math, default_config):
     """Function scoped model definition to avoid cross-test contamination."""
     return latex_backend_model.LatexBackendModel(
-        dummy_model_data, dummy_model_math, default_config.build, model_defaults
+        dummy_model_data, dummy_model_math, default_config.build
     )
 
 
@@ -29,7 +28,7 @@ class TestLatexBackendModel:
     )
     def test_add_parameter(self, request, backend_obj):
         latex_backend_model = request.getfixturevalue(backend_obj)
-        latex_backend_model.add_parameter("param", xr.DataArray(1))
+        latex_backend_model.add_parameter("param", xr.DataArray(1), {})
         assert latex_backend_model.parameters["param"] == xr.DataArray(1)
         assert "param" in latex_backend_model.valid_component_names
 
@@ -217,7 +216,7 @@ class TestLatexBackendModel:
 
     def test_new_objective_set(self, dummy_latex_backend_model):
         dummy_latex_backend_model.add_objective(
-            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+            "foo", {"equations": [{"expression": "no_dims"}], "sense": "minimise"}
         )
         dummy_latex_backend_model.set_objective("foo")
         assert dummy_latex_backend_model.objective == "foo"
@@ -231,10 +230,12 @@ class TestLatexBackendModel:
         dummy_latex_backend_model.add_parameter(
             "piecewise_x",
             xr.DataArray(data=[0, 5, 10], coords={"breakpoints": [0, 1, 2]}),
+            {},
         )
         dummy_latex_backend_model.add_parameter(
             "piecewise_y",
             xr.DataArray(data=[0, 1, 5], coords={"breakpoints": [0, 1, 2]}),
+            {},
         )
         for param in ["piecewise_x", "piecewise_y"]:
             dummy_latex_backend_model.inputs[param] = (
@@ -272,10 +273,12 @@ class TestLatexBackendModel:
         dummy_latex_backend_model.add_parameter(
             "piecewise_x",
             xr.DataArray(data=[0, 5, 10], coords={"breakpoints": [0, 1, 2]}),
+            {},
         )
         dummy_latex_backend_model.add_parameter(
             "piecewise_y",
             xr.DataArray(data=[0, 1, 5], coords={"breakpoints": [0, 1, 2]}),
+            {},
         )
         for param in ["piecewise_x", "piecewise_y"]:
             dummy_latex_backend_model.inputs[param] = (
@@ -436,7 +439,7 @@ class TestLatexBackendModel:
         ],
     )
     def test_generate_math_doc(self, temp_dummy_latex_backend_model, format, expected):
-        temp_dummy_latex_backend_model._add_all_inputs_as_parameters()
+        temp_dummy_latex_backend_model._load_inputs()
         temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
@@ -513,8 +516,10 @@ class TestLatexBackendModel:
                     === "YAML"
 
                         ```yaml
+                        description: foobar
                         equations:
                         - expression: 1 + 2
+                        default: 0
                         ```
                     """
         )
@@ -522,7 +527,7 @@ class TestLatexBackendModel:
     def test_generate_math_doc_mkdocs_features_admonition(
         self, temp_dummy_latex_backend_model
     ):
-        temp_dummy_latex_backend_model._add_all_inputs_as_parameters()
+        temp_dummy_latex_backend_model._load_inputs()
         temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
@@ -560,8 +565,10 @@ class TestLatexBackendModel:
                     === "YAML"
 
                         ```yaml
+                        description: foobar
                         equations:
                         - expression: no_dims + 1
+                        default: 0
                         ```
 
                     ## Parameters
@@ -657,7 +664,7 @@ class TestLatexBackendModel:
         ("instring", "kwargs", "expected"),
         [
             ("{{ foo }}", {"foo": 1}, "1"),
-            ("{{ foo|removesuffix('s') }}", {"foo": "bars"}, "bar"),
+            ("{{ foo|iterator }}", {"foo": "techs"}, "tech"),
             ("{{ foo }} + {{ bar }}", {"foo": "1", "bar": "2"}, "1 + 2"),
             (
                 "{{ foo|escape_underscores }}",
@@ -686,7 +693,7 @@ class TestLatexBackendModel:
         assert rendered == expected
 
     def test_get_variable_bounds_string(self, dummy_latex_backend_model):
-        bounds = {"min": 1, "max": 2e6}
+        bounds = math_schema.Bounds.model_validate({"min": 1, "max": 2e6})
         refs = set()
         lb, ub = dummy_latex_backend_model._get_variable_bounds_string(
             "multi_dim_var", bounds, refs
@@ -698,11 +705,11 @@ class TestLatexBackendModel:
         assert refs == {"multi_dim_var"}
 
     def test_param_type(self, temp_dummy_latex_backend_model):
-        temp_dummy_latex_backend_model._add_all_inputs_as_parameters()
+        temp_dummy_latex_backend_model._load_inputs()
         temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
-                "equations": [{"expression": "1 + flow_cap_max"}],
+                "equations": [{"expression": "1 + with_inf"}],
                 "description": "foobar",
                 "default": 0,
             },
@@ -719,30 +726,28 @@ class TestLatexBackendModel:
 
             **Uses**:
 
-            * [flow_cap_max](#flow_cap_max)
+            * [with_inf](#with_inf)
 
             **Default**: 0
 
             $$
             \begin{array}{l}
-                \quad 1 + \textit{flow\_cap\_max}\\
+                \quad 1 + \textit{with\_inf}_\text{node,tech}\\
             \end{array}
             $$
 
             ## Parameters
 
-            ### flow_cap_max
+            ### with_inf
 
-            Limits `flow_cap` to a maximum.
+            With infinity values.
 
             **Used in**:
 
             * [expr](#expr)
 
-            **Unit**: power.
+            **Unit**: power
 
-            **Default**: inf
-
-            **Type**: float
+            **Default**: 100
             """
         )

@@ -11,16 +11,16 @@ config:
     name: Urban-scale example model
     # What version of Calliope this model is intended for
     calliope_version: 0.7.0
-    # Time series data path - can either be a path relative to this file, or an absolute path
-    time_subset: ["2005-07-01", "2005-07-02"] # Subset of timesteps
+    subset:
+      timesteps: ["2005-07-01", "2005-07-02"] # Subset of timesteps
     broadcast_param_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
-    extra_math:
+    math_paths:
       additional_math: "additional_math.yaml"
+    extra_math: ["additional_math"]
+    mode: base # Choices: base, operate, spores
 
   build:
-    mode: base # Choices: base, operate
     ensure_feasibility: true # Switching on unmet demand
-    extra_math: ["additional_math"]
 
   solve:
     solver: cbc

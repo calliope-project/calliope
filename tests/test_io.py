@@ -183,10 +183,6 @@ class TestIO:
     def test_config_reload(self, model_from_file, model):
         assert model_from_file.config.model_dump() == model.config.model_dump()
 
-    def test_defaults_as_model_attrs_not_property(self, model_from_file):
-        assert len(model_from_file.runtime.defaults) > 0
-        assert not hasattr(model_from_file, "defaults")
-
     @pytest.mark.parametrize("attr", ["results", "inputs"])
     def test_filtered_dataset_as_property(self, model_from_file, attr):
         assert hasattr(model_from_file, attr)
@@ -258,6 +254,7 @@ c:  # a comment inline with `c`
         I: 1
         II: 2
 d:
+e: False
 """,
         "nested_string": "a.b.c: 1\na.b.foo: 2\nb.a.c.bar: foo",
     }
@@ -270,6 +267,7 @@ d:
             "b": 2,
             "c": {"x": "foo", "y": "bar", "z": {"I": 1, "II": 2}},
             "d": None,
+            "e": False,
         },
         "nested_string": {
             "a": {"b": {"c": 1, "foo": 2}},

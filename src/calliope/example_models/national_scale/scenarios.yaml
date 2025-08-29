@@ -11,28 +11,39 @@ scenarios:
 overrides:
   profiling:
     config:
-      init.name: "National-scale example model (profiling run)"
-      init.time_subset: ["2005-01-01", "2005-01-15"]
+      init:
+        name: "National-scale example model (profiling run)"
+        subset:
+          timesteps: ["2005-01-01", "2005-01-15"]
       solve.solver: cbc
 
   time_resampling:
     config:
       init:
         name: "National-scale example model with time resampling"
-        time_subset: ["2005-01", "2005-01"]
-        time_resample: "6h"
+        subset:
+          timesteps: ["2005-01", "2005-01"]
+        resample:
+          timesteps: "6h"
 
   time_clustering:
     config:
       init:
         name: "National-scale example model with time clustering"
-        time_subset: null # No time subsetting
-        time_cluster: data_tables/cluster_days.csv
+        subset: {timesteps: null} # No time subsetting
+        time_cluster: cluster_days_param
+    data_tables:
+      cluster_days:
+        data: data_tables/cluster_days.csv
+        rows: datesteps
+        add_dims:
+          parameters: cluster_days_param
 
   spores:
-    config.init.broadcast_param_data: false
-    config.build:
+    config.init:
+      broadcast_param_data: false
       mode: spores
+    config.build:
       ensure_feasibility: true
     config.solve.spores:
       tracking_parameter: spores_tracker
@@ -46,9 +57,10 @@ overrides:
 
   operate:
     config:
-      init.time_subset: ["2005-01-01", "2005-01-10"]
-      build:
+      init:
+        subset.timesteps: ["2005-01-01", "2005-01-10"]
         mode: operate
+      build:
         operate:
           window: 12h
           horizon: 24h
@@ -80,8 +92,7 @@ overrides:
       build:
         ensure_feasibility: False
         objective: "check_feasibility"
-      init:
-        time_subset: ["2005-01-04", "2005-01-04"]
+      init.subset.timesteps: ["2005-01-04", "2005-01-04"]
 
   reserve_margin:
     parameters:
@@ -99,14 +110,14 @@ overrides:
   ##
 
   run1:
-    config.init.time_subset: ["2005-01-01", "2005-01-31"]
+    config.init.subset.timesteps: ["2005-01-01", "2005-01-31"]
   run2:
-    config.init.time_subset: ["2005-02-01", "2005-02-31"]
+    config.init.subset.timesteps: ["2005-02-01", "2005-02-31"]
   run3:
-    config.init.time_subset: ["2005-01-01", "2005-01-31"]
+    config.init.subset.timesteps: ["2005-01-01", "2005-01-31"]
     nodes.region1.techs.ccgt.flow_cap_max: 0 # Disallow CCGT
   run4:
-    time_subset: ["2005-02-01", "2005-02-31"]
+    config.init.subset.timesteps: ["2005-02-01", "2005-02-31"]
     nodes.region1.techs.ccgt.flow_cap_max: 0 # Disallow CCGT
 
   ##

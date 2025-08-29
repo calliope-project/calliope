@@ -8,9 +8,8 @@ from pathlib import Path
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
-from calliope.preprocess.model_math import initialise_math
-from calliope.schemas import CalliopeInputs
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
+from calliope.preprocess.model_math import initialise_math_paths, load_math
+from calliope.schemas import CalliopeAttrs
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
@@ -20,9 +19,10 @@ def prepare_model_definition(
     model_definition: dict,
     scenario: str | None = None,
     override_dict: dict | None = None,
+    math_dict: dict | None = None,
     definition_path: Path | None = None,
     **kwargs,
-) -> CalliopeInputs:
+) -> CalliopeAttrs:
     """Arrange model definition data following our standardised order of priority.
 
     Should always be called when defining calliope models from configuration files.
@@ -34,6 +34,9 @@ def prepare_model_definition(
         model_definition (str | Path | dict): model data file or dictionary.
         scenario (str | None, optional): scenario to run. Defaults to None.
         override_dict (dict | None, optional): additional overrides. Defaults to None.
+        math_dict (dict | None, optional):
+            Additional math definitions to apply after loading the math paths.
+            Defaults to None.
         definition_path (Path | None): If given, path relative to which referenced files will be loaded.
         **kwargs: Initialisation overrides.
 
@@ -51,19 +54,20 @@ def prepare_model_definition(
 
     config = model_def_dict.pop("config")
     definition = model_def_dict
-    math = initialise_math(config.init.get("extra_math"), definition_path)
+    config.init["math_paths"] = initialise_math_paths(
+        config.init.get("math_paths"), definition_path
+    )
+    math = load_math(config.init["math_paths"])
+    if math_dict:
+        math.union(math_dict, allow_override=True)
 
     inputs = {
         "config": config,
         "definition": definition,
         "math": {"init": math},
-        "runtime": {
-            "applied_overrides": applied_overrides,
-            "scenario": scenario,
-            "defaults": extract_from_schema(MODEL_SCHEMA, "default"),
-        },
+        "runtime": {"applied_overrides": applied_overrides, "scenario": scenario},
     }
-    return CalliopeInputs(**inputs)
+    return CalliopeAttrs(**inputs)
 
 
 def _load_scenario_overrides(

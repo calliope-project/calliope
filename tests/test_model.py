@@ -1,5 +1,4 @@
 import logging
-import typing
 from contextlib import contextmanager
 
 import numpy as np
@@ -12,6 +11,7 @@ import calliope
 import calliope.backend
 import calliope.preprocess
 from calliope.model import Model, read_netcdf, read_yaml
+from calliope.schemas import CalliopeAttrs
 from calliope.schemas.general import CalliopeBaseModel
 
 from .common.util import build_test_model as build_model
@@ -21,7 +21,8 @@ LOGGER = "calliope.model"
 
 @pytest.fixture(scope="class")
 def model_from_yaml(minimal_test_model_path):
-    return read_yaml(minimal_test_model_path)
+    model = read_yaml(minimal_test_model_path)
+    return model
 
 
 @pytest.fixture(scope="class")
@@ -42,15 +43,15 @@ def model_from_dict(model_from_yaml, minimal_test_model_path):
 
 @pytest.fixture(scope="class")
 def model_from_datasets(model_from_yaml):
-    return Model(model_from_yaml.inputs, **model_from_yaml.dump_all_attrs())
+    return Model(model_from_yaml.inputs, model_from_yaml.all_attrs)
 
 
 @pytest.fixture(scope="class")
 def model_from_datasets_with_results(model_from_yaml):
     return Model(
         model_from_yaml.inputs,
+        attrs=model_from_yaml.all_attrs,
         results=model_from_yaml.inputs,
-        **model_from_yaml.dump_all_attrs(),
     )
 
 
@@ -73,7 +74,7 @@ class TestModelInit:
         assert not model.results
 
     @pytest.mark.parametrize("model_name", MODELS)
-    @pytest.mark.parametrize("attr_name", typing.get_args(Model._SAVE_ATTRS_T))
+    @pytest.mark.parametrize("attr_name", CalliopeAttrs.model_fields.keys())
     def test_model_attrs(
         self,
         request: pytest.FixtureRequest,
@@ -117,17 +118,15 @@ class TestModelInit:
 
 
 class TestModelBuild:
-    @pytest.fixture
-    def init_model(self):
-        return build_model({}, "simple_supply,two_hours,investment_costs")
-
-    def test_add_math_dict_with_mode_math(self, init_model):
-        init_model.build(
-            add_math_dict={"constraints": {"system_balance": {"active": False}}},
-            force=True,
+    def test_add_math_dict_with_mode_math(self):
+        model = build_model(
+            {},
+            "simple_supply,two_hours,investment_costs",
+            math_dict={"constraints": {"system_balance": {"active": False}}},
         )
-        assert len(init_model.backend.constraints) > 0
-        assert "system_balance" not in init_model.backend.constraints
+        model.build(force=True)
+        assert len(model.backend.constraints) > 0
+        assert model.backend.constraints.system_balance.equals(xr.DataArray(np.nan))
 
 
 class TestModelSolve:
@@ -161,15 +160,17 @@ class TestOperateMode:
     @pytest.fixture(scope="class")
     def base_model(self):
         """Solve in base mode for the same overrides, to check against operate mode model."""
-        model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        model.build(mode="base")
+        model = build_model(
+            {}, "simple_supply,operate,var_costs,investment_costs", mode="base"
+        )
+        model.build()
         model.solve()
         return model
 
     @pytest.fixture(
         scope="class", params=[("6h", "12h"), ("12h", "12h"), ("16h", "20h")]
     )
-    def operate_model_and_log(self, request):
+    def operate_model_and_log(self, base_model, request):
         """Solve in base mode, then use results to set operate mode inputs, then solve in operate mode.
 
         Three different operate/horizon windows chosen:
@@ -177,18 +178,13 @@ class TestOperateMode:
         ("12h", "12h"): Both window and horizon are the same length, so there is no need to rebuild the optimisation problem towards the end of horizon
         ("16h", "20h"): Neither window or horizon fit completely into the model time range (48hr)
         """
-        model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        model.build(mode="base")
-        model.solve()
-        model.build(
-            force=True,
+
+        model = calliope.Model(
+            inputs=base_model.inputs.assign(base_model.results),
+            attrs=base_model.all_attrs,
             mode="operate",
-            operate={
-                "use_cap_results": True,
-                "window": request.param[0],
-                "horizon": request.param[1],
-            },
         )
+        model.build(operate={"window": request.param[0], "horizon": request.param[1]})
 
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
@@ -196,11 +192,6 @@ class TestOperateMode:
             log = caplog.text
 
         return model, log
-
-    def test_backend_build_mode(self, operate_model_and_log):
-        """Verify that we have run in operate mode"""
-        operate_model, _ = operate_model_and_log
-        assert operate_model.backend.config.mode == "operate"
 
     def test_operate_mode_success(self, operate_model_and_log):
         """Solving in operate mode should lead to an optimal solution."""
@@ -225,7 +216,7 @@ class TestOperateMode:
                 operate_model_and_log[0].solve(force=True)
             return caplog.text
 
-    def test_reset_model_window(self, rerun_operate_log):
+    def test_reset_model_window(self, operate_model_and_log, rerun_operate_log):
         """The backend model time window needs resetting back to the start on rerunning in operate mode."""
         assert "Resetting model to first time window." in rerun_operate_log
 
@@ -254,23 +245,14 @@ class TestOperateMode:
         )
 
     def test_build_operate_not_allowed_build(self):
-        """Cannot build in operate mode if the `allow_operate_mode` attribute is False"""
+        """Cannot build in operate mode if time clustering is in use."""
 
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.runtime = m.runtime.update({"allow_operate_mode": False})
+        m = build_model({}, "simple_supply,two_hours,investment_costs", mode="operate")
+        m.config = m.config.update({"init.time_cluster": "foo"})
         with pytest.raises(
-            calliope.exceptions.ModelError, match="Unable to run this model in op"
+            calliope.exceptions.ModelError, match="Unable to run this model in operate"
         ):
-            m.build(mode="operate")
-
-    def test_build_operate_use_cap_results_error(self):
-        """Requesting to use capacity results should return an error if the model is not pre-solved."""
-        m = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        with pytest.raises(
-            calliope.exceptions.ModelError,
-            match="Cannot use base mode capacity results in operate mode if a solution does not yet exist for the model.",
-        ):
-            m.build(mode="operate", operate={"use_cap_results": True})
+            m.build()
 
 
 class TestSporesMode:
@@ -293,7 +275,7 @@ class TestSporesMode:
     def spores_model_and_log(self, request):
         """Iterate 2 times in SPORES mode."""
         model = build_model({}, self.SPORES_OVERRIDES)
-        model.build(mode="spores")
+        model.build()
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve()
@@ -308,7 +290,7 @@ class TestSporesMode:
     def spores_model_and_log_algorithms(self, request):
         """Iterate 2 times in SPORES mode using different scoring algorithms."""
         model = build_model({}, self.SPORES_OVERRIDES)
-        model.build(mode="spores")
+        model.build()
 
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
@@ -320,24 +302,30 @@ class TestSporesMode:
     @pytest.fixture(scope="class")
     def spores_model_continue_from_plan_and_log(self, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
-        model = build_model({}, self.SPORES_OVERRIDES)
-        model.build(mode="base")
+        model = build_model({}, self.SPORES_OVERRIDES, mode="base")
+        model.build()
         model.solve()
 
-        model.build(mode="spores", force=True)
+        model2 = calliope.Model(
+            inputs=model.inputs,
+            results=model.results,
+            attrs=model.all_attrs,
+            mode="spores",
+        )
+        model2.build()
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
-                model.solve(force=True, spores={"use_latest_results": True})
+                model2.solve(force=True, spores={"use_latest_results": True})
             log = caplog.text
 
-        return model, log
+        return model2, log
 
     @pytest.fixture(scope="class")
     def spores_model_continue_from_spores_and_log(self, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
 
         model = build_model({}, self.SPORES_OVERRIDES)
-        model.build(mode="spores")
+        model.build()
         model.solve()
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
@@ -357,7 +345,7 @@ class TestSporesMode:
         """Iterate 2 times in SPORES mode and save to file each time."""
 
         model = build_model({}, self.SPORES_OVERRIDES)
-        model.build(mode="spores")
+        model.build()
 
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
@@ -373,7 +361,7 @@ class TestSporesMode:
     def spores_model_with_tracker(self, request):
         """Iterate 2 times in SPORES mode with a SPORES score tracking parameter."""
         model = build_model({}, f"{self.SPORES_OVERRIDES},spores_tech_tracking")
-        model.build(mode="spores")
+        model.build()
         model.solve(spores={"scoring_algorithm": request.param})
 
         return model
@@ -388,24 +376,26 @@ class TestSporesMode:
 
     @pytest.fixture
     def spores_infeasible_model(self):
-        model = build_model({}, self.SPORES_OVERRIDES)
         # Add a negation, which makes the problem infeasible due to it being a minimisation problem that goes to minus infinity.
         infeasible_expression = (
             "sum(flow_cap * -1 * spores_score, over=[nodes, techs, carriers])"
         )
-        model.build(
-            add_math_dict={
+        model = build_model(
+            {},
+            self.SPORES_OVERRIDES,
+            math_dict={
                 "objectives.min_spores.equations": [
                     {"expression": infeasible_expression}
                 ]
-            }
+            },
         )
+        model.build()
         return model
 
     def test_backend_build_mode(self, spores_model_and_log):
         """Verify that we have run in spores mode"""
         spores_model, _ = spores_model_and_log
-        assert spores_model.backend.config.mode == "spores"
+        assert spores_model.backend.objective == "min_spores"
 
     def test_io_save(self, spores_model_and_log, tmp_path):
         """Verify that we can save a model with SPORES results to file."""
@@ -449,7 +439,7 @@ class TestSporesMode:
     def test_spores_constraining_cost_is_baseline_obj(
         self, request, simple_supply_spores_ready, fixture
     ):
-        """No matter how SPORES are initiated, the constraining cost (pre application of slack) should be the plan mode objective function value."""
+        """Ensure the constraining cost is the base mode objective function value."""
         model, _ = request.getfixturevalue(fixture)
         baseline = model.backend.get_parameter(
             "spores_baseline_cost", as_backend_objs=False
@@ -661,7 +651,7 @@ class TestSporesMode:
             {"techs.test_supply_elec.flow_cap_max": np.inf},
             f"{self.SPORES_OVERRIDES},spores_tech_tracking",
         )
-        model.build(mode="spores")
+        model.build()
 
         with pytest.raises(
             calliope.exceptions.BackendError,

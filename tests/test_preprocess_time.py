@@ -3,6 +3,7 @@ import pytest  # noqa: F401
 
 from calliope import exceptions
 from calliope.io import read_rich_yaml
+from calliope.preprocess import time
 
 from .common.util import build_test_model
 
@@ -17,7 +18,7 @@ class TestTimeFormat:
         # should pass: changing datetime format from default
         override = read_rich_yaml(
             """
-            config.init.time_format: "%d/%m/%Y %H:%M"
+            config.init.datetime_format: "%d/%m/%Y %H:%M"
             data_tables:
                 demand_elec.data: data_tables/demand_heat_diff_dateformat.csv
                 demand_heat.data: data_tables/demand_heat_diff_dateformat.csv
@@ -40,7 +41,7 @@ class TestTimeFormat:
 
     def test_incorrect_date_format_multi(self):
         # should fail: wrong dateformat input for all files
-        override3 = {"config.init.time_format": "%d/%m/%Y %H:%M"}
+        override3 = {"config.init.datetime_format": "%d/%m/%Y %H:%M"}
 
         with pytest.raises(exceptions.ModelError):
             build_test_model(override_dict=override3, scenario="simple_supply")
@@ -57,27 +58,78 @@ class TestTimeFormat:
             build_test_model(override_dict=override, scenario="simple_conversion")
 
 
+class TestSubsetTime:
+    @pytest.fixture(scope="class")
+    def ts_index(self):
+        return pd.date_range("2005-01-01", "2005-01-05", freq="h")
+
+    @pytest.mark.parametrize(
+        "time_subset",
+        [
+            ["2005", "2005"],
+            ["2005-01", "2005-01"],
+            ["2005-01-02", "2005-01-04"],
+            ["2005-01-02 00", "2005-01-04 00"],
+            ["2005-01-02 00:00", "2005-01-04 00:00"],
+            ["2005-01-02 00:00:00", "2005-01-04 00:00:00"],
+        ],
+    )
+    def test_check_time_subset_all_good(self, ts_index, time_subset):
+        """A nicely format subset raises no errors."""
+        time.check_time_subset(ts_index, time_subset)
+
+    def test_check_time_subset_no_overlap(self, ts_index):
+        """The subset must overlap at least partially with the timeseries index."""
+        time_subset = ["2005-01-06", "2005-01-07"]
+        with pytest.raises(exceptions.ModelError, match="subset time range"):
+            time.check_time_subset(ts_index, time_subset)
+
+    def test_check_time_subset_too_many_list_items(self, ts_index):
+        """Subset must be a slice of two timestamps."""
+        time_subset = ["2005-01-02", "2005-01-04", "2005-01-05"]
+        with pytest.raises(
+            exceptions.ModelError, match="subset must be a list of two timestamps"
+        ):
+            time.check_time_subset(ts_index, time_subset)
+
+    @pytest.mark.parametrize(
+        "time_subset",
+        [["01/01/2005", "03/01/2005"], ["01/01/2005 00:00", "03/01/2005 00:00"]],
+    )
+    def test_check_time_format(self, ts_index, time_subset):
+        """Subset must be in ISO format"""
+        with pytest.raises(
+            exceptions.ModelError, match="Timeseries subset must be in ISO format"
+        ):
+            time.check_time_subset(ts_index, time_subset)
+
+
 class TestClustering:
     @pytest.fixture(
         scope="class", params=["cluster_days", "cluster_days_diff_dateformat"]
     )
     def clustered_model(self, request):
         cluster_init = {
-            "time_subset": ["2005-01-01", "2005-01-04"],
-            "time_cluster": f"data_tables/{request.param}.csv",
+            "subset": {"timesteps": ["2005-01-01", "2005-01-04"]},
+            "time_cluster": request.param,
+            "override_dict": {
+                "data_tables": {
+                    "clustering": {
+                        "data": f"data_tables/{request.param}.csv",
+                        "rows": "datesteps",
+                        "add_dims": {"parameters": request.param},
+                    }
+                }
+            },
         }
         if "diff_dateformat" in request.param:
-            cluster_init["override_dict"] = {
-                "data_tables": {
-                    "demand_elec.data": "data_tables/demand_heat_diff_dateformat.csv"
-                }
+            cluster_init["override_dict"]["data_tables.demand_elec"] = {
+                "data": "data_tables/demand_heat_diff_dateformat.csv"
             }
-            cluster_init["time_format"] = "%d/%m/%Y %H:%M"
+            cluster_init["datetime_format"] = "%d/%m/%Y %H:%M"
+            cluster_init["date_format"] = "%d/%m/%Y"
 
         return build_test_model(scenario="simple_supply", **cluster_init)
-
-    def test_no_operate_mode_allowed(self, clustered_model):
-        assert clustered_model.runtime.allow_operate_mode == 0
 
     def test_cluster_numbers(self, clustered_model):
         assert (
@@ -128,9 +180,16 @@ class TestResamplingAndCluster:
     def test_resampling_to_6h_then_clustering(self):
         model = build_test_model(
             scenario="simple_supply",
-            time_subset=["2005-01-01", "2005-01-04"],
-            time_resample="6h",
-            time_cluster="data_tables/cluster_days.csv",
+            subset={"timesteps": ["2005-01-01", "2005-01-04"]},
+            resample={"timesteps": "6h"},
+            time_cluster="cluster_days_param",
+            override_dict={
+                "data_tables.cluster_days": {
+                    "data": "data_tables/cluster_days.csv",
+                    "rows": "datesteps",
+                    "add_dims": {"parameters": "cluster_days_param"},
+                }
+            },
         )
 
         dtindex = pd.DatetimeIndex(
@@ -147,10 +206,18 @@ class TestResamplingAndCluster:
         )
 
         assert dtindex.equals(model.inputs.timesteps.to_index())
-        assert model.runtime.allow_operate_mode == 0
 
 
 class TestResampling:
+    def test_resampling_unknown_format(self):
+        with pytest.raises(
+            exceptions.ModelError,
+            match="Unknown `timesteps` resampling frequency: unknown",
+        ):
+            build_test_model(
+                {}, scenario="simple_supply", resample={"timesteps": "unknown"}
+            )
+
     def test_15min_resampling_to_6h(self):
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
@@ -158,7 +225,9 @@ class TestResampling:
             "data_tables.demand_elec.data: data_tables/demand_elec_15mins.csv"
         )
 
-        model = build_test_model(override, scenario="simple_supply", time_resample="6h")
+        model = build_test_model(
+            override, scenario="simple_supply", resample={"timesteps": "6h"}
+        )
 
         dtindex = pd.DatetimeIndex(
             [
@@ -174,7 +243,6 @@ class TestResampling:
         )
 
         assert dtindex.equals(model.inputs.timesteps.to_index())
-        assert model.runtime.allow_operate_mode == 1
 
     def test_15min_to_2h_resampling_to_2h(self):
         """
@@ -185,7 +253,7 @@ class TestResampling:
         )
 
         model = build_test_model(
-            override, scenario="simple_supply,one_day", time_resample="2h"
+            override, scenario="simple_supply,one_day", resample={"timesteps": "2h"}
         )
 
         dtindex = pd.DatetimeIndex(
@@ -231,7 +299,9 @@ class TestResampling:
             """
         )
 
-        model = build_test_model(override, scenario="simple_supply", time_resample="6h")
+        model = build_test_model(
+            override, scenario="simple_supply", resample={"timesteps": "6h"}
+        )
 
         dtindex = pd.DatetimeIndex(
             [

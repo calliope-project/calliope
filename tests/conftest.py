@@ -6,10 +6,8 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from calliope.attrdict import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
 from calliope.schemas import config_schema, math_schema
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 from .common.util import build_test_model as build_model
 
@@ -43,22 +41,6 @@ def foreach(request):
 @pytest.fixture(scope="session")
 def default_config():
     return config_schema.CalliopeConfig()
-
-
-@pytest.fixture(scope="session")
-def model_defaults():
-    inbuilt_defaults = extract_from_schema(MODEL_SCHEMA, "default")
-
-    return AttrDict(
-        {
-            "all_inf": np.inf,
-            "all_nan": np.nan,
-            "with_inf": 100,
-            "only_techs": 5,
-            "no_dims": 0,
-            **inbuilt_defaults,
-        }
-    )
 
 
 @pytest.fixture(scope="session")
@@ -188,11 +170,6 @@ def simple_conversion_plus():
 
 
 @pytest.fixture(scope="module")
-def dummy_model_math():
-    return AttrDict(math_schema.MathSchema().model_dump())
-
-
-@pytest.fixture(scope="module")
 def dummy_model_data():
     coords = {
         dim: (
@@ -247,9 +224,10 @@ def dummy_model_data():
             ),
             "only_techs": (["techs"], [np.nan, 1, 2, 3]),
             "no_dims": (2),
-            "all_inf": (["nodes", "techs"], np.ones((2, 4)) * np.inf, {"is_result": 1}),
+            "all_inf": (["nodes", "techs"], np.ones((2, 4)) * np.inf),
             "all_nan": (["nodes", "techs"], np.ones((2, 4)) * np.nan),
             "all_false": (["nodes", "techs"], np.zeros((2, 4)).astype(bool)),
+            "all_ones": (["nodes", "techs"], np.ones((2, 4))),
             "all_true": (["nodes", "techs"], np.ones((2, 4)).astype(bool)),
             "all_true_carriers": (["carriers", "techs"], np.ones((2, 4)).astype(bool)),
             "nodes_true": (["nodes"], [True, True]),
@@ -279,14 +257,6 @@ def dummy_model_data():
                 ["techs"],
                 ["supply", "transmission", "demand", "conversion"],
             ),
-            "nodes_inheritance": (["nodes"], ["foo,bar", "boo"]),
-            "nodes_inheritance_boo_bool": (["nodes"], [False, True]),
-            "techs_inheritance": (["techs"], ["foo,bar", np.nan, "baz", "boo"]),
-            "techs_inheritance_boo_bool": (["techs"], [False, False, False, True]),
-            "multi_inheritance_boo_bool": (
-                ["nodes", "techs"],
-                [[False, False, False, False], [False, False, False, True]],
-            ),
             "lookup_techs": (["techs"], ["foobar", np.nan, "foobaz", np.nan]),
             "lookup_techs_no_match": (["techs"], ["foo", np.nan, "bar", np.nan]),
             "lookup_multi_dim_nodes": (
@@ -315,8 +285,48 @@ def dummy_model_data():
     return model_data
 
 
+@pytest.fixture(scope="module")
+def dummy_model_math(dummy_model_data):
+    defaults = {
+        "all_inf": np.inf,
+        "all_nan": np.nan,
+        "with_inf": 100,
+        "only_techs": 5,
+        "no_dims": 0,
+    }
+    dtype_translator = {
+        "U": "string",
+        "b": "bool",
+        "O": "string",
+        "M": "datetime",
+        "f": "float",
+        "i": "integer",
+    }
+    dtypes = {k: v.kind for k, v in dummy_model_data.dtypes.items()}
+    params = {
+        k: {"default": defaults.get(k, np.nan)}
+        for k, v in dtypes.items()
+        if v in ["f", "i"]
+    }
+    lookups = {
+        k: {"dtype": dtype_translator[v]}
+        for k, v in dtypes.items()
+        if v in ["U", "b", "O"]
+    }
+    dim_dtypes = {k: v.kind for k, v in dummy_model_data.coords.dtypes.items()}
+    dim_dtypes["breakpoints"] = "i"
+    dims = {
+        k: {"dtype": dtype_translator[v], "iterator": k.removesuffix("s")}
+        for k, v in dim_dtypes.items()
+    }
+    params["with_inf"].update({"description": "With infinity values.", "unit": "power"})
+    return math_schema.CalliopeBuildMath.model_validate(
+        {"parameters": params, "lookups": lookups, "dimensions": dims}
+    )
+
+
 def populate_backend_model(backend):
-    backend._add_all_inputs_as_parameters()
+    backend._load_inputs()
     backend.add_variable(
         "multi_dim_var",
         {
@@ -324,19 +334,17 @@ def populate_backend_model(backend):
             "where": "with_inf",
             "bounds": {"min": -np.inf, "max": np.inf},
             "domain": "real",
-            "active": True,
         },
     )
     backend.add_variable(
-        "no_dim_var",
-        {"bounds": {"min": -1, "max": 1}, "domain": "real", "active": True},
+        "no_dim_var", {"bounds": {"min": -1, "max": 1}, "domain": "real"}
     )
     backend.add_global_expression(
         "multi_dim_expr",
         {
             "foreach": ["nodes", "techs"],
             "where": "all_true",
-            "equations": [{"expression": "multi_dim_var * all_true"}],
+            "equations": [{"expression": "multi_dim_var * all_ones"}],
             "active": True,
         },
     )
@@ -356,40 +364,24 @@ def populate_backend_model(backend):
 
 
 @pytest.fixture(scope="module")
-def dummy_pyomo_backend_model(
-    dummy_model_data, dummy_model_math, default_config, model_defaults
-):
+def dummy_pyomo_backend_model(dummy_model_data, dummy_model_math, default_config):
     backend = pyomo_backend_model.PyomoBackendModel(
-        dummy_model_data,
-        dummy_model_math,
-        default_config.build,
-        defaults=model_defaults,
+        dummy_model_data, dummy_model_math, default_config.build
     )
     return populate_backend_model(backend)
 
 
 @pytest.fixture(scope="module")
-def dummy_latex_backend_model(
-    dummy_model_data, dummy_model_math, default_config, model_defaults
-):
+def dummy_latex_backend_model(dummy_model_data, dummy_model_math, default_config):
     backend = latex_backend_model.LatexBackendModel(
-        dummy_model_data,
-        dummy_model_math,
-        default_config.build,
-        defaults=model_defaults,
+        dummy_model_data, dummy_model_math, default_config.build
     )
     return populate_backend_model(backend)
 
 
 @pytest.fixture(scope="class")
-def valid_latex_backend(
-    dummy_model_data, dummy_model_math, default_config, model_defaults
-):
+def valid_latex_backend(dummy_model_data, dummy_model_math, default_config):
     backend = latex_backend_model.LatexBackendModel(
-        dummy_model_data,
-        dummy_model_math,
-        default_config.build,
-        defaults=model_defaults,
-        include="valid",
+        dummy_model_data, dummy_model_math, default_config.build, include="valid"
     )
     return populate_backend_model(backend)

@@ -47,7 +47,7 @@ def on_files(files: list, config: dict, **kwargs):
 
     base_documentation = generate_base_math_documentation()
     write_file(
-        "plan.yaml",
+        "base.yaml",
         textwrap.dedent(
             """
         Complete base mathematical formulation for a Calliope model.
@@ -74,7 +74,7 @@ def on_files(files: list, config: dict, **kwargs):
             text = textwrap.dedent(
                 f"""
             Pre-defined **extra math** to apply {custom_documentation.name} __on top of__ the [base mathematical formulation][base-math].
-            This math is _only_ applied if referenced in the `config.build.extra_math` list as `"{override}"`.
+            This math is _only_ applied if referenced in the `config.init.extra_math` list as `"{override}"`.
             """
             )
 
@@ -174,6 +174,8 @@ def generate_custom_math_documentation(
     full_del = []
     expr_del = []
     for component_group, component_group_dict in model.math.build.model_dump().items():
+        if component_group == "checks":
+            continue
         for name, component_dict in component_group_dict.items():
             if name in base_documentation.math[component_group]:
                 if not component_dict.get("active", True):

@@ -1,19 +1,24 @@
 overrides:
   milp:
     config:
-      init.name: mixed integer linear programming
-      build:
+      init:
+        name: mixed integer linear programming
         extra_math: ["milp"]
   storage_inter_cluster:
     config.init:
       name: inter-cluster storage
-      time_cluster: cluster_days.csv
-    config.build:
+      time_cluster: cluster_days
       extra_math: ["storage_inter_cluster"]
+    data_tables:
+      cluster_days:
+        data: cluster_days.csv
+        rows: timesteps
+        add_dims:
+          parameters: cluster_days
   spores:
     config:
       init.name: SPORES mode
-      build.mode: spores
+      init.mode: spores
       solve.spores.number: 2
     parameters:
       spores_slack: 0.1

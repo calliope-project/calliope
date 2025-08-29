@@ -9,13 +9,12 @@
 #     New indexed parameters:
 #
 #     - `flow_cap_max_relative_per_ts`
-#     - `storage_max_relative_per_ts`
-#
-#     Helper functions used:
-#
-#     - `sum` (expression)
-#
 # ---
+
+parameters:
+  flow_cap_max_relative_per_ts:
+    description: The relative quantity of flow capacity used to limit generator outflow in each timestep.
+    default: 1
 
 constraints:
   max_time_varying_flow_cap:

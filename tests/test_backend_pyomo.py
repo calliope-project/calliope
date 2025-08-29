@@ -11,7 +11,6 @@ from pyomo.core.kernel.piecewise_library.transforms import piecewise_sos2
 import calliope
 import calliope.backend
 import calliope.exceptions as exceptions
-from calliope import preprocess
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -1521,20 +1520,22 @@ class TestClusteringConstraints:
         ]
 
     def cluster_model(
-        self,
-        how="mean",
-        storage_inter_cluster=True,
-        cyclic=False,
-        storage_initial=False,
+        self, storage_inter_cluster=True, cyclic=False, storage_initial=False
     ):
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
-            "config.init.time_cluster": "data_tables/cluster_days.csv",
-            "config.build.extra_math": (
+            "config.init.time_cluster": "cluster_days_param",
+            "config.init.extra_math": (
                 ["storage_inter_cluster"] if storage_inter_cluster else []
             ),
-            "config.build.cyclic_storage": cyclic,
+            "parameters.cyclic_storage": cyclic,
+            "data_tables.cluster_days": {
+                "data": "data_tables/cluster_days.csv",
+                "rows": "datesteps",
+                "add_dims": {"parameters": "cluster_days_param"},
+            },
         }
+
         if storage_initial:
             override.update({"techs.test_storage.constraints.storage_initial": 0})
         return build_model(override, "simple_storage,investment_costs")
@@ -1629,7 +1630,7 @@ class TestNewBackend:
         self, simple_supply: calliope.Model, dummy_int: int
     ) -> calliope.Model:
         simple_supply.backend.verbose_strings()
-        simple_supply.backend.update_parameter("cost_flow_cap", dummy_int)
+        simple_supply.backend.update_input("cost_flow_cap", dummy_int)
         return simple_supply
 
     @pytest.fixture
@@ -1642,13 +1643,12 @@ class TestNewBackend:
         custom_math = {"constraints": {"force_zero_area_use": {"active": True}}}
 
         m = build_model(
-            {
-                "config.build.operate.window": "12h",
-                "config.build.operate.horizon": "12h",
-            },
+            {},
             "simple_supply,two_hours,investment_costs",
+            mode="operate",
+            math_dict=custom_math,
         )
-        m.build(mode="operate", add_math_dict=custom_math)
+        m.build(operate={"window": "12h", "horizon": "12h"})
 
         # operate mode set it to false, then our math set it back to active
         assert m.math.build.constraints["force_zero_area_use"].active
@@ -1751,9 +1751,10 @@ class TestNewBackend:
 
     def test_add_allnull_var(self, simple_supply):
         simple_supply.backend.add_variable(
-            "foo", {"foreach": ["nodes"], "where": "False", "active": True}
+            "foo_var",
+            {"foreach": ["nodes"], "where": "False", "bounds": {"min": 0, "max": 1}},
         )
-        assert "foo" not in simple_supply.backend._instance.variables.keys()
+        assert "foo_var" not in simple_supply.backend._instance.variables.keys()
 
     @pytest.mark.parametrize(
         ("component", "eq"),
@@ -1765,24 +1766,27 @@ class TestNewBackend:
             "foreach": ["nodes", "techs"],
             "where": "True",
             "equations": [{"expression": eq, "where": "False"}],
-            "active": True,
         }
-        adder("foo", constr_dict)
+        name = f"foo_{component}"
+        adder(name, constr_dict)
 
-        assert "foo" not in getattr(simple_supply.backend._instance, component).keys()
+        assert name not in getattr(simple_supply.backend._instance, component).keys()
 
     def test_add_allnull_param_no_shape(self, simple_supply):
-        simple_supply.backend.add_parameter("foo", xr.DataArray(np.nan))
+        simple_supply.backend.add_parameter(
+            "foo_param_no_dims", xr.DataArray(np.nan), {}
+        )
 
-        assert "foo" not in simple_supply.backend._instance.parameters.keys()
-        del simple_supply.backend._dataset["foo"]
+        assert (
+            "foo_param_no_dims" not in simple_supply.backend._instance.parameters.keys()
+        )
 
     def test_add_allnull_param_with_shape(self, simple_supply):
         nan_array = simple_supply.inputs.flow_cap_max.where(lambda x: x < 0)
-        simple_supply.backend.add_parameter("foo", nan_array)
+        simple_supply.backend.add_parameter("foo_param_dims", nan_array, {})
 
-        assert "foo" not in simple_supply.backend._instance.parameters.keys()
-        del simple_supply.backend._dataset["foo"]
+        assert "foo_param_dims" not in simple_supply.backend._instance.parameters.keys()
+        del simple_supply.backend._dataset["foo_param_dims"]
 
     def test_add_constraint_with_nan(self, simple_supply):
         """Expect an error if adding a constraint with a NaN in one of the expressions."""
@@ -1792,7 +1796,6 @@ class TestNewBackend:
             "equations": [
                 {"expression": "sum(flow_out, over=[nodes, timesteps]) >= 100"}
             ],
-            "active": True,
             # "where": "carrier_out",  # <- no error would be raised with this uncommented
         }
         constraint_name = "constraint-with-nan"
@@ -1835,7 +1838,7 @@ class TestNewBackend:
     def test_add_valid_obj(self, simple_supply):
         eq = {"expression": "bigM", "where": "True"}
         simple_supply.backend.add_objective(
-            "foo", {"equations": [eq], "sense": "minimise", "active": True}
+            "foo", {"equations": [eq], "sense": "minimise"}
         )
         assert "foo" in simple_supply.backend.objectives
         assert not simple_supply.backend.objectives.foo.item().active
@@ -1846,12 +1849,7 @@ class TestNewBackend:
 
     def test_new_objective_set(self, simple_supply_build_func):
         simple_supply_build_func.backend.add_objective(
-            "foo",
-            {
-                "equations": [{"expression": "bigM"}],
-                "sense": "minimise",
-                "active": True,
-            },
+            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
         )
         simple_supply_build_func.backend.set_objective("foo")
 
@@ -1862,12 +1860,7 @@ class TestNewBackend:
     def test_new_objective_set_log(self, caplog, simple_supply_build_func):
         caplog.set_level(logging.INFO)
         simple_supply_build_func.backend.add_objective(
-            "foo",
-            {
-                "equations": [{"expression": "bigM"}],
-                "sense": "minimise",
-                "active": True,
-            },
+            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
         )
         simple_supply_build_func.backend.set_objective("foo")
         assert ":foo | Objective activated." in caplog.text
@@ -1939,52 +1932,69 @@ class TestNewBackend:
         assert dir.exists()
         assert any(file.suffixes == [".pyomo", ".lp"] for file in dir.glob("*"))
 
-    @pytest.mark.parametrize(
-        ("order", "expected_in_expr"), [(-1, True), (None, False), (100, False)]
-    )
-    def test_add_reordered_global_expression(self, dummy_int, order, expected_in_expr):
-        """Adding a new global expression with an appropriately small order should be added before a pre-defined global expression."""
-        updated_math = {
-            "global_expressions": {
-                "new_expr": {
-                    "foreach": ["nodes", "techs", "costs"],
-                    "where": "cost_new",
-                    "equations": [{"expression": "source_cap * cost_new"}],
-                },
-                # cost_investment_source_cap exists in the pre-defined math.
-                "cost_investment_source_cap": {
-                    "where": "source_cap",
-                    "equations": [
-                        {
-                            "expression": "default_if_empty(cost_source_cap, 0) * source_cap + default_if_empty(new_expr, 0)"
-                        }
-                    ],
+    @pytest.fixture
+    def new_global_expr_math(self, dummy_int):
+        def _new_global_expr_math(order):
+            updated_math = {
+                "parameters": {"cost_new": {"default": dummy_int}},
+                "global_expressions": {
+                    "new_expr": {
+                        "foreach": ["nodes", "techs", "costs"],
+                        "where": "cost_new",
+                        "equations": [{"expression": "source_cap * cost_new"}],
+                    },
+                    # cost_investment_source_cap exists in the pre-defined math.
+                    "cost_investment_source_cap": {
+                        "where": "source_cap",
+                        "equations": [
+                            {
+                                "expression": "default_if_empty(cost_source_cap, 0) * source_cap + default_if_empty(new_expr, 0)"
+                            }
+                        ],
+                    },
                 },
             }
-        }
-        if order is not None:
-            updated_math["global_expressions"]["new_expr"]["order"] = order
-        new_cost = {"data": dummy_int, "index": "monetary", "dims": "costs"}
-        m = build_model(
-            {"techs.test_supply_elec.cost_new": new_cost},
-            "simple_supply,two_hours,investment_costs",
-        )
-        m.build(
-            add_math_dict=updated_math, backend="pyomo", pre_validate_math_strings=False
-        )
-        m.backend.verbose_strings()
+            if order is not None:
+                updated_math["global_expressions"]["new_expr"]["order"] = order
+            new_cost = {"data": dummy_int, "index": "monetary", "dims": "costs"}
+            m = build_model(
+                {"techs.test_supply_elec.cost_new": new_cost},
+                "simple_supply,two_hours,investment_costs",
+                pre_validate_math_strings=False,
+                math_dict=updated_math,
+            )
+            return m
 
-        new_expr_present = (
+        return _new_global_expr_math
+
+    def test_add_reordered_global_expression(self, new_global_expr_math):
+        """Adding a new global expression with an appropriately small order should be added before a pre-defined global expression."""
+
+        m = new_global_expr_math(-1)
+        m.build(backend="pyomo")
+        m.backend.verbose_strings()
+        expr_to_check = (
             m.backend.get_global_expression(
                 "cost_investment_source_cap", as_backend_objs=False
             )
             .to_series()
             .dropna()
-            .str.contains(
-                "parameters[cost_new][test_supply_elec, monetary]", regex=False
-            )
         )
-        assert (new_expr_present == expected_in_expr).all()
+        new_expr_present = expr_to_check.str.contains(
+            "parameters[cost_new][test_supply_elec, monetary]", regex=False
+        )
+        assert new_expr_present.all()
+
+    @pytest.mark.parametrize("order", [0, None, 100])
+    def test_add_reordered_global_expression_fails(self, new_global_expr_math, order):
+        """Adding a new global expression without reordering will cause an error to be raised when evaluating the other global expression in which it has been referenced."""
+
+        m = new_global_expr_math(order)
+        with pytest.raises(
+            exceptions.BackendError,
+            match="Trying to access a math component that is not yet defined: new_expr.",
+        ):
+            m.build(backend="pyomo")
 
 
 class TestVerboseStrings:
@@ -2121,7 +2131,15 @@ class TestPiecewiseConstraints:
             "y_values": "piecewise_y",
             "y_expression": "sum(flow_in, over=timesteps)",
             "description": "FOO",
-            "active": True,
+        }
+
+    @pytest.fixture(scope="class")
+    def add_math(self):
+        return {
+            "parameters": {"piecewise_x": {}, "piecewise_y": {}},
+            "dimensions": {
+                "breakpoints": {"dtype": "integer", "iterator": "breakpoint"}
+            },
         }
 
     @pytest.fixture(scope="class")
@@ -2137,15 +2155,19 @@ class TestPiecewiseConstraints:
         return self.gen_params([0, 5, 8])
 
     @pytest.fixture(scope="class")
-    def working_model(self, working_params, working_math):
-        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
+    def working_model(self, working_params, working_math, add_math):
+        m = build_model(
+            working_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
+        )
         m.build()
-        m.backend.add_piecewise_constraint("foo", working_math)
+        m.backend.add_piecewise_constraint("foo_piecewise", working_math)
         return m
 
     def test_piecewise_type(self, working_model):
         """All piecewise elements are the correct Pyomo type."""
-        constr = working_model.backend.get_piecewise_constraint("foo")
+        constr = working_model.backend.get_piecewise_constraint("foo_piecewise")
         assert (
             constr.to_series()
             .dropna()
@@ -2156,42 +2178,47 @@ class TestPiecewiseConstraints:
     def test_piecewise_verbose(self, working_model):
         """All piecewise elements have the full set of dimensions when verbose."""
         working_model.backend.verbose_strings()
-        constr = working_model.backend.get_piecewise_constraint("foo")
+        constr = working_model.backend.get_piecewise_constraint("foo_piecewise")
         dims = {"nodes": "a", "techs": "test_supply_elec", "carriers": "electricity"}
         constraint_item = constr.sel(dims).item()
         assert (
             str(constraint_item)
-            == f"piecewise_constraints[foo][{', '.join(dims[i] for i in constr.dims)}]"
+            == f"piecewise_constraints[foo_piecewise][{', '.join(dims[i] for i in constr.dims)}]"
         )
 
-    def test_fails_on_length_mismatch(self, length_mismatch_params, working_math):
+    def test_fails_on_length_mismatch(
+        self, length_mismatch_params, working_math, add_math
+    ):
         """Expected error when number of breakpoints on X and Y don't match."""
         m = build_model(
-            length_mismatch_params, "simple_supply,two_hours,investment_costs"
+            length_mismatch_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
         )
         m.build()
         with pytest.raises(exceptions.BackendError) as excinfo:
-            m.backend.add_piecewise_constraint("foo", working_math)
+            m.backend.add_piecewise_constraint("foo_piecewise_fails", working_math)
         assert check_error_or_warning(
             excinfo,
             "The number of breakpoints (2) differs from the number of function values (3)",
         )
 
     def test_fails_on_not_reaching_bounds(
-        self, not_reaching_var_bound_with_breakpoint_params, working_math
+        self, not_reaching_var_bound_with_breakpoint_params, working_math, add_math
     ):
         """Expected error when breakpoints exceed upper bound of the variable (pyomo-specific error)."""
         m = build_model(
             not_reaching_var_bound_with_breakpoint_params,
             "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
         )
         m.build()
         with pytest.raises(exceptions.BackendError) as excinfo:
-            m.backend.add_piecewise_constraint("foo", working_math)
+            m.backend.add_piecewise_constraint("foo_piecewise_fails", working_math)
         assert check_error_or_warning(
             excinfo,
             [
-                "(piecewise_constraints, foo) | Errors in generating piecewise constraint: Piecewise function domain does not include the upper bound",
+                "(piecewise_constraints, foo_piecewise_fails) | Errors in generating piecewise constraint: Piecewise function domain does not include the upper bound",
                 "ub = 10.0 > 8.0.",
             ],
         )
@@ -2316,88 +2343,3 @@ class TestShadowPrices:
         )
         # Since we listed only one (invalid) constraint, tracking should not be active
         assert not m.backend.shadow_prices.is_active
-
-
-class TestValidateMathDict:
-    LOGGER = "calliope.backend.backend_model"
-
-    @pytest.fixture
-    def validate_math(self):
-        def _validate_math(math_dict: dict):
-            m = build_model({}, "simple_supply,investment_costs")
-            math = preprocess.build_applied_math(
-                m.math_priority, m.math.init.model_dump(), math_dict
-            )
-            backend = calliope.backend.PyomoBackendModel(
-                m.inputs, math, m.config.build, m.runtime.defaults
-            )
-            backend._add_all_inputs_as_parameters()
-            backend._validate_math_string_parsing()
-
-        return _validate_math
-
-    def test_base_math(self, caplog, validate_math):
-        with caplog.at_level(logging.INFO, logger=self.LOGGER):
-            validate_math({})
-        assert "Optimisation Model | Validated math strings." in [
-            rec.message for rec in caplog.records
-        ]
-
-    @pytest.mark.parametrize(
-        ("equation", "where"),
-        [
-            ("1 == 1", "True"),
-            (
-                "sum(flow_out * flow_out_eff, over=[nodes, carriers, techs, timesteps]) <= .inf",
-                "base_tech==supply and flow_out_eff>0",
-            ),
-        ],
-    )
-    def test_add_math(self, caplog, validate_math, equation, where):
-        with caplog.at_level(logging.INFO, logger=self.LOGGER):
-            validate_math(
-                {
-                    "constraints": {
-                        "foo": {"equations": [{"expression": equation}], "where": where}
-                    }
-                }
-            )
-        assert "Optimisation Model | Validated math strings." in [
-            rec.message for rec in caplog.records
-        ]
-
-    @pytest.mark.parametrize(
-        "component_dict",
-        [
-            {"equations": [{"expression": "1 = 1"}]},
-            {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"},
-        ],
-    )
-    @pytest.mark.parametrize("both_fail", [True, False])
-    def test_add_math_fails(self, validate_math, component_dict, both_fail):
-        math_dict = {"constraints": {"foo": component_dict}}
-        errors_to_check = [
-            "math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)",
-            " * constraints:foo:",
-            "equations[0].expression",
-            "where",
-        ]
-        if both_fail:
-            math_dict["constraints"]["bar"] = component_dict
-            errors_to_check.append("* constraints:bar:")
-        else:
-            math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
-
-        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            validate_math(math_dict)
-        assert check_error_or_warning(excinfo, errors_to_check)
-
-    @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
-    def test_add_math_fails_marker_correct_position(self, validate_math, eq_string):
-        math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
-
-        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            validate_math(math_dict)
-        errorstrings = str(excinfo.value).split("\n")
-        # marker should be at the "=" sign, i.e., 2 characters from the end
-        assert len(errorstrings[-2]) - 2 == len(errorstrings[-1])

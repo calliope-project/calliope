@@ -1,3 +1,9 @@
+parameters:
+  heat_to_power_ratio:
+    default: 1
+    title: Heat to power ratio for CHP
+    description: Ratio of heat output to electricity output for combined heat and power (CHP) technology.
+
 constraints:
   link_chp_outputs:
     description: Fix the relationship between heat and electricity output

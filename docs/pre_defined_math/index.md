@@ -103,7 +103,7 @@ This run mode was developed for and first implemented in a [study on the future 
 As an example, if you wanted to generate 10 SPORES, all of which are within 10% of the optimal system cost, you would define the following in your model configuration:
 
 ```yaml
-config.build.mode: spores
+config.init.mode: spores
 # The number of SPORES to generate:
 config.solve.spores.number: 10
 # The fraction above the cost-optimal cost to set the maximum cost during SPORES:
@@ -157,7 +157,7 @@ To mitigate this, you can _save results per SPORE run_ to capture results up to 
 !!! example
 
     ```yaml
-    config.build.mode: spores
+    config.init.mode: spores
     # The number of SPORES to generate:
     config.solve.spores:
       number: 10
@@ -206,7 +206,7 @@ This is useful to further explore the option space, restart a run that was stopp
     ```python
     import calliope
 
-    # This model already has results from running in `plan` mode.
+    # This model already has results from running in `base` mode.
     model = calliope.Model(...)
 
     model.build(mode="spores")
@@ -222,13 +222,13 @@ This is useful to further explore the option space, restart a run that was stopp
     import calliope
     import xarray as xr
 
-    # This model already has results from running in `plan` mode.
+    # This model already has results from running in `base` mode.
     model = calliope.Model(...)
 
     model.build(mode="spores")
     model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
 
-    model.backend.update_parameter("spores_slack", xr.DataArray(0.3))
+    model.backend.update_input("spores_slack", xr.DataArray(0.3))
 
     # `model.results` will now have an additional 5 SPORES run results (6-10)
     model.solve(spores={"use_latest_results": True, "number": 10, "scoring_algorithm": "random"})

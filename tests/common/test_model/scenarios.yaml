@@ -102,7 +102,7 @@ overrides:
     templates.test_transmission.active: false
 
   supply_purchase:
-    config.build.extra_math: ["milp"]
+    config.init.extra_math: ["milp"]
     nodes:
       a:
         techs:
@@ -121,7 +121,7 @@ overrides:
     templates.test_transmission.active: false
 
   supply_milp:
-    config.build.extra_math: ["milp"]
+    config.init.extra_math: ["milp"]
     techs:
       test_supply_elec:
         cap_method: integer
@@ -200,7 +200,7 @@ overrides:
     templates.test_transmission.active: false
 
   conversion_plus_milp:
-    config.build.extra_math: ["milp"]
+    config.init.extra_math: ["milp"]
     data_tables:
       demand_heat:
         data: data_tables/demand_heat.csv
@@ -230,7 +230,7 @@ overrides:
     templates.test_transmission.active: false
 
   conversion_milp:
-    config.build.extra_math: ["milp"]
+    config.init.extra_math: ["milp"]
     data_tables:
       demand_heat:
         data: data_tables/demand_heat.csv
@@ -367,7 +367,7 @@ overrides:
         storage_discharge_depth: 0.8
 
   storage_milp:
-    config.build.extra_math: ["milp"]
+    config.init.extra_math: ["milp"]
     nodes:
       a:
         techs:
@@ -399,7 +399,7 @@ overrides:
 
   spores:
     config:
-      build.mode: spores
+      init.mode: spores
       solve.spores:
         number: 2
     parameters:
@@ -418,20 +418,20 @@ overrides:
   empty_tech_node:
     nodes.c.techs:
   one_day:
-    config.init.time_subset: ["2005-01-01", "2005-01-01"]
+    config.init.subset.timesteps: ["2005-01-01", "2005-01-01"]
 
   two_hours:
-    config.init.time_subset: ["2005-01-01 00:00:00", "2005-01-01 01:00:00"]
+    config.init.subset.timesteps: ["2005-01-01 00:00:00", "2005-01-01 01:00:00"]
 
   resample_two_days:
     config:
       init:
-        time_subset: ["2005-01-01", "2005-01-02"]
-        time_resample: 24h
+        subset.timesteps: ["2005-01-01", "2005-01-02"]
+        resample.timesteps: 24h
 
   operate:
-    config.build.mode: operate
-    config.init.time_subset: ["2005-01-01", "2005-01-02"]
+    config.init.mode: operate
+    config.init.subset.timesteps: ["2005-01-01", "2005-01-02"]
     config.build.ensure_feasibility: true
     config.build.operate.window: 6h
     config.build.operate.horizon: 12h
@@ -452,7 +452,7 @@ overrides:
   var_costs:
     templates:
       test_controller:
-        cost_flow_out:
+        cost_flow_in:
           data: 0.1
           index: monetary
           dims: costs

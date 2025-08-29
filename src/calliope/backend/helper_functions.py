@@ -17,10 +17,11 @@ import pandas as pd
 import xarray as xr
 
 from calliope.exceptions import BackendError
+from calliope.util import DTYPE_OPTIONS
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
-
+    from calliope.schemas.math_schema import CalliopeBuildMath
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
 ] = {"where": {}, "expression": {}}
@@ -35,6 +36,7 @@ class ParsingHelperFunction(ABC):
         *,
         equation_name: str,
         input_data: xr.Dataset,
+        math: "CalliopeBuildMath",
         backend_interface: type["BackendModel"] | None = None,
         **kwargs,
     ) -> None:
@@ -46,6 +48,7 @@ class ParsingHelperFunction(ABC):
         self._equation_name = equation_name
         self._input_data = input_data
         self._backend_interface = backend_interface
+        self._math = math
         self._return_type = return_type
 
     @property
@@ -144,8 +147,7 @@ class ParsingHelperFunction(ABC):
 
         return re.sub(r"(_\\text{)([^{}]*?)(})", __replace_in_iterator, instring)
 
-    @staticmethod
-    def _get_dims_from_iterators(instring: str) -> list[str]:
+    def _get_dims_from_iterators(self, instring: str) -> list[str]:
         """For a given math string describing a math component, extract the iterators and return the dimensions (a.k.a., sets) that they are members of.
 
         Args:
@@ -162,13 +164,19 @@ class ParsingHelperFunction(ABC):
             iterators = matched.group(2)
             # Split on `,`, add 's' back in to singular iterators to refer to dimension names,
             # then rejoin `,` as we must return a string.
-            return ",".join([i + "s" for i in iterators.split(",")])
+            return ",".join(
+                [
+                    dim_name
+                    for i in iterators.split(",")
+                    for dim_name, dim_math in self._math.dimensions.root.items()
+                    if dim_math.iterator == i
+                ]
+            )
 
         dims = re.sub(r"^.*(_\\text{)([^{}]*?)(})", __extract_dims, instring)
         return dims.split(",")
 
-    @staticmethod
-    def _instr(dim: str) -> str:
+    def _instr(self, dim: str) -> str:
         """Utility function for generating latex strings in multiple helper functions.
 
         Args:
@@ -177,8 +185,8 @@ class ParsingHelperFunction(ABC):
         Returns:
             str: LaTeX string for iterator in a set (e.g., "tech in techs")
         """
-        dim_singular = dim.removesuffix("s")
-        return rf"\text{{{dim_singular}}} \in \text{{{dim}}}"
+        iterator = self._dim_iterator(dim)
+        return rf"\text{{{iterator}}} \in \text{{{dim}}}"
 
     def _listify(self, vals: list[str] | str) -> list[str]:
         """Force a string to a list of length one if not already provided as a list.
@@ -192,6 +200,9 @@ class ParsingHelperFunction(ABC):
         if not isinstance(vals, list):
             vals = [vals]
         return vals
+
+    def _dim_iterator(self, dim: str) -> str:
+        return self._math.dimensions[dim].iterator
 
 
 class WhereAny(ParsingHelperFunction):
@@ -361,11 +372,11 @@ class Defined(ParsingHelperFunction):
             # Using vee for "collective-or"
             tex_how = "vee"
         vals = self._listify(vals)
-        within_singular = within.removesuffix("s")
-        dim_singular = dim.removesuffix("s")
-        selection = rf"\text{{{dim_singular}}} \in \text{{[{','.join(vals)}]}}"
+        within_iterator = self._dim_iterator(within)
+        dim_iterator = self._dim_iterator(dim)
+        selection = rf"\text{{{dim_iterator}}} \in \text{{[{','.join(vals)}]}}"
 
-        return rf"\big{tex_how}\limits_{{\substack{{{selection}}}}}\text{{{dim_singular} defined in {within_singular}}}"
+        return rf"\big{tex_how}\limits_{{\substack{{{selection}}}}}\text{{{dim_iterator} defined in {within_iterator}}}"
 
 
 class Sum(ParsingHelperFunction):
@@ -427,6 +438,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
             return_type=self._return_type,
             equation_name=self._equation_name,
             input_data=self._input_data,
+            math=self._math,
         )
 
         return sum_helper(
@@ -444,7 +456,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
 
     def as_math_string(self, array: str, **lookup_arrays: str) -> str:  # noqa: D102, override
         new_strings = {
-            (iterator := dim.removesuffix("s")): rf"={array}[{iterator}]"
+            (iterator := self._dim_iterator(dim)): rf"={array}[{iterator}]"
             for dim, array in lookup_arrays.items()
         }
         array = self._update_iterator(array, new_strings, "add")
@@ -610,7 +622,7 @@ class Roll(ParsingHelperFunction):
 
     def as_math_string(self, array: str, **roll_kwargs: str) -> str:  # noqa: D102, override
         new_strings = {
-            k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
+            self._dim_iterator(k): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
         }
         component = self._update_iterator(array, new_strings, "add")
         return component
@@ -752,7 +764,7 @@ class GroupSum(ParsingHelperFunction):
     ignore_where = True
 
     def as_math_string(self, array: str, groupby: str, group_dim: str) -> str:  # noqa: D102, override
-        group_dim_singular = group_dim.removesuffix("s")
+        group_dim_singular = self._dim_iterator(group_dim)
         sum_lim_string = rf"\text{{ if }} {groupby} = \text{{{group_dim_singular}}}"
         over = [self._instr(i) for i in self._get_dims_from_iterators(groupby)]
         foreach_string = r" \\ ".join([*over, sum_lim_string])
@@ -843,7 +855,7 @@ class GroupDatetime(ParsingHelperFunction):
 
     def as_math_string(self, array: str, over: str, group: str) -> str:  # noqa: D102, override
         overstring = self._instr(over)
-        foreach_string = rf"{overstring} \text{{ if }} \text{{{group}}}(\text{{{over.removesuffix('s')}}}) = \text{{{group[0]}}}"
+        foreach_string = rf"{overstring} \text{{ if }} \text{{{group}}}(\text{{{self._dim_iterator(over)}}}) = \text{{{self._dim_iterator(group)}}}"
         overstring = rf"\substack{{{foreach_string}}}"
 
         return rf"\sum\limits_{{{overstring}}} ({array})"
@@ -911,11 +923,12 @@ class GroupDatetime(ParsingHelperFunction):
                         - expression: "group_datetime(flow_in, timesteps, month) <= source_use_max_monthly"
             ```
         """
-        dtype = str if group in ["date", "time"] else int
+        dtype = DTYPE_OPTIONS[self._math.dimensions[group].dtype]
         group_sum_helper = GroupSum(
             return_type=self._return_type,
             equation_name=self._equation_name,
             input_data=self._input_data,
+            math=self._math,
         )
         array = group_sum_helper(
             array, getattr(array[over].dt, group).astype(dtype), group
@@ -936,10 +949,10 @@ class SumNextN(ParsingHelperFunction):
     ALLOWED_IN = ["expression"]
 
     def as_math_string(self, array: str, over: str, N: int) -> str:  # noqa: D102, override
-        over_singular = rf"\text{{{over.removesuffix('s')}}}"
+        over_singular = rf"\text{{{self._dim_iterator(over)}}}"
         new_iterator = over[0]
         updated_iterator_array = self._update_iterator(
-            array, {over.removesuffix("s"): new_iterator}, "replace"
+            array, {self._dim_iterator(over): new_iterator}, "replace"
         )
 
         return rf"\sum\limits_{{\text{{{new_iterator}}}={over_singular}}}^{{{over_singular}+{N}}} ({updated_iterator_array})"
@@ -968,7 +981,7 @@ class SumNextN(ParsingHelperFunction):
               E.g. `where: timesteps<=get_val_at_index(timesteps=-24)` if N == 24.
             - This function is based on an integer number of steps from the current step.
               For datetime dimensions like `timesteps`, you will (a) need to be using a regular time frequency (e.g. hourly) and (b) update `N` to reflect the resolution of your time dimension
-              (N = 4 in if time_resample=`1h` -> N = 2 if time_resample=`2h`).
+              (N = 4 in if resample.timesteps=`1h` -> N = 2 if resample.timesteps=`2h`).
 
         Examples:
             One common use-case is to collate N timesteps beyond a given timestep to apply a constraint to it

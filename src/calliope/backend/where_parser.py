@@ -9,17 +9,18 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pandas as pd
 import pyparsing as pp
 import xarray as xr
 from typing_extensions import NotRequired, TypedDict
 
 from calliope.backend import expression_parser
-from calliope.exceptions import BackendError
 from calliope.schemas import config_schema
 from calliope.util import tools
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
+    from calliope.schemas.math_schema import CalliopeBuildMath
 
 
 pp.ParserElement.enablePackrat()
@@ -31,12 +32,12 @@ class EvalAttrs(TypedDict):
 
     equation_name: str
     backend_interface: BackendModel
+    math: CalliopeBuildMath
     input_data: xr.Dataset
     helper_functions: dict[str, Callable]
     apply_where: NotRequired[bool]
     references: NotRequired[set]
     build_config: config_schema.Build
-    defaults: dict
 
 
 class EvalWhere(expression_parser.EvalToArrayStr):
@@ -105,7 +106,7 @@ class ConfigOptionParser(EvalWhere):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has two parsed elements: config group name (str) and config option (str).
         """
@@ -126,8 +127,8 @@ class ConfigOptionParser(EvalWhere):
         )
 
         if not isinstance(config_val, int | float | str | bool | np.bool_):
-            raise BackendError(
-                f"(where, {self.instring}): Configuration option resolves to invalid "
+            raise self.error_msg(
+                f"where string | Configuration option resolves to invalid "
                 f"type `{type(config_val).__name__}`, expected a number, string, or boolean."
             )
         else:
@@ -144,7 +145,7 @@ class DataVarParser(EvalWhere):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element: model data variable name (str).
         """
@@ -163,49 +164,44 @@ class DataVarParser(EvalWhere):
             TypeError: Cannot work with math components of type `constraint` or `objective`.
             TypeError: Cannot check array contents (`apply_where=False`) of `variable` or `global_expression` math components.
         """
-        backend_interface = self.eval_attrs["backend_interface"]
         self.eval_attrs["references"].add(self.data_var)
-        if self.data_var in backend_interface._dataset.data_vars.keys():
-            data_var_type = backend_interface._dataset[self.data_var].attrs["obj_type"]
-        else:
-            data_var_type = "parameters"
-
-        if data_var_type not in ["parameters", "global_expressions", "variables"]:
-            raise TypeError(
-                f"Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
-                f"Received {data_var_type.removesuffix('s')}: `{self.data_var}`."
+        try:
+            return self.eval_attrs["input_data"][self.data_var].attrs["obj_type"]
+        except KeyError:
+            pass
+        try:
+            return (
+                self.eval_attrs["backend_interface"]
+                ._dataset[self.data_var]
+                .attrs["obj_type"]
             )
-        apply_where = self.eval_attrs.get("apply_where", True)
-        if data_var_type != "parameters" and not apply_where:
-            raise TypeError(
-                f"Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
-                "These arrays cannot be used for comparison with expected values. "
-                f"Received `{self.data_var}`."
+        except KeyError:
+            raise self.error_msg(
+                f"where string | Data variable `{self.data_var}` not found in model dataset."
             )
-        return data_var_type
 
     def _data_var_exists(
-        self, source_dataset: xr.Dataset, data_var_type: str
+        self, source_dataset: xr.Dataset, resolve_contents: bool
     ) -> xr.DataArray:
         """Mask by setting all (NaN | INF/-INF) to False, otherwise True."""
         var = source_dataset.get(self.data_var, xr.DataArray(np.nan))
-        if data_var_type == "parameters":
-            if self.data_var not in self.eval_attrs["input_data"]:
-                return xr.DataArray(np.False_)
-            else:
-                return var.notnull() & (var != np.inf) & (var != -np.inf)
+        if var.dtype.kind == "b":
+            return var
+        elif resolve_contents:
+            return var.notnull() & (var != np.inf) & (var != -np.inf)
         else:
             return var.notnull()
 
-    def _data_var_with_default(self, source_dataset: xr.Dataset) -> xr.DataArray:
+    def _data_var_with_default(self) -> xr.DataArray:
         """Access data var and fill with default values.
 
         Return default value as an array if var does not exist.
         """
-        default = self.eval_attrs["defaults"].get(self.data_var)
-        var = source_dataset.get(self.data_var, xr.DataArray(default))
-        if default is not None:
-            var = var.fillna(default)
+        var = self.eval_attrs["input_data"][self.data_var]
+        if var.attrs["obj_type"] != "dimensions":
+            default = self.eval_attrs["math"].find(self.data_var)[1]["default"]
+            if pd.notnull(default):
+                var = var.fillna(default)
         return var
 
     def as_math_string(self) -> str:  # noqa: D102, override
@@ -225,15 +221,32 @@ class DataVarParser(EvalWhere):
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         data_var_type = self._preprocess()
-        if data_var_type == "parameters":
-            source_dataset = self.eval_attrs["input_data"]
+        if data_var_type == "unknown":
+            return xr.DataArray(np.False_)
+        elif self.eval_attrs.get("apply_where", True):
+            if data_var_type in ["parameters", "lookups", "dimensions"]:
+                return self._data_var_exists(
+                    self.eval_attrs["input_data"], resolve_contents=True
+                )
+            elif data_var_type in ["variables", "global_expressions"]:
+                return self._data_var_exists(
+                    self.eval_attrs["backend_interface"]._dataset,
+                    resolve_contents=False,
+                )
+            else:
+                raise self.error_msg(
+                    f"where string | Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
+                    f"Received {data_var_type.removesuffix('s')}: `{self.data_var}`."
+                )
         else:
-            source_dataset = self.eval_attrs["backend_interface"]._dataset
+            if data_var_type not in ["lookups", "parameters", "dimensions"]:
+                raise self.error_msg(
+                    f"where string | Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
+                    "These arrays cannot be used for comparison with expected values. "
+                    f"Received `{self.data_var}`."
+                )
 
-        if self.eval_attrs.get("apply_where", True):
-            return self._data_var_exists(source_dataset, data_var_type)
-        else:
-            return self._data_var_with_default(source_dataset)
+            return self._data_var_with_default()
 
 
 class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
@@ -285,7 +298,7 @@ class SubsetParser(EvalWhere):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has two parsed elements: model set name (str), set items (Any).
         """
@@ -304,9 +317,9 @@ class SubsetParser(EvalWhere):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         subset = self._eval()
-        set_singular = self.set_name.removesuffix("s")
+        iterator = self.eval_attrs["math"].dimensions[self.set_name].iterator
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
-        return rf"\text{{{set_singular}}} \in \text{{{subset_string}}}"
+        return rf"\text{{{iterator}}} \in \text{{{subset_string}}}"
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         subset = self._eval()
@@ -317,13 +330,18 @@ class SubsetParser(EvalWhere):
 class BoolOperandParser(EvalWhere):
     """Boolean operand parsing."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Parse action to process successfully parsed boolean strings.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: boolean (str).
         """
         self.val = tokens[0].lower()
+        self.instring = instring
 
     def __repr__(self):
         """Programming / official string representation."""
@@ -343,16 +361,21 @@ class BoolOperandParser(EvalWhere):
 class GenericStringParser(expression_parser.EvalString):
     """Parsing of generic strings."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Parse action to process successfully parsed generic strings.
 
         This is required since we call "eval()" on all elements of the where string,
         so even arbitrary strings (used in comparison operations) need to be evaluatable.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: string name (str).
         """
         self.val = tokens[0]
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Return string representation of the parsed grammar."""

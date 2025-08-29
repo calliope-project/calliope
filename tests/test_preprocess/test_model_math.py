@@ -7,9 +7,15 @@ import pytest
 
 import calliope
 from calliope import exceptions
-from calliope.io import to_yaml
+from calliope.io import read_rich_yaml, to_yaml
 from calliope.preprocess import model_math
 from calliope.schemas import math_schema
+
+from ..common.util import build_test_model as build_model
+from ..common.util import check_error_or_warning
+
+PRE_DEFINED_MATH = ["base", "operate", "spores", "storage_inter_cluster", "milp"]
+LOGGER = "calliope.preprocess.model_math"
 
 
 @pytest.fixture(scope="module")
@@ -45,32 +51,30 @@ class TestInitMath:
 
     @pytest.fixture(scope="class")
     def math_data(self, extra_math, def_path):
-        return model_math.initialise_math(extra_math, def_path)
+        math_paths = model_math.initialise_math_paths(extra_math, def_path)
+        return model_math.load_math(math_paths)
 
     def test_loaded_internal(self, math_data, extra_math):
         """Loaded math should contain both user defined and internal files."""
-        assert not math_data.keys() - (
-            set(model_math.PRE_DEFINED_MATH) | extra_math.keys()
-        )
+        assert not math_data.keys() - (set(PRE_DEFINED_MATH) | extra_math.keys())
 
     def test_pre_defined_load(self, math_data):
         """Internal files should be loaded correctly."""
-        for filename in model_math.PRE_DEFINED_MATH:
-            expected = model_math._load_internal_math(filename)
-            math_data[filename] == expected
+        for file in model_math.MATH_FILE_DIR.iterdir():
+            expected = read_rich_yaml(file)
+            math_data[file.stem] == expected
 
     def test_extra_load(self, math_data, extra_math, user_math):
         """Extra math should be loaded with no alterations."""
         if extra_math:
             assert math_data["user_math"] == user_math
 
-    def test_overwrite_warning(self, user_math_path, def_path):
+    def test_overwrite_warning(self, caplog, user_math_path, def_path):
         """Users should be warned when overwritting pre-defined math."""
-        extra_math = {"plan": user_math_path}
-        with pytest.raises(
-            exceptions.ModelWarning, match="Overwriting pre-defined 'plan' math."
-        ):
-            model_math.initialise_math(extra_math, def_path)
+        extra_math = {"base": user_math_path}
+        with caplog.at_level(logging.WARNING, logger=LOGGER):
+            model_math.initialise_math_paths(extra_math, def_path)
+        assert "Math init | Overwriting pre-defined 'base' math with custom-math.yaml."
 
 
 class TestBuildMath:
@@ -79,19 +83,19 @@ class TestBuildMath:
         """Simulate users adding extra math using the urban example model."""
         calliope_dir = Path(calliope.__file__).parent
         additional = calliope_dir / "example_models/urban_scale/additional_math.yaml"
-        alternative_base = calliope_dir / "math/plan.yaml"
+        alternative_base = calliope_dir / "math/base.yaml"
 
         return calliope.examples.urban_scale(
             override_dict={
                 "config": {
                     "init": {
-                        "base_math": "plan",
-                        "extra_math": {
+                        "math_paths": {
                             "additional_math": str(additional.absolute()),
                             "alternative_base": str(alternative_base.absolute()),
                         },
-                    },
-                    "build": {"mode": "base", "extra_math": []},
+                        "mode": "base",
+                        "extra_math": [],
+                    }
                 }
             }
         )
@@ -108,11 +112,11 @@ class TestBuildMath:
         "math_order",
         [
             # Default
-            ["plan"],
+            ["base"],
             # Default and extra
-            ["plan", "additional_math"],
+            ["base", "additional_math"],
             # Default, mode and extra
-            ["plan", "operate", "additional_math"],
+            ["base", "operate", "additional_math"],
             # Alternative base, mode and extra
             ["alternative_base", "operate", "additional_math"],
         ],
@@ -122,10 +126,10 @@ class TestBuildMath:
         math = calliope.AttrDict()
         for i in math_order:
             math.union(math_options[i], allow_override=True)
-        expected_math = math_schema.MathSchema(**math).model_dump()
+        expected_math = math_schema.CalliopeBuildMath(**math).model_dump()
         with caplog.at_level(logging.INFO):
             built_math = model_math.build_applied_math(math_order, math_options)
-        assert expected_math == built_math
+        assert expected_math == built_math.model_dump()
         assert str(math_order) in caplog.text
 
     def test_math_name_error(self, math_options):
@@ -136,3 +140,57 @@ class TestBuildMath:
             match="Requested math 'foobar_fail' was not initialised.",
         ):
             model_math.build_applied_math(wrong_names, math_options)
+
+
+class TestValidateMathDict:
+    @pytest.fixture(scope="class")
+    def init_math(self) -> dict:
+        model = build_model({}, "simple_supply,investment_costs")
+        return model.math.init.model_dump()
+
+    @pytest.fixture(scope="class")
+    def math_priority(self) -> list[str]:
+        return ["base"]
+
+    def test_base_math(self, caplog, init_math, math_priority):
+        with caplog.at_level(logging.INFO, logger=LOGGER):
+            model_math.build_applied_math(math_priority, init_math, validate=True)
+        assert "Math build | Validated math strings." in caplog.text
+
+    @pytest.mark.parametrize(
+        "component_dict",
+        [
+            {"equations": [{"expression": "1 = 1"}]},
+            {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"},
+        ],
+    )
+    @pytest.mark.parametrize("both_fail", [True, False])
+    def test_add_math_fails(self, init_math, math_priority, component_dict, both_fail):
+        math_dict = {"constraints": {"foo": component_dict}}
+        errors_to_check = [
+            "math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)",
+            " * constraints:foo:",
+            "equations[0].expression",
+            "where",
+        ]
+        if both_fail:
+            math_dict["constraints"]["bar"] = component_dict
+            errors_to_check.append("* constraints:bar:")
+        else:
+            math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            model_math.build_applied_math(math_priority, init_math, math_dict)
+        assert check_error_or_warning(excinfo, errors_to_check)
+
+    @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
+    def test_add_math_fails_marker_correct_position(
+        self, init_math, math_priority, eq_string
+    ):
+        math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            model_math.build_applied_math(math_priority, init_math, math_dict)
+        errorstrings = str(excinfo.value).split("\n")
+        # marker should be at the "=" sign, i.e., 2 characters from the end
+        assert len(errorstrings[-2]) - 2 == len(errorstrings[-1])

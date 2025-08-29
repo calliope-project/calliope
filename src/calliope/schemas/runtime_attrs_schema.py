@@ -16,9 +16,6 @@ class CalliopeRuntime(CalliopeBaseModel):
     applied_overrides: str | None = None
     """Overrides applied when initialising the model."""
 
-    allow_operate_mode: bool = True
-    """If False, building in `operate` mode will not be allowed."""
-
     calliope_version_initialised: str = _version.__version__
     """The calliope version this model was initialised with."""
 

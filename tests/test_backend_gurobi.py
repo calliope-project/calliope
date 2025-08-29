@@ -135,7 +135,7 @@ class TestNewBackend:
     def test_new_objective_set_update(
         self, simple_supply_gurobi_func_new_objective, dummy_int
     ):
-        simple_supply_gurobi_func_new_objective.backend.update_parameter(
+        simple_supply_gurobi_func_new_objective.backend.update_input(
             "bigM", xr.DataArray(dummy_int)
         )
         obj_expr = simple_supply_gurobi_func_new_objective.backend.get_objective("foo")
@@ -253,10 +253,11 @@ class TestNewBackend:
         assert not fixed.sel(techs="test_demand_elec", carriers="electricity").any()
         assert fixed.where(where, other=True).all()
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
+    )
     def test_fix_variable_before_optimal_solve(self, simple_supply_gurobi_func):
-        simple_supply_gurobi_func.backend.update_parameter(
-            "flow_cap_max", xr.DataArray(0)
-        )
+        simple_supply_gurobi_func.backend.update_input("flow_cap_max", xr.DataArray(0))
         simple_supply_gurobi_func.solve(force=True)
         assert simple_supply_gurobi_func.runtime.termination_condition != "optimal"
         with pytest.raises(exceptions.BackendError) as excinfo:
@@ -393,6 +394,15 @@ class TestPiecewiseConstraints:
         }
 
     @pytest.fixture(scope="class")
+    def add_math(self):
+        return {
+            "parameters": {"piecewise_x": {}, "piecewise_y": {}},
+            "dimensions": {
+                "breakpoints": {"dtype": "integer", "iterator": "breakpoint"}
+            },
+        }
+
+    @pytest.fixture(scope="class")
     def failing_math(self, working_math):
         return {**working_math, **{"y_expression": "sum(flow_in, over=timesteps)"}}
 
@@ -405,8 +415,12 @@ class TestPiecewiseConstraints:
         return self.gen_params([0, 10], [0, 1])
 
     @pytest.fixture(scope="class")
-    def working_model(self, working_params, working_math):
-        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
+    def working_model(self, working_params, working_math, add_math):
+        m = build_model(
+            working_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
+        )
         m.build(backend="gurobi")
         m.backend.add_piecewise_constraint("foo", working_math)
         return m
@@ -432,10 +446,14 @@ class TestPiecewiseConstraints:
             == f"foo[{', '.join(dims[i] for i in constr.dims)}]"
         )
 
-    def test_fails_on_length_mismatch(self, length_mismatch_params, working_math):
+    def test_fails_on_length_mismatch(
+        self, length_mismatch_params, working_math, add_math
+    ):
         """Expected error when number of breakpoints on X and Y don't match."""
         m = build_model(
-            length_mismatch_params, "simple_supply,two_hours,investment_costs"
+            length_mismatch_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
         )
         m.build(backend="gurobi")
         with pytest.raises(exceptions.BackendError) as excinfo:
@@ -445,9 +463,13 @@ class TestPiecewiseConstraints:
             "Errors in generating piecewise constraint: Arguments xpts and ypts must have the same length",
         )
 
-    def test_expressions_not_allowed(self, working_params, failing_math):
+    def test_expressions_not_allowed(self, working_params, failing_math, add_math):
         """Expected error when using an expression instead of a decision variable (gurobi-specific error)."""
-        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
+        m = build_model(
+            working_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
+        )
         m.build(backend="gurobi")
         with pytest.raises(exceptions.BackendError) as excinfo:
             m.backend.add_piecewise_constraint("foo", failing_math)

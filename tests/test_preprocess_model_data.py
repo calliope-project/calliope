@@ -8,38 +8,39 @@ import xarray as xr
 from calliope import AttrDict, exceptions, io
 from calliope.preprocess import prepare_model_definition
 from calliope.preprocess.model_data import ModelDataFactory
+from calliope.util import DATETIME_DTYPE
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def model_def(minimal_test_model_path):
     model_def_override = prepare_model_definition(
         io.read_rich_yaml(minimal_test_model_path),
         scenario="simple_supply,empty_tech_node",
         definition_path=minimal_test_model_path,
+        pre_validate_math_strings=False,
     )
     # Erase data tables for simplicity
     # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
     model_def_override.definition.data_tables.root = {}
-    return AttrDict(model_def_override.model_dump(exclude_defaults=True))
+    return model_def_override
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def init_config(default_config, model_def):
-    updated_config = default_config.update(model_def.config)
+    updated_config = default_config.update(model_def.config.model_dump())
     return updated_config.init
 
 
 @pytest.fixture
-def model_data_factory(minimal_test_model_path, model_def, init_config, model_defaults):
+def model_data_factory(minimal_test_model_path, model_def, init_config):
     return ModelDataFactory(
         init_config,
-        model_def.definition,
+        AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
+        model_def.math.init,
         minimal_test_model_path,
-        [],
-        {"default": model_defaults},
     )
 
 
@@ -53,6 +54,26 @@ def model_data_factory_w_params(model_data_factory: ModelDataFactory):
 def my_caplog(caplog):
     caplog.set_level(logging.DEBUG, logger="calliope.preprocess")
     return caplog
+
+
+@pytest.fixture
+def model_data_factory_with_time(model_data_factory_w_params):
+    time_da = pd.Series(
+        1,
+        index=pd.date_range(
+            "2005-01-01", "2005-01-04 23:59", freq="h", name="timesteps"
+        ),
+    )
+    model_data_factory_w_params._add_to_dataset(
+        time_da.to_xarray().to_dataset(name="time_data"), ""
+    )
+    model_data_factory_w_params.config = model_data_factory_w_params.config.update(
+        {"subset": {"timesteps": None}}
+    )
+    model_data_factory_w_params.math = model_data_factory_w_params.math.update(
+        {"parameters.time_data": {"resample_method": "sum"}}
+    )
+    return model_data_factory_w_params
 
 
 @pytest.mark.filterwarnings("ignore:(?s).*Converting non-nanosecond precision datetime")
@@ -72,9 +93,6 @@ class TestModelData:
         da = pd.Series(data).rename_axis(index=["timesteps", "foobaz"]).to_xarray()
         da.coords["timesteps"] = da.coords["timesteps"].astype("M")
         return da
-
-    def test_model_data_init(self, model_data_factory: ModelDataFactory):
-        assert model_data_factory.param_attrs["flow_in_eff"] == {"default": 1.0}
 
     def test_add_node_tech_data(self, model_data_factory_w_params: ModelDataFactory):
         assert set(model_data_factory_w_params.dataset.nodes.values) == {"a", "b", "c"}
@@ -409,7 +427,13 @@ class TestModelData:
     def test_prepare_param_dict_lookup(
         self, model_data_factory: ModelDataFactory, simple_da: xr.DataArray
     ):
-        model_data_factory.LOOKUP_PARAMS["lookup_arr"] = "foobar"
+        model_data_factory.math = model_data_factory.math.update(
+            {
+                "lookups": {
+                    "lookup_arr": {"pivot_values_to_dim": "foobar", "dtype": "bool"}
+                }
+            }
+        )
         model_data_factory.dataset["orig"] = simple_da
         output = model_data_factory._prepare_param_dict("lookup_arr", ["foo", "bar"])
         assert output == {"data": True, "index": [["foo"], ["bar"]], "dims": ["foobar"]}
@@ -418,8 +442,7 @@ class TestModelData:
         with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
             model_data_factory._prepare_param_dict("foo", ["foo", "bar"])
         assert check_error_or_warning(
-            excinfo,
-            "foo | Cannot pass parameter data as a list unless the parameter is one of the pre-defined lookup arrays",
+            excinfo, "foo | Cannot pass un-indexed parameter data"
         )
 
     @pytest.mark.parametrize("param_data", [1, [1], [1, 2, 3]])
@@ -498,13 +521,11 @@ class TestModelData:
         assert "a" in model_data_factory_w_params.dataset.nodes
         assert "test_supply_elec" in model_data_factory_w_params.dataset.techs
         assert (
-            model_data_factory_w_params.dataset.carrier_in.sel(**to_drop).isnull().all()
-        )
+            model_data_factory_w_params.dataset.carrier_in.sel(**to_drop) == 0
+        ).all()
         assert (
-            model_data_factory_w_params.dataset.carrier_out.sel(**to_drop)
-            .isnull()
-            .all()
-        )
+            model_data_factory_w_params.dataset.carrier_out.sel(**to_drop) == 0
+        ).all()
 
     @pytest.mark.parametrize(
         "to_drop",
@@ -592,15 +613,20 @@ class TestModelData:
     def test_add_to_dataset_timeseries(
         self, my_caplog, model_data_factory: ModelDataFactory, coord_name
     ):
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {coord_name: {"dtype": "datetime", "iterator": "i"}}}
+        )
         new_idx = pd.Index(["2005-01-01 00:00", "2005-01-01 01:00"], name=coord_name)
         new_param = pd.DataFrame({"ts_data": [True, False]}, index=new_idx).to_xarray()
         model_data_factory._add_to_dataset(new_param, "foo")
 
         assert (
-            f"foo | Updating `{coord_name}` dimension index values to datetime format"
+            f"foo | dimensions | Updating values of `{coord_name}` to datetime type"
             in my_caplog.text
         )
-        assert model_data_factory.dataset.coords[coord_name].dtype.kind == "M"
+        assert (
+            model_data_factory.dataset.coords[coord_name].dtype.kind == DATETIME_DTYPE
+        )
         assert "ts_data" in model_data_factory.dataset
 
     def test_add_to_dataset_no_timeseries(
@@ -609,50 +635,65 @@ class TestModelData:
         new_param = simple_da.copy().to_dataset(name="non_ts_data")
         model_data_factory._add_to_dataset(new_param, "foo")
 
-        assert "dimension index values to datetime format" not in my_caplog.text
+        assert "datetime type" not in my_caplog.text
         # make sure nothing has changed in the array
         assert "non_ts_data" in model_data_factory.dataset
         assert model_data_factory.dataset["non_ts_data"].equals(simple_da)
 
     @pytest.mark.parametrize(
-        ("data", "kind"),
-        [
-            ([1, 2], "i"),
-            (["1", "2"], "i"),
-            (["1", 2], "i"),
-            ([1, "2"], "i"),
-            ([1.0, 2.0], "f"),
-            (["1.0", "2.0"], "f"),
-            ([1, "2.0"], "f"),
-            (["1", 2.0], "f"),
-        ],
+        "data", [[1.0, 2.0], ["1.0", "2.0"], [1, "2.0"], ["1", 2.0]]
     )
-    def test_update_numeric_dims(
-        self, my_caplog, model_data_factory: ModelDataFactory, data, kind
+    def test_update_float_dims(
+        self, my_caplog, model_data_factory: ModelDataFactory, data
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"my_data": [True, False]}, index=new_idx).to_xarray()
-        updated_ds = model_data_factory._update_numeric_dims(new_param, "foo")
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {"bar": {"dtype": "float", "iterator": "i"}}}
+        )
+        updated_ds = model_data_factory._update_dtypes(new_param.coords, "foo")
 
         assert (
-            "foo | Updating `bar` dimension index values to numeric type"
+            "foo | dimensions | Updating values of `bar` to float type"
             in my_caplog.text
         )
-        assert updated_ds.coords["bar"].dtype.kind == kind
+        assert updated_ds["bar"].dtype.kind == "f"
 
-    @pytest.mark.parametrize(("data", "kind"), [(["1", 2], "i"), ([1.0, "2.0"], "f")])
+    @pytest.mark.parametrize("data", [[1, 2], ["1", "2"], ["1", 2], [1, "2"]])
+    def test_update_integer_dims(
+        self, my_caplog, model_data_factory: ModelDataFactory, data
+    ):
+        new_idx = pd.Index(data, name="bar")
+        new_param = pd.DataFrame({"my_data": [True, False]}, index=new_idx).to_xarray()
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {"bar": {"dtype": "integer", "iterator": "i"}}}
+        )
+        updated_ds = model_data_factory._update_dtypes(new_param.coords, "foo")
+
+        assert (
+            "foo | dimensions | Updating values of `bar` to integer type"
+            in my_caplog.text
+        )
+        assert updated_ds["bar"].dtype.kind == "i"
+
+    @pytest.mark.parametrize(
+        ("data", "dtype"), [(["1", 2], "integer"), ([1.0, "2.0"], "float")]
+    )
     def test_update_numeric_dims_in_model_data(
-        self, my_caplog, model_data_factory: ModelDataFactory, data, kind
+        self, my_caplog, model_data_factory: ModelDataFactory, data, dtype
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"num_data": [True, False]}, index=new_idx).to_xarray()
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {"bar": {"dtype": dtype, "iterator": "i"}}}
+        )
         model_data_factory._add_to_dataset(new_param, "foo")
 
         assert (
-            "foo | Updating `bar` dimension index values to numeric type"
+            f"foo | dimensions | Updating values of `bar` to {dtype} type"
             in my_caplog.text
         )
-        assert model_data_factory.dataset.coords["bar"].dtype.kind == kind
+        assert model_data_factory.dataset.coords["bar"].dtype.kind == dtype[0]
 
     @pytest.mark.parametrize(
         "data", [["foo", 2], [1.0, "foo"], ["foo", "bar"], ["Y1", "Y2"]]
@@ -662,13 +703,16 @@ class TestModelData:
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"ts_data": [True, False]}, index=new_idx).to_xarray()
-        updated_ds = model_data_factory._update_numeric_dims(new_param, "foo")
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {"bar": {"dtype": "string", "iterator": "i"}}}
+        )
+        updated_ds = model_data_factory._update_dtypes(new_param, "foo")
 
         assert (
-            "foo | Updating `bar` dimension index values to numeric type"
+            "foo | dimensions | Updating values of `bar` to string type"
             not in my_caplog.text
         )
-        assert updated_ds.coords["bar"].dtype.kind not in ["f", "i"]
+        assert updated_ds["bar"].dtype.kind == "O"
 
     @pytest.mark.parametrize(
         ("coords", "new_coords"),
@@ -684,6 +728,9 @@ class TestModelData:
     ):
         model_data_factory.dataset["orig"] = simple_da
         new_param = simple_da.to_series().rename_axis(index=coords).to_xarray()
+        model_data_factory.math = model_data_factory.math.update(
+            {"dimensions": {dim: {"dtype": "float", "iterator": "i"}} for dim in coords}
+        )
         model_data_factory._log_param_updates("foo", new_param)
         for coord in new_coords:
             assert (
@@ -886,7 +933,7 @@ class TestTopLevelParams:
             "timesteps",
         )
         assert (
-            "(parameters, my_val) | Updating `timesteps` dimension index values to datetime format"
+            "(parameters, my_val) | dimensions | Updating values of `timesteps` to datetime type"
             in my_caplog.text
         )
 
@@ -957,3 +1004,160 @@ class TestActiveFalse:
         # Ensure what should be gone is gone
         assert not (model.inputs.base_tech == "transmission").any()
         assert "(techs, test_link_a_b_elec) | Deactivated." in my_caplog.text
+
+
+class TestSubset:
+    @pytest.fixture
+    def model_data_factory_with_int_dim(self, model_data_factory_w_params):
+        time_da = pd.Series(1, index=pd.Index(range(6), dtype=int, name="int_dim"))
+        model_data_factory_w_params._add_to_dataset(
+            time_da.to_xarray().to_dataset(name="int_dim_data"), ""
+        )
+        model_data_factory_w_params.math = model_data_factory_w_params.math.update(
+            {
+                "dimensions.int_dim": {
+                    "dtype": "integer",
+                    "ordered": True,
+                    "iterator": "id",
+                }
+            }
+        )
+        return model_data_factory_w_params
+
+    def test_subset_time(self, model_data_factory_with_time: ModelDataFactory):
+        """Subsetting time dimension works as expected as a time slice"""
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"subset": {"timesteps": ["2005-01-01", "2005-01-02"]}}
+            )
+        )
+        model_data_factory_with_time._subset_dims()
+        expected = pd.date_range(
+            "2005-01-01", "2005-01-02 23:59", freq="h", name="timesteps"
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.timesteps.to_index(), expected
+        )
+
+    def test_subset_nodes(self, model_data_factory_with_time: ModelDataFactory):
+        """Subsetting node dimension works as expected as an intersection with the subset list."""
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update({"subset": {"nodes": ["a"]}})
+        )
+        model_data_factory_with_time._subset_dims()
+        # no change in time subset
+        expected = pd.date_range(
+            "2005-01-01", "2005-01-04 23:59", freq="h", name="timesteps"
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.timesteps.to_index(), expected
+        )
+        # only a change in node subset
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.nodes.to_index(),
+            pd.Index(["a"], name="nodes"),
+        )
+
+    def test_subset_time_and_nodes(
+        self, model_data_factory_with_time: ModelDataFactory
+    ):
+        """Subsetting two dimensions works as expected."""
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"subset": {"timesteps": ["2005-01-01", "2005-01-02"], "nodes": ["a"]}}
+            )
+        )
+        model_data_factory_with_time._subset_dims()
+        expected = pd.date_range(
+            "2005-01-01", "2005-01-02 23:59", freq="h", name="timesteps"
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.timesteps.to_index(), expected
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.nodes.to_index(),
+            pd.Index(["a"], name="nodes"),
+        )
+
+    def test_numeric_ordered(self, model_data_factory_with_int_dim):
+        """Subsetting an integer, ordered dimension uses a slicer."""
+        model_data_factory_with_int_dim.config = (
+            model_data_factory_with_int_dim.config.update(
+                {"subset": {"int_dim": [1, 3]}}
+            )
+        )
+        model_data_factory_with_int_dim._subset_dims()
+        assert (model_data_factory_with_int_dim.dataset.int_dim == [1, 2, 3]).all()
+
+    def test_numeric_unordered(self, model_data_factory_with_int_dim):
+        """Subsetting an integer, unordered dimension uses an intersection with the subset list."""
+        model_data_factory_with_int_dim.math = (
+            model_data_factory_with_int_dim.math.update(
+                {"dimensions.int_dim": {"ordered": False}}
+            )
+        )
+        model_data_factory_with_int_dim.config = (
+            model_data_factory_with_int_dim.config.update(
+                {"subset": {"int_dim": [1, 3]}}
+            )
+        )
+        model_data_factory_with_int_dim._subset_dims()
+        assert (model_data_factory_with_int_dim.dataset.int_dim == [1, 3]).all()
+
+    def test_subset_undefined_dim(
+        self, model_data_factory_with_time: ModelDataFactory, my_caplog
+    ):
+        """Subsetting an undefined dimensions does nothing but logs a debug message."""
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"subset": {"undefined": ["foo"]}}
+            )
+        )
+        model_data_factory_with_time._subset_dims()
+        assert "undefined" not in model_data_factory_with_time.dataset.dims
+        assert (
+            "Skipping subsetting for undefined dimension: undefined" in my_caplog.text
+        )
+
+
+class TestResample:
+    def test_resample(self, model_data_factory_with_time: ModelDataFactory):
+        """Resampling a datetime dimension works as expected."""
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"resample": {"timesteps": "1D"}}
+            )
+        )
+        model_data_factory_with_time._resample_dims()
+        expected = pd.date_range(
+            "2005-01-01", "2005-01-04 23:59", freq="D", name="timesteps"
+        )
+        pd.testing.assert_index_equal(
+            model_data_factory_with_time.dataset.timesteps.to_index(), expected
+        )
+        assert (model_data_factory_with_time.dataset.time_data == 24).all()
+
+    def test_resample_fails_non_datetime(
+        self, model_data_factory_with_time: ModelDataFactory
+    ):
+        """Cannot resample non-datetime dimensions"""
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update({"resample": {"nodes": "1D"}})
+        )
+        with pytest.raises(exceptions.ModelError, match="Cannot resample"):
+            model_data_factory_with_time._resample_dims()
+
+    def test_resample_undefined_dim(
+        self, model_data_factory_with_time: ModelDataFactory, my_caplog
+    ):
+        """Resampling an undefined dimensions does nothing but logs a debug message."""
+        model_data_factory_with_time.config = (
+            model_data_factory_with_time.config.update(
+                {"resample": {"undefined": "1D"}}
+            )
+        )
+        model_data_factory_with_time._resample_dims()
+        assert "undefined" not in model_data_factory_with_time.dataset.dims
+        assert (
+            "Skipping resampling for undefined dimension: undefined" in my_caplog.text
+        )

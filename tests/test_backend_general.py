@@ -2,11 +2,12 @@ import logging
 
 import numpy as np
 import pandas as pd
-import pytest  # noqa: F401
+import pytest
 import xarray as xr
 
 import calliope
 import calliope.backend
+from calliope.util import DATETIME_DTYPE
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -29,16 +30,20 @@ def built_model_cls_longnames(backend) -> calliope.Model:
 
 @pytest.fixture
 def built_model_func_longnames(backend) -> calliope.Model:
-    m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build(backend=backend, pre_validate_math_strings=False)
+    m = build_model(
+        {}, "simple_supply,two_hours,investment_costs", pre_validate_math_strings=False
+    )
+    m.build(backend=backend)
     m.backend.verbose_strings()
     return m
 
 
 @pytest.fixture
 def solved_model_func(backend) -> calliope.Model:
-    m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build(backend=backend, pre_validate_math_strings=False)
+    m = build_model(
+        {}, "simple_supply,two_hours,investment_costs", pre_validate_math_strings=False
+    )
+    m.build(backend=backend)
     m.solve()
     return m
 
@@ -48,7 +53,7 @@ def infeasible_model_cls(backend) -> calliope.Model:
     """If we increase demand, the solved model becomes infeasible"""
     m = build_model({}, "simple_supply,two_hours,investment_costs")
     m.build(backend=backend)
-    m.backend.update_parameter(
+    m.backend.update_input(
         "sink_use_equals",
         m.inputs.sink_use_equals.where(m.inputs.techs == "test_demand_elec") * 100,
     )
@@ -95,18 +100,21 @@ def solved_model_cls_multi_type_global_expression(backend) -> calliope.Model:
     m = build_model(
         {"techs.test_link_a_b_heat.active": False},
         "simple_supply,two_hours,investment_costs",
+        math_dict=new_global_expression,
     )
-    m.build(backend=backend, add_math_dict=new_global_expression)
+    m.build(backend=backend)
     m.solve()
     return m
 
 
 @pytest.fixture
 def built_model_func_updated_cost_flow_cap(backend, dummy_int: int) -> calliope.Model:
-    m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build(backend=backend, pre_validate_math_strings=False)
+    m = build_model(
+        {}, "simple_supply,two_hours,investment_costs", pre_validate_math_strings=False
+    )
+    m.build(backend=backend)
     m.backend.verbose_strings()
-    m.backend.update_parameter("cost_flow_cap", dummy_int)
+    m.backend.update_input("cost_flow_cap", dummy_int)
     return m
 
 
@@ -158,6 +166,10 @@ class TestGetters:
     def global_expression(self, solved_model_cls):
         return solved_model_cls.backend.get_global_expression("cost_investment")
 
+    @pytest.fixture(scope="class")
+    def lookup(self, solved_model_cls):
+        return solved_model_cls.backend.get_lookup("cap_method")
+
     @pytest.mark.parametrize(
         "component_type", ["variable", "global_expression", "parameter", "constraint"]
     )
@@ -171,12 +183,12 @@ class TestGetters:
         expected_keys = {
             "obj_type",
             "references",
+            "coords_in_name",
             "title",
             "description",
             "unit",
             "default",
-            "yaml_snippet",
-            "coords_in_name",
+            "domain",
         }
         assert not expected_keys.symmetric_difference(variable.attrs.keys())
 
@@ -205,15 +217,14 @@ class TestGetters:
         """Check a parameter has all expected attributes."""
         assert parameter.attrs == {
             "obj_type": "parameters",
-            "original_dtype": "float64",
             "references": {"flow_in_inc_eff"},
             "coords_in_name": False,
-            "default": 1.0,
             "title": "Inflow efficiency",
             "description": (
                 "Conversion efficiency from `source`/`flow_in` (tech dependent) into the technology. "
                 "Set as value between 1 (no loss) and 0 (all lost)."
             ),
+            "default": 1.0,
             "unit": "fraction.",
         }
 
@@ -224,15 +235,15 @@ class TestGetters:
         )
         assert param.dtype == np.dtype("float64")
 
-    def test_get_parameter_as_vals_timeseries_data(self, solved_model_func):
+    def test_get_parameter_as_vals_integers(self, solved_model_func, dummy_int):
         """Timestep values should have a datetime dtype when resolving the backend parameter objects."""
         solved_model_func.backend.add_parameter(
-            "important_timestep", xr.DataArray(pd.to_datetime("2005-01-01 01:00"))
+            "important_number", xr.DataArray(dummy_int), {}
         )
         param = solved_model_func.backend.get_parameter(
-            "important_timestep", as_backend_objs=False
+            "important_number", as_backend_objs=False
         )
-        assert param.dtype.kind == "M"
+        assert param.equals(xr.DataArray(dummy_int))
 
     def test_get_global_expression_attrs(self, global_expression):
         """Check a global expression has all expected attributes."""
@@ -243,7 +254,6 @@ class TestGetters:
             "description",
             "unit",
             "default",
-            "yaml_snippet",
             "coords_in_name",
         }
         assert not expected_keys.symmetric_difference(global_expression.attrs.keys())
@@ -254,7 +264,10 @@ class TestGetters:
 
     def test_get_global_expression_refs(self, global_expression):
         """Check a global expression has all expected math component refs."""
-        assert global_expression.attrs["references"] == {"cost_investment_annualised"}
+        assert global_expression.attrs["references"] == {
+            "cost_investment_annualised",
+            "cost_operation_fixed",
+        }
 
     def test_get_global_expression_default(self, global_expression):
         """Check a global expression has expected default."""
@@ -347,8 +360,14 @@ class TestGetters:
         assert (
             expr.where(expr != "nan").to_series().dropna().str.contains("2005-").all()
         )
-        assert built_model_cls_longnames.backend._dataset.timesteps.dtype.kind == "M"
-        assert built_model_cls_longnames.backend.inputs.timesteps.dtype.kind == "M"
+        assert (
+            built_model_cls_longnames.backend._dataset.timesteps.dtype.kind
+            == DATETIME_DTYPE
+        )
+        assert (
+            built_model_cls_longnames.backend.inputs.timesteps.dtype.kind
+            == DATETIME_DTYPE
+        )
 
     def test_get_constraint_attrs(self, constraint):
         """Check a constraint has all expected attributes."""
@@ -356,7 +375,6 @@ class TestGetters:
             "obj_type",
             "references",
             "description",
-            "yaml_snippet",
             "coords_in_name",
             "title",
         }
@@ -375,12 +393,33 @@ class TestGetters:
         """Check a constraint does not have verbose strings activated."""
         assert constraint.attrs["coords_in_name"] is False
 
+    def test_get_lookup_obj_type(self, lookup):
+        """Check that a lookup has the right object type set."""
+        assert lookup.attrs["obj_type"] == "lookups"
+
+    def test_get_lookup_refs(self, lookup):
+        """Check that a lookup has zero refs to other components."""
+        assert not lookup.attrs["references"]
+
+    def test_get_lookup_expected_keys(self, lookup):
+        """Check that a lookup displays its schema attributes."""
+        expected_keys = {
+            "obj_type",
+            "references",
+            "description",
+            "coords_in_name",
+            "title",
+            "default",
+            "dtype",
+        }
+        assert not expected_keys.symmetric_difference(lookup.attrs.keys())
+
 
 class TestAdders:
     def test_raise_error_on_preexistence_same_type(self, solved_model_func):
         """Cannot add a parameter if one with the same name already exists"""
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:
-            solved_model_func.backend.add_parameter("flow_out_eff", xr.DataArray(1))
+            solved_model_func.backend.add_parameter("flow_out_eff", xr.DataArray(1), {})
 
         assert check_error_or_warning(
             excinfo,
@@ -390,7 +429,7 @@ class TestAdders:
     def test_raise_error_on_preexistence_diff_type(self, solved_model_func):
         """Cannot add a component if one with the same name already exists, even if it is a different component type."""
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:
-            solved_model_func.backend.add_parameter("flow_out", xr.DataArray(1))
+            solved_model_func.backend.add_parameter("flow_out", xr.DataArray(1), {})
 
         assert check_error_or_warning(
             excinfo,
@@ -410,9 +449,8 @@ class TestAdders:
                 {"expression": "sum(flow_out, over=[nodes, timesteps]) >= 100"}
             ],
             "where": "carrier_out",  # <- no error is raised because of this
-            "active": True,
         }
-        constraint_name = "constraint-without-nan"
+        constraint_name = "constraint_without_nan"
 
         solved_model_func.backend.add_constraint(constraint_name, constraint_dict)
 
@@ -432,9 +470,8 @@ class TestAdders:
             "foreach": ["techs", "carriers"],
             "equations": [{"expression": "sum(flow_out, over=[nodes, timesteps])"}],
             "where": "carrier_out",  # <- no error is raised because of this
-            "active": True,
         }
-        expression_name = "expression-without-nan"
+        expression_name = "expression_without_nan"
 
         # add expression with nan
         solved_model_func.backend.add_global_expression(
@@ -457,9 +494,8 @@ class TestAdders:
             # as 'nodes' is not listed here, the constraint will have excess dimensions
             "foreach": ["techs", "carriers"],
             "equations": [{"expression": "flow_cap >= 100"}],
-            "active": True,
         }
-        constraint_name = "constraint-with-excess-dimensions"
+        constraint_name = "constraint_with_excess_dimensions"
 
         with pytest.raises(calliope.exceptions.BackendError) as error:
             solved_model_func.backend.add_constraint(constraint_name, constraint_dict)
@@ -480,9 +516,8 @@ class TestAdders:
             # as 'nodes' is not listed here, the constraint will have excess dimensions
             "foreach": ["techs", "carriers"],
             "equations": [{"expression": "flow_cap + 1"}],
-            "active": True,
         }
-        expr_name = "expr-with-excess-dimensions"
+        expr_name = "expr_with_excess_dimensions"
 
         with pytest.raises(calliope.exceptions.BackendError) as error:
             solved_model_func.backend.add_global_expression(expr_name, expr_dict)
@@ -492,58 +527,110 @@ class TestAdders:
             f"global_expressions:{expr_name}:0 | The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
         )
 
-    @pytest.mark.parametrize(
-        ("component", "eq"),
-        [("global_expressions", "flow_cap + 1"), ("constraints", "flow_cap >= 1")],
-    )
-    def test_add_allnull_expr_or_constr(self, solved_model_func, component, eq):
-        """If `where` string resolves to False in all array elements, the component won't be built."""
-        adder = getattr(solved_model_func.backend, "add_" + component.removesuffix("s"))
+    def test_add_two_same_expr_nodim(self, solved_model_func):
+        """Cannot set multiple equation expressions for a dimensionless global expression"""
+        eq = {"expression": "bigM"}
+        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
+            solved_model_func.backend.add_global_expression(
+                "foo", {"equations": [eq, eq]}
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "global_expressions:foo:1 | trying to set two equations for the same component.",
+        )
+
+    def test_add_two_same_expr_with_shape(self, solved_model_func):
+        """Cannot set multiple equation expressions for a global expression with dimensions"""
+        eq = {"expression": "flow_cap + 1"}
+        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
+            solved_model_func.backend.add_global_expression(
+                "foo",
+                {"foreach": ["techs", "carriers", "nodes"], "equations": [eq, eq]},
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "global_expressions:foo:1 | trying to set two equations for the same index",
+        )
+
+    def test_add_two_same_expr_with_shape_partial(self, solved_model_func):
+        """Cannot set multiple equation expressions for any array item in a global expression array."""
+        eq1 = {
+            "expression": "flow_cap + 1",
+            "where": "[test_supply_elec, test_demand_elec] in techs",
+        }
+        eq2 = {"expression": "flow_cap + 1", "where": "[test_supply_elec] in techs"}
+        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
+            solved_model_func.backend.add_global_expression(
+                "foo",
+                {"foreach": ["techs", "carriers", "nodes"], "equations": [eq1, eq2]},
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "global_expressions:foo:1 | trying to set two equations for the same index",
+        )
+
+    def test_add_allnull_expr(self, solved_model_func, dummy_int):
+        """If `where` string resolves to False in all array elements, the component will be built with its default."""
         constr_dict = {
             "foreach": ["nodes", "techs"],
-            "where": "True",
-            "equations": [{"expression": eq, "where": "False"}],
-            "active": True,
+            "equations": [{"expression": "flow_cap + 1", "where": "False"}],
+            "default": dummy_int,
         }
-        adder("foo", constr_dict)
+        solved_model_func.backend.add_global_expression("foo", constr_dict)
 
-        assert "foo" not in solved_model_func.backend._dataset.data_vars.keys()
+        assert solved_model_func.backend._dataset["foo"].equals(xr.DataArray(np.nan))
+
+    def test_add_allnull_constr(self, solved_model_func):
+        """If `where` string resolves to False in all array elements, the component won't be built."""
+        constr_dict = {
+            "foreach": ["nodes", "techs"],
+            "equations": [{"expression": "flow_cap <= 1", "where": "False"}],
+        }
+        solved_model_func.backend.add_constraint("foo", constr_dict)
+
+        assert solved_model_func.backend.constraints["foo"].equals(xr.DataArray(np.nan))
 
     def test_add_allnull_param_no_shape(self, solved_model_func):
         """If parameter is Null, the component will still be added to the backend dataset in case it is filled by another parameter later."""
-        solved_model_func.backend.add_parameter("foo", xr.DataArray(np.nan))
+        solved_model_func.backend.add_parameter("foo", xr.DataArray(np.nan), {})
 
-        assert "foo" in solved_model_func.backend._dataset.data_vars.keys()
+        assert solved_model_func.backend.parameters.foo.equals(xr.DataArray(np.nan))
 
     def test_add_allnull_param_with_shape(self, solved_model_func):
         """If parameter is Null in all array elements, the component will still be added to the backend dataset in case it is filled by another parameter later."""
         nan_array = solved_model_func.inputs.flow_cap_max.where(lambda x: x < 0)
-        solved_model_func.backend.add_parameter("foo", nan_array)
+        solved_model_func.backend.add_parameter("foo", nan_array, {})
 
         # We keep it in the dataset since it might be fillna'd by another param later.
-        assert "foo" in solved_model_func.backend._dataset.data_vars.keys()
+        assert solved_model_func.backend.parameters["foo"].equals(xr.DataArray(np.nan))
 
-    def test_add_allnull_var(self, solved_model_func):
+    def test_add_allnull_var(self, solved_model_func, dummy_int):
         """If `where` string resolves to False in all array elements, the component won't be built."""
         solved_model_func.backend.add_variable(
-            "foo", {"foreach": ["nodes"], "where": "False", "active": True}
+            "foo",
+            {
+                "foreach": ["nodes"],
+                "where": "False",
+                "bounds": {"min": 0, "max": 1},
+                "default": dummy_int,
+            },
         )
-        assert "foo" not in solved_model_func.backend._dataset.data_vars.keys()
+        assert solved_model_func.backend.variables["foo"].equals(xr.DataArray(np.nan))
 
     def test_add_allnull_obj(self, solved_model_func):
         """If `where` string resolves to False in all array elements, the component won't be built."""
         eq = {"expression": "bigM", "where": "False"}
         solved_model_func.backend.add_objective(
-            "foo", {"equations": [eq, eq], "sense": "minimise", "active": True}
+            "foo", {"equations": [eq, eq], "sense": "minimise"}
         )
-        assert "foo" not in solved_model_func.backend._dataset.data_vars.keys()
+        assert solved_model_func.backend.objectives["foo"].equals(xr.DataArray(np.nan))
 
     def test_add_two_same_obj(self, solved_model_func):
         """Cannot set multiple equation expressions for an objective"""
         eq = {"expression": "bigM", "where": "True"}
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:
             solved_model_func.backend.add_objective(
-                "foo", {"equations": [eq, eq], "sense": "minimise", "active": True}
+                "foo", {"equations": [eq, eq], "sense": "minimise"}
             )
         assert check_error_or_warning(
             excinfo,
@@ -552,23 +639,23 @@ class TestAdders:
 
 
 class TestUpdateParameter:
-    def test_update_parameter(self, solved_model_func):
+    def test_update_input(self, solved_model_func):
         """Updating a parameter where no Null values need to be rebuilt."""
         updated_param = solved_model_func.inputs.flow_out_eff * 1000
-        solved_model_func.backend.update_parameter("flow_out_eff", updated_param)
+        solved_model_func.backend.update_input("flow_out_eff", updated_param)
 
         expected = solved_model_func.backend.get_parameter(
             "flow_out_eff", as_backend_objs=False
         )
         assert expected.where(updated_param.notnull()).equals(updated_param)
 
-    def test_update_parameter_one_val(self, caplog, solved_model_func, dummy_int: int):
+    def test_update_input_one_val(self, caplog, solved_model_func, dummy_int: int):
         """Updating a parameter where a single value needs broadcasting to the shape of the parameter, leading to any parameter Null values being rebuilt."""
         updated_param = dummy_int
         new_dims = {"techs"}
         caplog.set_level(logging.DEBUG)
 
-        solved_model_func.backend.update_parameter("flow_out_eff", updated_param)
+        solved_model_func.backend.update_input("flow_out_eff", updated_param)
 
         assert (
             f"New values will be broadcast along the {new_dims} dimension(s)"
@@ -579,18 +666,18 @@ class TestUpdateParameter:
         )
         assert (expected == dummy_int).all()
 
-    def test_update_parameter_replace_defaults(self, solved_model_func):
+    def test_update_input_replace_defaults(self, solved_model_func):
         """Updating a parameter that only exists in the backend thanks to its existence in the model definition schema."""
         updated_param = solved_model_func.inputs.flow_out_eff.fillna(0.1)
 
-        solved_model_func.backend.update_parameter("flow_out_eff", updated_param)
+        solved_model_func.backend.update_input("flow_out_eff", updated_param)
 
         expected = solved_model_func.backend.get_parameter(
             "flow_out_eff", as_backend_objs=False
         )
         assert expected.equals(updated_param)
 
-    def test_update_parameter_add_dim(self, caplog, solved_model_func):
+    def test_update_input_add_dim(self, caplog, solved_model_func):
         """flow_out_eff doesn't have the time dimension in the simple model, we add it here."""
         updated_param = solved_model_func.inputs.flow_out_eff.where(
             solved_model_func.inputs.timesteps.notnull()
@@ -602,7 +689,7 @@ class TestUpdateParameter:
         ]
         caplog.set_level(logging.DEBUG)
 
-        solved_model_func.backend.update_parameter("flow_out_eff", updated_param)
+        solved_model_func.backend.update_input("flow_out_eff", updated_param)
 
         assert (
             f"The optimisation problem components {refs_to_update} will be re-built."
@@ -614,14 +701,14 @@ class TestUpdateParameter:
         )
         assert "timesteps" in expected.dims
 
-    def test_update_parameter_replace_undefined(self, caplog, solved_model_func):
+    def test_update_input_replace_undefined(self, caplog, solved_model_func):
         """source_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value."""
         updated_param = solved_model_func.inputs.flow_out_eff
 
         refs_to_update = ["balance_supply_no_storage"]
         caplog.set_level(logging.DEBUG)
 
-        solved_model_func.backend.update_parameter("source_eff", updated_param)
+        solved_model_func.backend.update_input("source_eff", updated_param)
 
         assert (
             f"The optimisation problem components {refs_to_update} will be re-built."
@@ -645,7 +732,7 @@ class TestUpdateParameter:
     @pytest.mark.usefixtures(
         "built_model_func_longnames", "built_model_func_updated_cost_flow_cap"
     )
-    def test_update_parameter_expr_refs_rebuilt(
+    def test_update_input_expr_refs_rebuilt(
         self, request: pytest.FixtureRequest, model_suffix: str, expr: str, kwargs: dict
     ):
         """Check that parameter re-definition propagates across all cross-referenced global expressions."""
@@ -666,7 +753,7 @@ class TestUpdateParameter:
         "built_model_func_longnames", "built_model_func_updated_cost_flow_cap"
     )
     @pytest.mark.parametrize("model_suffix", ["_longnames", "_updated_cost_flow_cap"])
-    def test_update_parameter_refs_in_obj_func(
+    def test_update_input_refs_in_obj_func(
         self, request: pytest.FixtureRequest, model_suffix: str
     ):
         """Check that parameter re-definition propagates from global expressions to objective function."""
@@ -689,7 +776,7 @@ class TestUpdateParameter:
             # If this fails, it means that `updated_cost_flow_cap` might be passing for reasons unrelated to a successful rebuild.
             assert "test_demand_elec" not in objective_string
 
-    def test_update_parameter_no_refs_to_update(self, solved_model_func):
+    def test_update_input_no_refs_to_update(self, solved_model_func):
         """flow_cap_per_storage_cap_max isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
 
         Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it.
@@ -697,7 +784,7 @@ class TestUpdateParameter:
         """
         updated_param = 1
 
-        solved_model_func.backend.update_parameter(
+        solved_model_func.backend.update_input(
             "flow_cap_per_storage_cap_max", updated_param
         )
 
@@ -746,14 +833,14 @@ class TestUpdateVariable:
             bound_array.where(bound_vals.notnull()).transpose(*bound_vals.dims)
         )
 
-    def test_update_variable_error_update_parameter_instead(self, solved_model_func):
+    def test_update_variable_error_update_input_instead(self, solved_model_func):
         """Check that expected error is raised if trying to update a variable bound that was set by a parameter."""
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:
             solved_model_func.backend.update_variable_bounds("flow_cap", max=1)
         assert check_error_or_warning(
             excinfo,
             "Cannot update variable bounds that have been set by parameters."
-            " Use `update_parameter('flow_cap_max')` to update the max bound of flow_cap.",
+            " Use `update_input('flow_cap_max')` to update the max bound of flow_cap.",
         )
 
     def test_fix_variable_before_solve(self, built_model_cls_longnames):
@@ -800,7 +887,6 @@ class TestPiecewiseConstraints:
             "y_values": "piecewise_y",
             "y_expression": "source_cap",
             "description": "FOO",
-            "active": True,
         }
 
     @pytest.fixture(scope="class")
@@ -820,8 +906,21 @@ class TestPiecewiseConstraints:
         return self.gen_params([0, 5, 10], dim="foobar")
 
     @pytest.fixture(scope="class")
-    def working_model(self, backend, working_params, working_math):
-        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
+    def add_math(self):
+        return {
+            "parameters": {"piecewise_x": {}, "piecewise_y": {}},
+            "dimensions": {
+                "breakpoints": {"dtype": "integer", "iterator": "breakpoint"}
+            },
+        }
+
+    @pytest.fixture(scope="class")
+    def working_model(self, backend, working_params, working_math, add_math):
+        m = build_model(
+            working_params,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
+        )
         m.build(backend=backend)
         m.backend.add_piecewise_constraint("foo", working_math)
         return m
@@ -833,7 +932,7 @@ class TestPiecewiseConstraints:
     def test_piecewise_attrs(self, piecewise_constraint):
         """Check a piecewise constraint has all expected attributes."""
         expected_keys = set(
-            ["obj_type", "references", "description", "yaml_snippet", "coords_in_name"]
+            ["obj_type", "references", "title", "description", "coords_in_name"]
         )
         assert not expected_keys.symmetric_difference(piecewise_constraint.attrs.keys())
 
@@ -869,11 +968,13 @@ class TestPiecewiseConstraints:
         )
 
     def test_fails_on_no_breakpoints_in_params(
-        self, missing_breakpoint_dims, working_math, backend
+        self, missing_breakpoint_dims, working_math, backend, add_math
     ):
         """Expected error when parameter defining breakpoints isn't indexed over `breakpoints`."""
         m = build_model(
-            missing_breakpoint_dims, "simple_supply,two_hours,investment_costs"
+            missing_breakpoint_dims,
+            "simple_supply,two_hours,investment_costs",
+            math_dict=add_math,
         )
         m.build(backend=backend)
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:

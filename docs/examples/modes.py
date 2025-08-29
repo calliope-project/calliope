@@ -17,8 +17,8 @@
 #
 # Models can be built and solved in different modes:
 
-# - `plan` mode.
-# In `plan` mode, the user defines upper and lower boundaries for technology capacities and the model decides on an optimal system configuration.
+# - `base` mode.
+# In `base` mode, the user defines upper and lower boundaries for technology capacities and the model decides on an optimal system configuration.
 # In this configuration, the total cost of investing in technologies and then using them to meet demand in every _timestep_ (e.g., every hour) is as low as possible.
 # - `operate` mode.
 # In `operate` mode, all capacity constraints are fixed and the system is operated with a receding horizon control algorithm.
@@ -44,13 +44,15 @@ import calliope
 calliope.set_log_verbosity("INFO", include_solver_output=False)
 
 # %% [markdown]
-# ## Running in 'plan' mode.
+# ## Running in 'base' mode.
 
 # %%
 # We subset to the same time range as operate mode
-model_plan = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-10"])
-model_plan.build()
-model_plan.solve()
+model_base = calliope.examples.national_scale(
+    subset={"timesteps": ["2005-01-01", "2005-01-10"]}
+)
+model_base.build()
+model_base.solve()
 
 # %% [markdown]
 # ## Running in 'operate' mode.
@@ -73,9 +75,9 @@ model_operate.results
 # ## Running in 'spores' mode.
 
 # %%
-# We subset to the same time range as operate/plan mode
+# We subset to the same time range as operate/base mode
 model_spores = calliope.examples.national_scale(
-    scenario="spores", time_subset=["2005-01-01", "2005-01-10"]
+    scenario="spores", subset={"timesteps": ["2005-01-01", "2005-01-10"]}
 )
 model_spores.build()
 model_spores.solve()
@@ -105,7 +107,7 @@ model_spores.results.spores_score_cumulative.to_series().where(
 # %%
 # We set the color mapping to use in all our plots by extracting the colors defined in the technology definitions of our model.
 # We also create some reusable plotting functions.
-colors = model_plan.inputs.color.to_series().to_dict()
+colors = model_base.inputs.color.to_series().to_dict()
 
 
 def plot_flows(results: xr.Dataset) -> go.Figure:
@@ -168,9 +170,9 @@ def plot_capacity(results: xr.Dataset, **plotly_kwargs) -> go.Figure:
 # Here, we'll compare the result on `flow_cap` from running each.
 
 # %%
-# We subset to the same time range as operate/plan mode
+# We subset to the same time range as operate/base mode
 model_spores = calliope.examples.national_scale(
-    scenario="spores", time_subset=["2005-01-01", "2005-01-10"]
+    scenario="spores", subset={"timesteps": ["2005-01-01", "2005-01-10"]}
 )
 model_spores.build()
 
@@ -184,15 +186,15 @@ spores_results_da = xr.concat(spores_results, dim="algorithm")
 spores_results_da.flow_cap.to_series().dropna().unstack("spores")
 
 # %% [markdown]
-# ## 'plan' vs 'operate'
+# ## 'base' vs 'operate'
 # Here, we compare flows over the 10 days.
 # Note how flows do not match as the rolling horizon makes it difficult to make the correct storage charge/discharge decisions.
 
 # %%
-fig_flows_plan = plot_flows(
-    model_plan.results.sel(timesteps=model_operate.results.timesteps)
+fig_flows_base = plot_flows(
+    model_base.results.sel(timesteps=model_operate.results.timesteps)
 )
-fig_flows_plan.update_layout(title="Plan mode flows")
+fig_flows_base.update_layout(title="Base mode flows")
 
 
 # %%
@@ -200,13 +202,13 @@ fig_flows_operate = plot_flows(model_operate.results)
 fig_flows_operate.update_layout(title="Operate mode flows")
 
 # %% [markdown]
-# ## 'plan' vs 'spores'
-# Here, we compare installed capacities between the baseline run (== `plan` mode) and the SPORES.
-# Note how the `0` SPORE is the same as `plan` mode and then results deviate considerably.
+# ## 'base' vs 'spores'
+# Here, we compare installed capacities between the baseline run (== `base` mode) and the SPORES.
+# Note how the `0` SPORE is the same as `base` mode and then results deviate considerably.
 
 # %%
-fig_flows_plan = plot_capacity(model_plan.results)
-fig_flows_plan.update_layout(title="Plan mode capacities")
+fig_flows_base = plot_capacity(model_base.results)
+fig_flows_base.update_layout(title="Base mode capacities")
 
 # %%
 fig_flows_spores = plot_capacity(model_spores.results, facet_col="spores")

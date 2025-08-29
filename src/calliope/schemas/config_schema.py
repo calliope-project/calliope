@@ -8,7 +8,13 @@ from typing import Literal
 
 from pydantic import Field
 
-from calliope.schemas.general import AttrStr, CalliopeBaseModel, UniqueList
+from calliope.schemas.general import (
+    AttrStr,
+    CalliopeBaseModel,
+    CalliopeDictModel,
+    NonEmptyList,
+    UniqueList,
+)
 
 Mode = Literal["base", "operate", "spores"]
 
@@ -17,6 +23,26 @@ LOGGER = logging.getLogger(__name__)
 SPORES_SCORING_OPTIONS = Literal[
     "integer", "relative_deployment", "random", "evolving_average"
 ]
+
+
+class Subsets(CalliopeDictModel):
+    """Dimension subsets."""
+
+    root: dict[AttrStr, NonEmptyList[str | int | float] | None] = Field(
+        default_factory=dict
+    )
+
+
+class Resamples(CalliopeDictModel):
+    """Dimension resampling settings."""
+
+    root: dict[AttrStr, str | None] = Field(default_factory=dict)
+
+
+class MathPaths(CalliopeDictModel):
+    """Math paths settings."""
+
+    root: dict[AttrStr, Path] = Field(default_factory=dict)
 
 
 class Init(CalliopeBaseModel):
@@ -36,7 +62,7 @@ class Init(CalliopeBaseModel):
     Defaults to False to mitigate unexpected broadcasting when applying overrides.
     """
 
-    time_subset: tuple[str, str] | None = None
+    subset: Subsets = Subsets()
     """
     Subset of timesteps as an two-element list giving the **inclusive** range.
     For example, ["2005-01", "2005-04"] will create a time subset from "2005-01-01 00:00:00" to "2005-04-31 23:59:59".
@@ -44,19 +70,25 @@ class Init(CalliopeBaseModel):
     Strings must be ISO8601-compatible, i.e. of the form `YYYY-mm-dd HH:MM:SS` (e.g, '2005-01 ', '2005-01-01', '2005-01-01 00:00', ...)
     """
 
-    time_resample: str | None = Field(default=None, pattern="^[0-9]+[a-zA-Z]")
-    """Setting to adjust time resolution, e.g. '2h' for 2-hourly"""
+    resample: Resamples = Resamples()
+    """Setting to adjust datetime dimension resolution, e.g. '2h' for 2-hourly"""
 
-    time_cluster: str | None = None
+    time_cluster: AttrStr | None = None
     """
     Setting to cluster the timeseries.
-    Must be a path to a file where each date is linked to a representative date that also exists in the timeseries.
+    Must reference the name of an input data array.
     """
 
-    time_format: str = Field(default="ISO8601")
+    datetime_format: str = Field(default="ISO8601")
     """
-    Timestamp format of all time series data when read from file.
+    Timestamp format of all time series data with `datetime` dtype when read from file.
     'ISO8601' means '%Y-%m-%d %H:%M:%S'.
+    """
+
+    date_format: str = Field(default="ISO8601")
+    """
+    Datestamp format of all time series data with `date` dtype when read from file.
+    'ISO8601' means '%Y-%m-%d'.
     """
 
     distance_unit: Literal["km", "m"] = Field(default="km")
@@ -65,13 +97,34 @@ class Init(CalliopeBaseModel):
     Automatically derived distances from lat/lon coordinates will be given in this unit.
     """
 
-    base_math: AttrStr = "plan"
-    """Name of the math file to build on top of.
-    Can be any pre-defined math file or user-defined file in `extra_math`.
+    mode: Mode = Field(default="base")
+    """Mode in which to run the optimisation.
+    Triggers additional processing and appends additional math formulations.
+    Math order: base -> mode
     """
 
-    extra_math: dict[AttrStr, str] = Field(default={})
-    "Dictionary with the names and paths of additional math files."
+    extra_math: UniqueList[str] = Field(default_factory=list)
+    """
+    List of math entries to be applied on top of the `base` math and `mode` math.
+    The list items must have been defined as keys in `math_paths` (see below).
+    Math order: base -> mode -> extra
+    """
+
+    math_paths: MathPaths = MathPaths()
+    """Dictionary with the names and paths of additional math files to add to the available math entries.
+    Some math entry names are linked to specific functionality, so re-defining them here will overwrite the pre-defined math.:
+    - `base`: replaces the pre-defined base math.
+    - `milp`: replaces the mixed integer math.
+    - `spores`/`operate`: replaces the respective pre-defined mode math.
+    - `storage_inter_cluster`: replaces the pre-defined storage inter-cluster math.
+    """
+
+    pre_validate_math_strings: bool = Field(default=False)
+    """
+    If true, the Calliope math definition will be scanned for parsing errors at model initialisation,
+    i.e., _before_ undertaking the much more expensive operation of building the optimisation problem.
+    It is switched off by default to reduce overall build time.
+    """
 
 
 class BuildOperate(CalliopeBaseModel):
@@ -91,26 +144,11 @@ class BuildOperate(CalliopeBaseModel):
     Must be ≥ `window`
     """
 
-    use_cap_results: bool = Field(default=False)
-    """If the model already contains `base` results, use those optimal capacities as input parameters to the `operate` mode run."""
-
 
 class Build(CalliopeBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {"title": "Model build configuration"}
-
-    mode: Mode = Field(default="base")
-    """Mode in which to run the optimisation.
-    Triggers additional processing and appends additional math formulations.
-    Math order: base -> mode
-    """
-
-    extra_math: UniqueList[str] = Field(default=[])
-    """
-    List of additional math to be applied on top of the base mode math and mode math.
-    Math order: base -> mode -> extra
-    """
 
     backend: Literal["pyomo", "gurobi"] = Field(default="pyomo")
     """Module with which to build the optimisation problem."""
@@ -123,12 +161,6 @@ class Build(CalliopeBaseModel):
 
     objective: str = Field(default="min_cost_optimisation")
     """Name of internal objective function to use, from those defined in the pre-defined math and any applied additional math."""
-
-    pre_validate_math_strings: bool = Field(default=True)
-    """
-    If true, the Calliope math definition will be scanned for parsing errors _before_ undertaking the much more expensive operation of building the optimisation problem.
-    You can switch this off (e.g., if you know there are no parsing errors) to reduce overall build time.
-    """
 
     operate: BuildOperate = BuildOperate()
     """Operate mode specific configuration."""
@@ -156,7 +188,7 @@ class SolveSpores(CalliopeBaseModel):
 
     use_latest_results: bool = Field(default=False)
     """
-    If the model already contains `plan` mode results, use them as the baseline results and start with SPORES iterations immediately.
+    If the model already contains `base` mode results, use them as the baseline results and start with SPORES iterations immediately.
     If the model already contains `spores` mode results, use the most recent results and continue with the remaining SPORES iterations immediately.
     """
 
@@ -184,7 +216,7 @@ class Solve(CalliopeBaseModel):
     For instance, setting `solver_io="python"` when using the solver `gurobi` tends to reduce the time to send the optimisation problem to the solver.
     """
 
-    solver_options: dict = Field(default={})
+    solver_options: dict = Field(default_factory=dict)
     """Any solver options, as key-value pairs, to pass to the chosen solver"""
 
     solver: str = Field(default="cbc")
@@ -193,7 +225,7 @@ class Solve(CalliopeBaseModel):
     zero_threshold: float = Field(default=1e-10)
     """On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero."""
 
-    shadow_prices: UniqueList[str] = Field(default=[])
+    shadow_prices: UniqueList[str] = Field(default_factory=list)
     """Names of model constraints."""
 
     spores: SolveSpores = SolveSpores()

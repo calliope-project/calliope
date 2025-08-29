@@ -16,11 +16,11 @@ from .common.util import check_error_or_warning
 BASE_DIMS = {"carriers", "nodes", "techs"}
 
 
-def string_to_dict(yaml_string, schema: math_schema.CalliopeBaseModel):
+def string_to_def(yaml_string, schema: math_schema.CalliopeBaseModel):
     """Convert a YAML string to its validated equivalent."""
     yaml_loader = yaml.YAML(typ="safe", pure=True)
     validated = schema.model_validate(yaml_loader.load(StringIO(yaml_string)))
-    return validated.model_dump()
+    return validated
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def component_obj():
     equations:
         - expression: 1 == 1
     """
-    variable_data = string_to_dict(setup_string, math_schema.Constraint)
+    variable_data = string_to_def(setup_string, math_schema.Constraint)
     return parsing.ParsedBackendComponent("constraints", "foo", variable_data)
 
 
@@ -77,7 +77,7 @@ def expression_generator():
         expression_dict = {"expression": parse_string}
         if where_string is not None:
             expression_dict["where"] = where_string
-        return expression_dict
+        return math_schema.ExpressionItem.model_validate(expression_dict)
 
     return _expression_generator
 
@@ -99,7 +99,7 @@ def parse_sub_expressions_and_slices(
         _name: component_obj.generate_expression_list(
             parser, _list, expression_group, _name
         )
-        for _name, _list in expression_list.items()
+        for _name, _list in expression_list.root.items()
     }
 
 
@@ -117,7 +117,7 @@ def parsed_sub_expression_dict(component_obj, sub_expression_parser):
         bar: [{bars}]
         """
 
-        sub_expressions = string_to_dict(setup_string, math_schema.SubExpressions)
+        sub_expressions = string_to_def(setup_string, math_schema.SubExpressions)
 
         return parse_sub_expressions_and_slices(
             sub_expression_parser, sub_expressions, "sub_expressions", component_obj
@@ -136,7 +136,7 @@ def parsed_slice_dict(component_obj, slice_parser):
         tech2: [{techs2}]
         """
 
-        slices = string_to_dict(setup_string, math_schema.SubExpressions)
+        slices = string_to_def(setup_string, math_schema.SubExpressions)
 
         return parse_sub_expressions_and_slices(
             slice_parser, slices, "slices", component_obj
@@ -181,7 +181,7 @@ def obj_with_sub_expressions_and_slices():
         return parsing.ParsedBackendComponent(
             "constraints",
             "my_constraint",
-            string_to_dict(string_, math_schema.Constraint),
+            string_to_def(string_, math_schema.Constraint),
         )
 
     return _obj_with_sub_expressions_and_slices
@@ -224,9 +224,7 @@ def equation_slice_obj(slice_parser, where_string_parser):
 
 
 @pytest.fixture
-def dummy_backend_interface(
-    dummy_model_data, dummy_model_math, default_config, model_defaults
-):
+def dummy_backend_interface(dummy_model_data, dummy_model_math, default_config):
     # ignore the need to define the abstract methods from backend_model.BackendModel
     with patch.multiple(backend_model.BackendModel, __abstractmethods__=set()):
 
@@ -237,17 +235,10 @@ def dummy_backend_interface(
                     dummy_model_data,
                     dummy_model_math,
                     default_config.build,
-                    defaults=model_defaults,
                     instance=None,
                 )
 
-                self._dataset = dummy_model_data.copy(deep=True)
-                self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
-                    model_defaults["with_inf"]
-                )
-                self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
-                    model_defaults["only_techs"]
-                )
+                self._dataset = self.inputs
 
     return DummyBackendModel()
 
@@ -265,7 +256,7 @@ def evaluatable_component_obj(valid_component_names):
         slices:
             tech: [{{expression: barfoo, where: "[bar] in nodes"}}]
         """
-        sub_expression_dict = string_to_dict(setup_string, math_schema.Constraint)
+        sub_expression_dict = string_to_def(setup_string, math_schema.Constraint)
 
         class DummyParsedBackendComponent(parsing.ParsedBackendComponent):
             def __init__(self, dict_):
@@ -645,7 +636,7 @@ equations[0].expression (line 1, char 5): bar = 1
         assert where.item() is True
 
     def test_parse_top_level_where_fail(self, component_obj):
-        component_obj._unparsed["where"] = "1"
+        component_obj._unparsed = component_obj._unparsed.update({"where": "1"})
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             component_obj.parse_top_level_where()
 
@@ -670,7 +661,7 @@ equations[0].expression (line 1, char 5): bar = 1
         self, dummy_pyomo_backend_model, component_obj
     ):
         component_obj.sets = ["nodes", "techs", "timesteps"]
-        component_obj._unparsed["where"] = "all_nan"
+        component_obj._unparsed = component_obj._unparsed.update({"where": "all_nan"})
         where_array = component_obj.generate_top_level_where_array(
             dummy_pyomo_backend_model
         )
@@ -681,7 +672,7 @@ equations[0].expression (line 1, char 5): bar = 1
         self, caplog, dummy_pyomo_backend_model, component_obj
     ):
         component_obj.sets = ["nodes", "techs", "foos"]
-        component_obj._unparsed["where"] = "all_nan"
+        component_obj._unparsed = component_obj._unparsed.update({"where": "all_nan"})
         caplog.set_level(logging.DEBUG)
 
         where_array = component_obj.generate_top_level_where_array(
@@ -698,7 +689,9 @@ equations[0].expression (line 1, char 5): bar = 1
         self, dummy_pyomo_backend_model, component_obj
     ):
         component_obj.sets = ["nodes", "techs"]
-        component_obj._unparsed["where"] = "all_nan AND all_true_carriers"
+        component_obj._unparsed = component_obj._unparsed.update(
+            {"where": "all_nan AND all_true_carriers"}
+        )
         where_array = component_obj.generate_top_level_where_array(
             dummy_pyomo_backend_model, break_early=False, align_to_foreach_sets=True
         )
@@ -706,7 +699,7 @@ equations[0].expression (line 1, char 5): bar = 1
         assert not set(component_obj.sets).difference(where_array.dims)
 
     def test_evaluate_where_fail(self, component_obj):
-        component_obj._unparsed["where"] = "1[]"
+        component_obj._unparsed = component_obj._unparsed.update({"where": "1[]"})
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             component_obj.parse_top_level_where()
         expected_err_string = """
@@ -716,7 +709,7 @@ equations[0].expression (line 1, char 5): bar = 1
         assert check_error_or_warning(excinfo, expected_err_string)
 
     def test_evaluate_where_fail_no_raise(self, component_obj):
-        component_obj._unparsed["where"] = "1[]"
+        component_obj._unparsed = component_obj._unparsed.update({"where": "1[]"})
         component_obj.parse_top_level_where(errors="ignore")
         expected_err_string = """\
 where (line 1, char 1): 1[]
@@ -1007,18 +1000,20 @@ class TestParsedBackendEquation:
 class TestParsedConstraint:
     @pytest.fixture
     def constraint_obj(self):
-        dict_ = {
-            "foreach": ["techs"],
-            "where": "with_inf",
-            "equations": [{"expression": "$foo == 1"}],
-            "sub_expressions": {
-                "foo": [
-                    {"expression": "only_techs + 2", "where": "False"},
-                    {"expression": "only_techs / 3", "where": "True"},
-                ]
-            },
-        }
-        parsed_ = parsing.ParsedBackendComponent("constraints", "foo", dict_)
+        constr = math_schema.Constraint.model_validate(
+            {
+                "foreach": ["techs"],
+                "where": "with_inf",
+                "equations": [{"expression": "$foo == 1"}],
+                "sub_expressions": {
+                    "foo": [
+                        {"expression": "only_techs + 2", "where": "False"},
+                        {"expression": "only_techs / 3", "where": "True"},
+                    ]
+                },
+            }
+        )
+        parsed_ = parsing.ParsedBackendComponent("constraints", "foo", constr)
         parsed_.equations = parsed_.parse_equations(["only_techs"])
         parsed_.parse_top_level_where()
         return parsed_
@@ -1059,9 +1054,11 @@ class TestParsedConstraint:
 class TestParsedVariable:
     @pytest.fixture
     def variable_obj(self):
-        dict_ = {"foreach": ["techs"], "where": "False"}
+        var = math_schema.Variable.model_validate(
+            {"foreach": ["techs"], "where": "False", "bounds": {"min": 0, "max": 10}}
+        )
 
-        return parsing.ParsedBackendComponent("variables", "foo", dict_)
+        return parsing.ParsedBackendComponent("variables", "foo", var)
 
     def test_parse_variable_dict_sets(self, variable_obj):
         assert variable_obj.sets == ["techs"]
@@ -1081,14 +1078,20 @@ class TestParsedVariable:
 class TestParsedObjective:
     @pytest.fixture
     def objective_obj(self):
-        dict_ = {
-            "equations": [
-                {"expression": "bar + 2", "where": "False"},
-                {"expression": "sum(only_techs, over=[techs]) + 1", "where": "True"},
-            ]
-        }
+        obj = math_schema.Objective.model_validate(
+            {
+                "equations": [
+                    {"expression": "bar + 2", "where": "False"},
+                    {
+                        "expression": "sum(only_techs, over=[techs]) + 1",
+                        "where": "True",
+                    },
+                ],
+                "sense": "minimize",
+            }
+        )
 
-        parsed_ = parsing.ParsedBackendComponent("objectives", "foo", dict_)
+        parsed_ = parsing.ParsedBackendComponent("objectives", "foo", obj)
         parsed_.equations = parsed_.parse_equations(["only_techs", "bar"])
         return parsed_
 

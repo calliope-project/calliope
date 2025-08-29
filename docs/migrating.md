@@ -157,7 +157,8 @@ This split means you can change configuration options on-the-fly if you are work
     ```yaml
     config:
       init:
-        time_subset: ["2005-01", "2005-02"]
+        subset:
+          timesteps: ["2005-01", "2005-02"]
       build:
         mode: base
       solve:
@@ -168,7 +169,7 @@ This split means you can change configuration options on-the-fly if you are work
 
     ```python
     import calliope
-    model = calliope.Model(time_subset=["2005-01", "2005-02"])
+    model = calliope.Model(subset={"timesteps": ["2005-01", "2005-02"]})
     model.build(mode="base")
     model.solve(solver="cbc")
     ```
@@ -338,8 +339,8 @@ Here are the main changes to parameter/decision variable names that are not link
 
 Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flat YAML hierarchy or to group settings alphabetically:
 
-* `model.subset_time` → `config.init.time_subset`
-* `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.time_resample`
+* `model.subset_time` → `config.init.subset.timesteps` (subsetting other dimensions is now also possible)
+* `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.resample.timesteps: '6h'` (resampling other dimensions is now also possible)
 * `run.operation.window` → `config.build.operate.window`
 * `run.operation.horizon` → `config.build.operate.horizon`
 * `run.operation.use_cap_results` → `config.build.operate.use_cap_results`
@@ -519,7 +520,8 @@ Therefore, `24H` is equivalent to `24` in v0.6 if you are using hourly resolutio
         ```yaml
         config:
           init:
-            time_resample: 6H
+            resample:
+              timesteps: 6H
           build:
             operate.window: 12H
             operate.horizon: 24H
@@ -721,7 +723,7 @@ If you want to achieve some of the same plots that were possible with the Callio
 ### Clustering
 
 Time masking and clustering capabilities have been severely reduced.
-Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.time_resample: 2H`, `config.init.time_cluster: cluster_file.csv`.
+Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2H`, `config.init.time_cluster: cluster_param`.
 Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries.
 
 If you want to masking/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](advanced/time.md#time-clustering) page.

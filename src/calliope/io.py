@@ -148,15 +148,20 @@ def save_netcdf(
     _serialise(model_data.attrs)
     for var in model_data.data_vars.values():
         _serialise(var.attrs)
+    for var in model_data.coords.values():
+        _serialise(var.attrs)
 
-    encoding = {
+    encoding: dict[str, dict] = {
         k: (
             {"zlib": False, "_FillValue": None}
             if v.dtype.kind in ["U", "O"]
+            else {"zlib": False, "_FillValue": None, "dtype": "int8"}
+            if v.dtype.kind == "b"
             else {"zlib": True, "complevel": 4}
         )
         for k, v in model_data.data_vars.items()
     }
+
     try:
         model_data.to_netcdf(
             path,
@@ -170,6 +175,8 @@ def save_netcdf(
     finally:  # Revert model_data.attrs back
         model_data.attrs = original_model_data_attrs
         for var in model_data.data_vars.values():
+            _deserialise(var.attrs)
+        for var in model_data.coords.values():
             _deserialise(var.attrs)
 
 
@@ -307,6 +314,8 @@ def to_yaml(data: AttrDict | dict, path: None | str | Path = None) -> str:
             result.set_key(k, float(v))
         elif isinstance(v, np.integer):
             result.set_key(k, int(v))
+        elif isinstance(v, np.bool_):
+            result.set_key(k, bool(v))
         # Lists are turned into seqs so that they are formatted nicely
         elif isinstance(v, list):
             result.set_key(k, yaml_.seq(v))

@@ -12,6 +12,17 @@
 #
 # ---
 
+dimensions:
+  pieces:
+    dtype: integer
+    iterator: piece
+
+parameters:
+  cost_flow_cap_piecewise_slopes:
+    description: The gradient of each of the piecewise limiting line defining the convex, non-linear cost curve
+  cost_flow_cap_piecewise_intercept:
+    description: The y-axis intercept of each of the piecewise limiting line defining the convex, non-linear cost curve
+
 variables:
   piecewise_cost_investment:
     description: Investment cost that increases monotonically

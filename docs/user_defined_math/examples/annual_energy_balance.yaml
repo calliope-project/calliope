@@ -19,6 +19,25 @@
 #
 # ---
 
+parameters:
+  annual_flow_max:
+    description: Annual maximum outflow
+    default: .inf
+
+  annual_source_max:
+    description: Annual maximum source use
+    default: .inf
+
+  annual_sink_max:
+    description: Annual maximum sink use
+    default: .inf
+
+lookups:
+  flow_max_group:
+    description: Technology group slice
+    dtype: bool
+    default: false
+
 constraints:
   annual_energy_balance_per_tech_and_node:
     description: >

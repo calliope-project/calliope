@@ -47,6 +47,7 @@ from calliope.exceptions import BackendError
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
+    from calliope.schemas.math_schema import CalliopeBuildMath
 
 pp.ParserElement.enablePackrat()
 
@@ -61,6 +62,7 @@ class EvalAttrs(TypedDict):
     slice_dict: dict
     sub_expression_dict: dict
     backend_interface: BackendModel
+    math: CalliopeBuildMath
     input_data: xr.DataArray
     references: set[str]
     helper_functions: dict[str, Callable]
@@ -75,6 +77,7 @@ class EvalString(ABC):
 
     name: str
     eval_attrs: EvalAttrs
+    instring: str
 
     def __eq__(self, other):
         """Functionality for '==' operations."""
@@ -83,6 +86,12 @@ class EvalString(ABC):
     @abstractmethod
     def __repr__(self) -> str:
         """Return string representation of the parsed grammar."""
+
+    def error_msg(self, message: str) -> BackendError:
+        """Raise an error message with context."""
+        return BackendError(
+            f"({self.eval_attrs['equation_name']}, {self.instring}) | {message}"
+        )
 
 
 class EvalToArrayStr(EvalString):
@@ -190,18 +199,23 @@ class EvalOperatorOperand(EvalToArrayStr):
     }
     SKIP_IF: list[str] = ["+", "-"]
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Process successfully parsed expressions with operands separated by an operator.
 
         I.e.: OPERAND OPERATOR OPERAND OPERATOR OPERAND ...
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Contains a list of the form [operand (pp.ParseResults), operator (str),
                 operand (pp.ParseResults), operator (str), ...].
         """
         self.value: pp.ParseResults = tokens[0]
         self.values = tokens
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""
@@ -297,15 +311,20 @@ class EvalOperatorOperand(EvalToArrayStr):
 class EvalSignOp(EvalToArrayStr):
     """Class for processing expressions with + or -."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Parse action to process successfully parsed expressions with a leading + or - sign.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Contains a list of the form [sign (str), operand (pp.ParseResults)].
         """
         self.sign, self.value = tokens[0]
         self.values = tokens
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""
@@ -345,7 +364,7 @@ class EvalComparisonOp(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Contains a list with an RHS (pp.ParseResults), operator (str), and LHS (pp.ParseResults).
         """
@@ -386,8 +405,7 @@ class EvalComparisonOp(EvalToArrayStr):
         for side, arr in {"left": lhs, "right": rhs}.items():
             extra_dims = set(arr.dims).difference(set(where.dims))
             if extra_dims:
-                raise BackendError(
-                    f"({self.eval_attrs['equation_name']}, {self.instring}) | "
+                raise self.error_msg(
                     f"The {side}-hand side of the equation is indexed over dimensions not present in `foreach`: {extra_dims}"
                 )
         lhs_where = lhs.broadcast_like(where)
@@ -407,12 +425,16 @@ class EvalComparisonOp(EvalToArrayStr):
 class EvalFunction(EvalToArrayStr):
     """Class to process parsed functions."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Parse action to process successfully parsed helper function strings.
 
         Strings must be in the following form: helper_function_name(*args, **eval_kwargs).
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has a dictionary component with the parsed elements:
                 helper_function_name (pp.ParseResults), args (list), kwargs (dict).
@@ -422,6 +444,7 @@ class EvalFunction(EvalToArrayStr):
         self.args: list = token_dict["args"]
         self.kwargs: dict = token_dict["kwargs"]
         self.values = tokens
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""
@@ -444,6 +467,8 @@ class EvalFunction(EvalToArrayStr):
             evaluated = arg[0].eval(return_type, **self.eval_attrs)
         elif isinstance(arg, list):
             evaluated = [self._arg_eval(return_type, arg_) for arg_ in arg]
+        elif isinstance(arg, ListParser):
+            evaluated = arg.eval("array", **self.eval_attrs)
         else:
             evaluated = arg.eval(return_type, **self.eval_attrs)
         if isinstance(evaluated, xr.DataArray) and isinstance(arg, EvalGenericString):
@@ -493,7 +518,7 @@ class EvalHelperFuncName(EvalToCallable):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element: helper_function_name (str).
         """
@@ -509,15 +534,11 @@ class EvalHelperFuncName(EvalToCallable):
     def as_callable(self, return_type: RETURN_T) -> Callable:
         """Evalluate and return the callable action of the helper function."""
         helper_functions = self.eval_attrs["helper_functions"]
-        equation_name = self.eval_attrs["equation_name"]
         if self.name not in helper_functions.keys():
-            raise BackendError(
-                f"({equation_name}, {self.instring}) | Invalid helper function defined: {self.name}"
-            )
+            raise self.error_msg(f"Invalid helper function defined: {self.name}")
         elif not isinstance(helper_functions[self.name], type(ParsingHelperFunction)):
-            raise TypeError(
-                f"({equation_name}, {self.instring}) | Helper function must be "
-                f"subclassed from calliope.backend.helper_functions.ParsingHelperFunction: {self.name}"
+            raise self.error_msg(
+                f"Helper function must be subclassed from calliope.backend.helper_functions.ParsingHelperFunction: {self.name}"
             )
         else:
             return helper_functions[self.name](return_type, **self.eval_attrs)
@@ -526,12 +547,16 @@ class EvalHelperFuncName(EvalToCallable):
 class EvalSlicedComponent(EvalToArrayStr):
     """For processing of sliced parameters / decision variables."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Process successfully parsed sliced parameters or decision variables.
 
         In the form of param_or_var[*slices].
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has a dictionary component with the parsed elements:
                 param_or_var_name (str), slices (list of strings).
@@ -543,6 +568,7 @@ class EvalSlicedComponent(EvalToArrayStr):
             idx["set_name"][0]: idx["slicer"][0] for idx in token_dict["slices"]
         }
         self.values = tokens
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""
@@ -587,7 +613,9 @@ class EvalSlicedComponent(EvalToArrayStr):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         evaluated, slices = self._eval("math_string")
-        singular_slice_refs = {k.removesuffix("s"): v for k, v in slices.items()}
+        singular_slice_refs = {
+            self.eval_attrs["math"].dimensions[k].iterator: v for k, v in slices.items()
+        }
         id_ = pp.Combine(
             pp.Word(pp.alphas, pp.alphanums)
             + pp.ZeroOrMore("_" + pp.Word(pp.alphanums))
@@ -608,15 +636,20 @@ class EvalSlicedComponent(EvalToArrayStr):
 class EvalIndexSlice(EvalToArrayStr):
     """For processing `$slice` expressions."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Process successfully parsed expression index `$slice` references.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element containing the index slice name (str).
         """
         self.name: str = tokens[0]
         self.values = tokens
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""
@@ -644,23 +677,26 @@ class EvalIndexSlice(EvalToArrayStr):
 
     def as_array(self) -> xr.DataArray | list[str | float]:  # noqa: D102, override
         evaluated = self._eval("array", True)
-        if isinstance(evaluated, xr.DataArray) and evaluated.isnull().any():
-            evaluated = evaluated.notnull()
         return evaluated
 
 
 class EvalSubExpressions(EvalToArrayStr):
     """For processing sub-expressions."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Process successfully parsed `$sub_expressions`.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element containing the sub_expression name (str).
         """
         self.name: str = tokens[0]
         self.values = tokens
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""
@@ -688,18 +724,23 @@ class EvalSubExpressions(EvalToArrayStr):
 class EvalNumber(EvalToArrayStr):
     """For processing numbers."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Process successfully parsed numbers.
 
         Catches integers (1), floats (1.), and in scientific notation (1e1).
         Also capture infinity (inf/.inf).
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element containing the number (str).
         """
         self.value = tokens[0]
         self.values = tokens
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""
@@ -719,16 +760,21 @@ class EvalNumber(EvalToArrayStr):
 class ListParser(EvalToArrayStr):
     """For parsing lists."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Process successfully parsed lists of generic strings.
 
         This is required since we call "eval()" on all elements of the where string,
         so lists of strings need to be evaluatable as a whole "package".
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): a list of parsed string elements.
         """
         self.val = tokens
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""
@@ -748,18 +794,23 @@ class ListParser(EvalToArrayStr):
 class EvalUnslicedComponent(EvalToArrayStr):
     """Evaluation of unsliced components."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Parse action to process successfully parsed generic strings.
 
         This is required since we call "eval()" on all elements of the where string,
         so even arbitrary strings (used in comparison operations) need to be evaluatable.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: string name (str).
         """
         self.val = tokens[0]
         self.name = str(self.val)
         self.values = tokens
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""
@@ -780,16 +831,21 @@ class EvalUnslicedComponent(EvalToArrayStr):
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         backend_interface = self.eval_attrs["backend_interface"]
 
-        if self.eval_attrs.get("as_values", False):
-            evaluated = backend_interface.get_parameter(
-                self.name, as_backend_objs=False
+        try:
+            evaluated = backend_interface._dataset[self.name]
+            if (
+                self.eval_attrs.get("as_values", False)
+                and evaluated.attrs["obj_type"] == "parameters"
+            ):
+                evaluated = backend_interface.get_parameter(
+                    self.name, as_backend_objs=False
+                )
+        except KeyError:
+            raise self.error_msg(
+                f"Trying to access a math component that is not yet defined: {self.name}. "
+                "If the referenced component is a global expression, set its `order` to have it defined first."
             )
-        else:
-            try:
-                evaluated = backend_interface._dataset[self.name]
-            except KeyError:
-                evaluated = xr.DataArray(self.name, attrs={"obj_type": "string"})
-        if "default" in evaluated.attrs and pd.notna(evaluated.attrs["default"]):
+        if pd.notna(evaluated.attrs["default"]):
             evaluated = evaluated.fillna(evaluated.attrs["default"])
 
         self.eval_attrs["references"].add(self.name)
@@ -799,16 +855,21 @@ class EvalUnslicedComponent(EvalToArrayStr):
 class EvalGenericString(EvalToArrayStr):
     """For generic string parsing."""
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Process successfully parsed generic strings.
 
         This is required since we call "eval()" on all elements of the where string,
         so even arbitrary strings (used in comparison operations) need to be evaluatable.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: string name (str).
         """
         self.val = tokens[0]
+        self.instring = instring
 
     def __repr__(self) -> str:
         """Programming / official string representation."""

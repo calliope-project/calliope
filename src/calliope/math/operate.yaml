@@ -1,3 +1,52 @@
+parameters:
+  area_use:
+    default: .inf
+    title: Area used.
+    description: >-
+      Sets `area_use` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `base` mode as it clashes with the decision variable of the same name.
+    unit: $\text{area}^{2}$.
+
+  storage_cap:
+    default: .inf
+    title: Rated storage capacity.
+    description: >-
+      Sets `storage_cap` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `base` mode as it clashes with the decision variable of the same name.
+    unit: $\text{area}^{2}$.
+
+  purchased_units:
+    default: .inf
+    title: Number of purchased units.
+    description: >-
+      Sets `purchased_units` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `base` mode as it clashes with the decision variable of the same name.
+    unit: integer
+
+  source_cap:
+    default: .inf
+    title: Installed source consumption capacity.
+    description: >-
+      Sets `source_cap` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `base` mode as it clashes with the decision variable of the same name.
+    unit: power.
+
+  flow_cap:
+    default: .inf
+    title: Rated flow capacity.
+    description: >-
+      Sets `flow_cap` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `base` mode as it clashes with the decision variable of the same name.
+    unit: power.
+
+  link_flow_cap:
+    default: .inf
+    title: Rated link flow capacity.
+    description: >-
+      Sets `link_flow_cap` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `base` mode as it clashes with the decision variable of the same name.
+    unit: power.
+
 constraints:
   flow_capacity_per_storage_capacity_min.active: false
   flow_capacity_per_storage_capacity_max.active: false
@@ -15,6 +64,7 @@ constraints:
 
 variables:
   flow_cap.active: false
+  link_flow_cap.active: false
   area_use.active: false
   source_cap.active: false
   storage_cap.active: false
@@ -32,3 +82,11 @@ global_expressions:
     where: "cost_operation_variable"
     equations:
       - expression: sum(cost_operation_variable, over=timesteps)
+
+checks:
+  operate_mode_cyclic_storage:
+    where: cyclic_storage==True AND (base_tech==storage OR include_storage==True)
+    message: >-
+      Cyclic storage should be switched off in operate mode.
+      Since the parameter defaults to True, make sure you explicitly set `cyclic_storage: false` for all your technologies with storage.
+    errors: raise
