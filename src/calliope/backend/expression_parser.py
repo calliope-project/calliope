@@ -208,7 +208,7 @@ class EvalOperatorOperand(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Contains a list of the form [operand (pp.ParseResults), operator (str),
                 operand (pp.ParseResults), operator (str), ...].
@@ -318,7 +318,7 @@ class EvalSignOp(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Contains a list of the form [sign (str), operand (pp.ParseResults)].
         """
@@ -364,7 +364,7 @@ class EvalComparisonOp(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Contains a list with an RHS (pp.ParseResults), operator (str), and LHS (pp.ParseResults).
         """
@@ -434,7 +434,7 @@ class EvalFunction(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has a dictionary component with the parsed elements:
                 helper_function_name (pp.ParseResults), args (list), kwargs (dict).
@@ -518,7 +518,7 @@ class EvalHelperFuncName(EvalToCallable):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element: helper_function_name (str).
         """
@@ -556,7 +556,7 @@ class EvalSlicedComponent(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has a dictionary component with the parsed elements:
                 param_or_var_name (str), slices (list of strings).
@@ -643,7 +643,7 @@ class EvalIndexSlice(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element containing the index slice name (str).
         """
@@ -690,7 +690,7 @@ class EvalSubExpressions(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element containing the sub_expression name (str).
         """
@@ -734,7 +734,7 @@ class EvalNumber(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element containing the number (str).
         """
@@ -770,7 +770,7 @@ class ListParser(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): a list of parsed string elements.
         """
         self.val = tokens
@@ -804,7 +804,7 @@ class EvalUnslicedComponent(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: string name (str).
         """
         self.val = tokens[0]
@@ -865,7 +865,7 @@ class EvalGenericString(EvalToArrayStr):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: string name (str).
         """
         self.val = tokens[0]

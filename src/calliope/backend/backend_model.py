@@ -62,9 +62,12 @@ def validate_on_adding_component(func) -> Callable:
     """
 
     def validator(*args, **kwargs):
+        # First, we have to turn all `args`` into `kwargs``
+        # so that we can unambiguously select "definition" from the user input.
         sig = inspect.signature(func)
         bound_args = sig.bind_partial(*args, **kwargs)
         bound_args.apply_defaults()
+
         component_def = bound_args.arguments["definition"]
 
         validator = typing.get_type_hints(func)["definition"]
@@ -595,9 +598,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             BackendError: if `key` already exists in the backend model
                 (either with the same or different type as `obj_type`).
         """
-        if key in self._dataset.keys():
-            if not self._dataset[key].attrs.get("active", True):
-                return None
+        if key in self._dataset.keys() and self.math.find(key)[1].active:
             if key in getattr(self, obj_type):
                 raise BackendError(
                     f"Trying to add already existing `{key}` to backend model {obj_type}."

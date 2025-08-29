@@ -9,6 +9,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pandas as pd
 import pyparsing as pp
 import xarray as xr
 from typing_extensions import NotRequired, TypedDict
@@ -105,7 +106,7 @@ class ConfigOptionParser(EvalWhere):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has two parsed elements: config group name (str) and config option (str).
         """
@@ -144,7 +145,7 @@ class DataVarParser(EvalWhere):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has one parsed element: model data variable name (str).
         """
@@ -197,9 +198,10 @@ class DataVarParser(EvalWhere):
         Return default value as an array if var does not exist.
         """
         var = self.eval_attrs["input_data"][self.data_var]
-        default = var.attrs.get("default", None)
-        if default is not None:
-            var = var.fillna(default)
+        if var.attrs["obj_type"] != "dimensions":
+            default = self.eval_attrs["math"].find(self.data_var)[1]["default"]
+            if pd.notnull(default):
+                var = var.fillna(default)
         return var
 
     def as_math_string(self) -> str:  # noqa: D102, override
@@ -296,7 +298,7 @@ class SubsetParser(EvalWhere):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Has two parsed elements: model set name (str), set items (Any).
         """
@@ -335,7 +337,7 @@ class BoolOperandParser(EvalWhere):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: boolean (str).
         """
         self.val = tokens[0].lower()
@@ -369,7 +371,7 @@ class GenericStringParser(expression_parser.EvalString):
             instring (str): String that was parsed (used in error message).
             loc (int):
                 Location in parsed string where parsing error was logged.
-                This is not used, but comes with `instring` when setting the parse action.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
             tokens (pp.ParseResults): Has one parsed element: string name (str).
         """
         self.val = tokens[0]
