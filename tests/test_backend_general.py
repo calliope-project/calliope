@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-import pytest  # noqa: F401
+import pytest
 import xarray as xr
 
 import calliope
@@ -165,6 +165,10 @@ class TestGetters:
     @pytest.fixture(scope="class")
     def global_expression(self, solved_model_cls):
         return solved_model_cls.backend.get_global_expression("cost_investment")
+
+    @pytest.fixture(scope="class")
+    def lookup(self, solved_model_cls):
+        return solved_model_cls.backend.get_lookup("cap_method")
 
     @pytest.mark.parametrize(
         "component_type", ["variable", "global_expression", "parameter", "constraint"]
@@ -388,6 +392,27 @@ class TestGetters:
     def test_get_constraint_coords_in_name(self, constraint):
         """Check a constraint does not have verbose strings activated."""
         assert constraint.attrs["coords_in_name"] is False
+
+    def test_get_lookup_obj_type(self, lookup):
+        """Check that a lookup has the right object type set."""
+        assert lookup.attrs["obj_type"] == "lookups"
+
+    def test_get_lookup_refs(self, lookup):
+        """Check that a lookup has zero refs to other components."""
+        assert not lookup.attrs["references"]
+
+    def test_get_lookup_expected_keys(self, lookup):
+        """Check that a lookup displays its schema attributes."""
+        expected_keys = {
+            "obj_type",
+            "references",
+            "description",
+            "coords_in_name",
+            "title",
+            "default",
+            "dtype",
+        }
+        assert not expected_keys.symmetric_difference(lookup.attrs.keys())
 
 
 class TestAdders:
