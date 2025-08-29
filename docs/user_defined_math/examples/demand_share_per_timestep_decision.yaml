@@ -1,7 +1,7 @@
 # title: Demand share per timestep as decision variable
 #
 # description: |
-#   Allows the model to decide on how a fraction of demand for a carrier is met by the given group of technologies, which will each have the same share in each timestep.
+#   Allows the model to decide on how a unitless of demand for a carrier is met by the given group of technologies, which will each have the same share in each timestep.
 #   Variables and constraints defined here could be extended to iterate over nodes  and over carriers if desired.
 #   If summing over nodes, remove the summation over nodes in the constraints and add it into the list in `demand_share_per_timestep_decision_sum` (if using).
 #   If summing over carriers, the slicing of `sink_use_equals` will need to change per carrier by using a where statement in `slices: ...`.
@@ -30,12 +30,12 @@ parameters:
       0 == no relaxation, 0.01 == 1% relaxation.
       This is usually only required to mitigate against numerical trouble when solving.
     default: 0
-    unit: fraction
+    unit: unitless
 
   demand_share_limit:
-    description: The total share of demand (as a fraction) that the technologies must meet in total.
+    description: The total share of demand (as a unitless) that the technologies must meet in total.
     default: 1
-    unit: fraction
+    unit: unitless
 
 lookups:
   decide_demand_share:
@@ -51,7 +51,7 @@ variables:
   demand_share_per_timestep_decision:
     description: >
       Relative share of demand that a given technology must meet per node.
-    unit: fraction
+    unit: unitless
     default: 0
     foreach: [nodes, techs]
     where: decide_demand_share
@@ -60,9 +60,9 @@ variables:
       max: .inf
 
 checks:
-  demand_share_is_fraction:
+  demand_share_is_unitless:
     where: demand_share_limit > 1 OR demand_share_limit < 0
-    message: The demand share limit must be a fraction of demand, i.e. between 0 and 1.
+    message: The demand share limit must be a unitless of demand, i.e. between 0 and 1.
     errors: raise
 
 # The two main constraints enforce that the shares are the same in each timestep,

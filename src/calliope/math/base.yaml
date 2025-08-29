@@ -76,7 +76,7 @@ parameters:
       This value should be larger than the largest values that any decision variables can take, but should not be **too** large
       (i.e., do not set it greater than 3 orders of magnitude above the numeric range of the model).
       If too large, numerical problems may arise in the optimisation.
-    unit: none
+    unit: unitless
 
   cost_flow_cap_per_distance:
     default: 0
@@ -84,7 +84,7 @@ parameters:
     description: >-
       Cost per unit of the decision variable `flow_cap` and per unit distance of a transmission link.
       Applied to transmission links only.
-    unit: $(\text{power}\times\text{distance})^{-1}$
+    unit: $\frac{\{cost}}{\text{power}\times\text{distance}}$
 
   cost_purchase_per_distance:
     default: 0
@@ -92,14 +92,14 @@ parameters:
     description: >-
       Cost applied if the binary variable `purchased` is 1 or per unit of the integer variable `units`.
       Requires the parameter `cap_method` to be `integer`.
-    unit: $(\text{purchased\_units}\times\text{distance})^{-1}$
+    unit: $\frac{\{cost}}{\text{unit}\times\text{distance}}$
 
   cost_flow_cap:
     default: 0
     title: Cost of flow capacity.
     description: >-
       Cost per unit of the decision variable `flow_cap`.
-    unit: $\text{power}^{-1}$.
+    unit: $\frac{\{cost}}{\text{power}}$.
 
   cost_export:
     default: 0
@@ -108,14 +108,14 @@ parameters:
     description: >-
       Cost per unit of `flow_export` in each timestep.
       Usually used in the negative sense, as a subsidy.
-    unit: $\text{energy}^{-1}$.
+    unit: $\frac{\{cost}}{\text{energy}}$.
 
   cost_interest_rate:
     default: 0
     title: Interest rate.
     description: >-
       Used when computing levelized costs and technology depreciation_rate (relative to lifetime).
-    unit: fraction
+    unit: unitless
 
   cost_om_annual:
     default: 0
@@ -123,14 +123,14 @@ parameters:
     description: >-
       Annual costs applied per unit `flow_cap`.
       These costs are not subject to being recalculated relative to technology lifetime, only scaled to reflect the fraction of one year that the model represents (e.g., 7 days ~= 0.02 of a year).
-    unit: $\text{power}^{-1}$.
+    unit: $\frac{\{cost}}{\text{power}}$.
 
   cost_om_annual_investment_fraction:
     default: 0
     title: Fractional annual O&M costs.
     description: >-
       Add an additional cost to total investment costs (except `cost_om_annual`) that is a fraction of that total.
-    unit: fraction / total investment.
+    unit: unitless.
 
   cost_flow_in:
     default: 0
@@ -138,7 +138,7 @@ parameters:
     title: Carrier inflow cost.
     description: >-
       Cost per unit of `flow_in` in each timestep.
-    unit: $\text{energy}^{-1}$.
+    unit: $\frac{\{cost}}{\text{energy}}$.
 
   cost_flow_out:
     default: 0
@@ -146,7 +146,7 @@ parameters:
     title: Carrier outflow cost
     description: >-
       Cost per unit of `flow_in` in each timestep.
-    unit: $\text{energy}^{-1}$.
+    unit: $\frac{\{cost}}{\text{energy}}$.
 
   cost_purchase:
     default: 0
@@ -154,28 +154,28 @@ parameters:
     description: >-
       Cost applied to the variable `purchased_units`.
       Requires the parameter `cap_method` to be `integer`.
-    unit: $\text{purchased\_unit}^{-1}$
+    unit: $\frac{\{cost}}{\text{unit}}$
 
   cost_area_use:
     default: 0
     title: Cost of area use.
     description: >-
       Cost per unit `area_use`.
-    unit: $\text{area}^{-2}$.
+    unit: $\text{area}$.
 
   cost_source_cap:
     default: 0
     title: Cost of source flow capacity.
     description: >-
       Cost per unit `source_cap`.
-    unit: $\text{power}^{-1}$.
+    unit: $\frac{\{cost}}{\text{power}}$.
 
   cost_storage_cap:
     default: 0
     title: Cost of storage capacity.
     description: >-
       Cost per unit `storage_cap`, i.e., the maximum available capacity of the storage technology's "reservoir".
-    unit: $\text{energy}^{-1}$.
+    unit: $\frac{\{cost}}{\text{energy}}$.
 
   cost_depreciation_rate:
     default: 1
@@ -183,7 +183,7 @@ parameters:
     description: >-
       Applied to "annualise" investment costs so they are comparable to variable costs.
       If not provided, this will be calculated using technology `lifetime` and `cost_interest_rate`.
-    unit: fraction.
+    unit: unitless.
 
   distance:
     default: 1.0
@@ -261,7 +261,7 @@ parameters:
     description: >-
       Set to a value between 0 and 1 to force minimum `flow_out` as a fraction of the technology rated capacity.
       If non-zero and `cap_method` is `continuous`, this will force the technology to operate above its minimum value at every timestep.
-    unit: fraction.
+    unit: unitless.
 
   flow_cap_per_unit:
     default: .inf
@@ -277,7 +277,7 @@ parameters:
     description: >-
       Conversion efficiency from `source`/`flow_in` (tech dependent) into the technology.
       Set as value between 1 (no loss) and 0 (all lost).
-    unit: fraction.
+    unit: unitless.
 
   flow_in_eff_per_distance:
     default: 1.0
@@ -295,7 +295,7 @@ parameters:
     description: >-
       Conversion efficiency from the technology to `sink`/`flow_out` (tech dependent).
       Set as value between 1 (no loss) and 0 (all lost).
-    unit: fraction.
+    unit: unitless.
 
   flow_out_eff_per_distance:
     default: 1.0
@@ -313,7 +313,7 @@ parameters:
     description: >-
       Additional losses as flow gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption.
       Set as value between 1 (no loss) and 0 (all lost).
-    unit: fraction.
+    unit: unitless.
 
   flow_ramping:
     default: 1.0
@@ -335,7 +335,7 @@ parameters:
     default: 1
     title: Objective cost class weights.
     description: Weightings for cost classes to apply in the objective function.
-    unit: none
+    unit: unitless
 
   purchased_units_min_systemwide:
     default: 0
@@ -400,7 +400,7 @@ parameters:
     description: >-
       Conversion efficiency from the technology from `source`.
       Set as value between 1 (no loss) and 0 (all lost).
-    unit: fraction.
+    unit: unitless.
 
   source_use_min:
     default: 0
@@ -472,14 +472,14 @@ parameters:
     title: Storage depth of discharge.
     description: >-
       Defines the minimum level of storage state of charge, as a fraction of total storage capacity.
-    unit: fraction.
+    unit: unitless.
 
   storage_initial:
     default: 0
     title: Initial storage level.
     description: >-
       Set stored flow in device at the first timestep, as a fraction of total storage capacity.
-    unit: fraction.
+    unit: unitless.
 
   storage_loss:
     default: 0
@@ -499,7 +499,7 @@ parameters:
     default: 1
     resample_method: mean
     title: Weight per timestep.
-    unit: fraction.
+    unit: unitless.
 
 lookups:
   base_tech:

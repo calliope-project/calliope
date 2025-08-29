@@ -20,11 +20,11 @@ parameters:
   demand_share_equals:
     description: The share of a technology's (or group thereof) total inflow met by other technologies
     default: 1
-    unit: fraction
+    unit: untiless
   supply_share_equals:
     description: The share of all of a node's total outflows met by other technologies
     default: 1
-    unit: fraction
+    unit: untiless
 
 lookups:
   demand_share_tech:

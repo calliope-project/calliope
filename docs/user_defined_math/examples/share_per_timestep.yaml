@@ -21,11 +21,11 @@ parameters:
   demand_share_per_timestep_equals:
     description: The share of a technology's (or group thereof) per-timestep inflow met by other technologies
     default: 1
-    unit: fraction
+    unit: unitless
   supply_share_per_timestep_equals:
     description: The share of all of a node's per-timestep outflows met by other technologies
     default: 1
-    unit: fraction
+    unit: unitless
 
 lookups:
   demand_share_tech:

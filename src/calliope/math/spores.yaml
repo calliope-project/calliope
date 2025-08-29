@@ -11,13 +11,13 @@ parameters:
       The amount of slack in the maximum cost constraint applied in SPORES mode.
       This is a fraction that is applied to the baseline cost, e.g., `0.1` would be used to set a maximum cost constraint of `spores_baseline_cost * 1.1`
     default: 0
-    unit: fraction
+    unit: unitless
 
   spores_score:
     description: >-
       The per-tech & per-node SPORES score used to penalise technologies at nodes that have appeared in previous SPORES iterations.
     default: 0
-    unit: none
+    unit: unitless
 
 constraints:
   total_system_cost_max:
@@ -53,7 +53,7 @@ global_expressions:
     foreach: [nodes, techs, carriers]
     equations:
       - expression: spores_score
-    unit: none
+    unit: unitless
     default: 0
 
   spores_baseline_cost_tracked:
