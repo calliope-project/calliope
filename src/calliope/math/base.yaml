@@ -43,21 +43,21 @@ parameters:
     title: Maximum usable area.
     description: >-
       If set to a finite value, limits the upper bound of the `area_use` decision variable to this value.
-    unit: $\text{area}^{2}$.
+    unit: $\text{area}$.
 
   area_use_min:
     default: 0
     title: Minimum usable area.
     description: >-
       Limits the lower bound of the `area_use` decision variable to this value.
-    unit: $\text{area}^{2}$.
+    unit: $\text{area}$.
 
   area_use_per_flow_cap:
     default: .nan
     title: Area use per flow capacity
     description: >-
       If set, forces `area_use` to follow `flow_cap` with the given numerical ratio (e.g. setting to 1.5 means that `area_use == 1.5 * flow_cap`).
-    unit: $\frac{\text{area}^{2}}{\text{power}}$.
+    unit: $\frac{\text{area}}{\text{power}}$.
 
   available_area:
     default: .inf
@@ -76,6 +76,7 @@ parameters:
       This value should be larger than the largest values that any decision variables can take, but should not be **too** large
       (i.e., do not set it greater than 3 orders of magnitude above the numeric range of the model).
       If too large, numerical problems may arise in the optimisation.
+    unit: none
 
   cost_flow_cap_per_distance:
     default: 0
@@ -191,6 +192,7 @@ parameters:
     description: >-
       Used for `..._per_distance` constraints.
       If not defined, it will be automatically derived from latitude/longitude of nodes in a link.
+    unit: distance.
 
   export_max:
     default: .inf
@@ -284,6 +286,7 @@ parameters:
     description: >-
       Total link efficiency will be calculated as $\text{flow\_in\_eff}\times{}\text{flow\_in\_eff\_per\_distance}^\text{distance}$.
       Set as value between 1 (no loss) and 0 (all lost).
+    unit: $\frac{\text{fraction}}{\text{distance}}$.
 
   flow_out_eff:
     default: 1.0
@@ -301,6 +304,7 @@ parameters:
     description: >-
       Total link efficiency will be calculated as $\text{flow\_out\_eff}\times{}\text{flow\_out\_eff\_per\_distance}^\text{distance}$.
       Set as value between 1 (no loss) and 0 (all lost).
+    unit: $\frac{\text{fraction}}{\text{distance}}$.
 
   flow_out_parasitic_eff:
     default: 1.0
@@ -327,16 +331,11 @@ parameters:
       A reasonable value for many technologies is around 20-25 years.
     unit: years.
 
-  latitude:
-    title: Latitude (WGS84 / EPSG4326).
-
-  longitude:
-    title: Longitude (WGS84 / EPSG4326).
-
   objective_cost_weights:
     default: 1
     title: Objective cost class weights.
     description: Weightings for cost classes to apply in the objective function.
+    unit: none
 
   purchased_units_min_systemwide:
     default: 0
@@ -374,6 +373,7 @@ parameters:
     description: >-
       Minimum sink use to remove a carrier from the system (e.g., electricity demand, transport distance).
       Unit dictated by `source_unit`.
+    unit: energy / $\frac{\text{energy}}{\text{power}}$. / $\frac{\text{energy}}{\text{area}}$.
 
   sink_use_max:
     default: .inf
@@ -382,6 +382,7 @@ parameters:
     description: >-
       Maximum sink use to remove a carrier from the system (e.g., electricity demand, transport distance).
       Unit dictated by `source_unit`.
+    unit: energy / $\frac{\text{energy}}{\text{power}}$. / $\frac{\text{energy}}{\text{area}}$.
 
   sink_use_equals:
     default: .nan
@@ -390,6 +391,7 @@ parameters:
     description: >-
       Required amount of carrier removal from the system (e.g., electricity demand, transport distance).
       Unit dictated by `source_unit`.
+    unit: energy / $\frac{\text{energy}}{\text{power}}$. / $\frac{\text{energy}}{\text{area}}$.
 
   source_eff:
     default: 1.0
@@ -407,6 +409,7 @@ parameters:
     description: >-
       Minimum source use to add a carrier from the system (e.g., biofuel, coal, rainfall, wind flow).
       Unit dictated by `source_unit`.
+    unit: energy / $\frac{\text{energy}}{\text{power}}$. / $\frac{\text{energy}}{\text{area}}$.
 
   source_use_max:
     default: .inf
@@ -415,6 +418,7 @@ parameters:
     description: >-
       Maximum sink use to remove a carrier from the system (e.g., biofuel, coal, rainfall, wind flow).
       Unit dictated by `source_unit`.
+    unit: energy / $\frac{\text{energy}}{\text{power}}$. / $\frac{\text{energy}}{\text{area}}$.
 
   source_use_equals:
     default: .nan
@@ -423,6 +427,7 @@ parameters:
     description: >-
       Required amount of carrier removal from the system (e.g., biofuel, coal, rainfall, wind flow).
       Unit dictated by `source_unit`.
+    unit: energy / $\frac{\text{energy}}{\text{power}}$. / $\frac{\text{energy}}{\text{area}}$.
 
   source_cap_max:
     default: .inf
@@ -610,6 +615,16 @@ lookups:
     description: The last timestep of each cluster.
     dtype: datetime
     resample_method: first
+
+  latitude:
+    title: Latitude (WGS84 / EPSG4326).
+    dtype: float
+    resample_method: mean
+
+  longitude:
+    title: Longitude (WGS84 / EPSG4326).
+    dtype: float
+    resample_method: mean
 
 
 constraints:
@@ -1143,6 +1158,7 @@ global_expressions:
     description: >-
       Outflows after taking efficiency losses into account.
     default: 0
+    unit: energy
     foreach: [nodes, techs, carriers, timesteps]
     where: flow_out
     equations:
@@ -1160,6 +1176,7 @@ global_expressions:
     description: >-
       Inflows after taking efficiency losses into account.
     default: 0
+    unit: energy
     foreach: [nodes, techs, carriers, timesteps]
     where: flow_in
     equations:
@@ -1173,7 +1190,7 @@ global_expressions:
     description: >-
       The operating costs per timestep of a technology.
     default: 0
-    unit: cost_per_time
+    unit: $\frac{\text{cost}}{\text{hour}}$.
     foreach: [nodes, techs, costs, timesteps]
     where: "cost_export OR cost_flow_in OR cost_flow_out"
     equations:
@@ -1197,6 +1214,7 @@ global_expressions:
     description: >-
       The investment costs associated with the nominal/rated capacity of a technology.
     default: 0
+    unit: cost
     foreach: [nodes, techs, carriers, costs]
     where: flow_cap AND (cost_flow_cap OR cost_flow_cap_per_distance)
     equations:
@@ -1213,6 +1231,7 @@ global_expressions:
     description: >-
       The investment costs associated with the storage capacity of a technology.
     default: 0
+    unit: cost
     foreach: [nodes, techs, costs]
     where: cost_storage_cap AND storage_cap
     equations:
@@ -1223,6 +1242,7 @@ global_expressions:
     description: >-
       The investment costs associated with the source consumption capacity of a technology.
     default: 0
+    unit: cost
     foreach: [nodes, techs, costs]
     where: cost_source_cap AND source_cap
     equations:
@@ -1233,6 +1253,7 @@ global_expressions:
     description: >-
       The investment costs associated with the area used by a technology.
     default: 0
+    unit: cost
     foreach: [nodes, techs, costs]
     where: cost_area_use AND area_use
     equations:
@@ -1251,10 +1272,10 @@ global_expressions:
       cost_investment_area_use
     equations:
       - expression: >-
-          sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
-          default_if_empty(cost_investment_storage_cap, 0) +
-          default_if_empty(cost_investment_source_cap, 0) +
-          default_if_empty(cost_investment_area_use, 0)
+          sum(cost_investment_flow_cap, over=carriers) +
+          cost_investment_storage_cap +
+          cost_investment_source_cap +
+          cost_investment_area_use
 
   cost_investment_annualised:
     title: Equivalent annual investment costs
@@ -1310,9 +1331,7 @@ global_expressions:
     where: "cost_investment_annualised OR cost_operation_variable OR cost_operation_fixed"
     equations:
       - expression: >-
-          default_if_empty(cost_investment_annualised, 0) +
-          $cost_operation_sum +
-          default_if_empty(cost_operation_fixed, 0)
+          cost_investment_annualised + $cost_operation_sum + cost_operation_fixed
     sub_expressions:
       cost_operation_sum:
         - where: "cost_operation_variable"

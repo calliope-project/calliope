@@ -21,6 +21,7 @@ parameters:
   net_import_share:
     description: The share of carrier out/inflows that transmission import/export at a node can account for.
     default: 1
+    unit: fraction
 
 constraints:
   net_import_share_max:
@@ -58,6 +59,9 @@ constraints:
 
 global_expressions:
   flow_out_transmission_techs:
+    description: A pre-filtered list of transmission technology outflows.
+    default: 0
+    unit: energy
     foreach: [nodes, techs, carriers, timesteps]
     where: base_tech==transmission
     equations:

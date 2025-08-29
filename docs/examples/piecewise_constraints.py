@@ -104,8 +104,10 @@ new_math = """
   parameters:
     capacity_steps:
       description: Capacity at each piecewise curve breakpoint
+      unit: power
     cost_steps:
       description: Investment cost at each piecewise curve breakpoint
+      unit: cost
   variables:
     piecewise_cost_investment:
       description: "Investment cost that increases monotonically"
@@ -115,6 +117,7 @@ new_math = """
         min: 0
         max: .inf
       default: 0
+      unit: cost
   global_expressions:
     cost_investment_flow_cap:
       where: (flow_cap AND (cost_flow_cap OR cost_flow_cap_per_distance)) OR piecewise_cost_investment
