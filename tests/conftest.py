@@ -299,6 +299,7 @@ def dummy_model_math(dummy_model_data):
         "b": "bool",
         "O": "string",
         "M": "datetime",
+        "f": "float",
         "i": "integer",
     }
     dtypes = {k: v.kind for k, v in dummy_model_data.dtypes.items()}

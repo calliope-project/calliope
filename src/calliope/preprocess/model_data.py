@@ -772,18 +772,18 @@ class ModelDataFactory:
             match dtype_str:
                 case "string":
                     updated_var = var_data.astype(dtype).where(var_data.notnull())
-                case "integer":
-                    updated_var = var_data.fillna(0).astype(dtype)
-                    if var_data.isnull().any():
-                        updated_var = updated_var.where(var_data.notnull())
                 case "datetime":
                     updated_var = time._datetime_index(
                         var_data.to_series(), self.config.datetime_format
                     ).to_xarray()
                 case "date":
-                    updated_var = time._datetime_index(
-                        var_data.to_series(), self.config.date_format
-                    ).to_xarray()
+                    updated_var = (
+                        time._datetime_index(
+                            var_data.to_series(), self.config.date_format
+                        )
+                        .to_xarray()
+                        .assign_attrs(var_data.attrs)
+                    )
                 case "bool":
                     updated_var = var_data.fillna(False).astype(dtype)
                 case _:

@@ -5,12 +5,12 @@
 lookups:
   timestep_cluster:
     description: The cluster to which each timestep belongs.
-    dtype: integer
+    dtype: float
     resample_method: first
 
   lookup_datestep_cluster:
     description: The cluster to which each datestep belongs.
-    dtype: integer
+    dtype: float
     resample_method: first
 
   lookup_datestep_last_cluster_timestep:

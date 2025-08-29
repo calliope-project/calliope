@@ -56,7 +56,7 @@ class MathComponent(CalliopeBaseModel):
 class Dimension(MathComponent):
     """Schema for named dimension."""
 
-    dtype: Literal["string", "datetime", "date", "integer", "float"] = "string"
+    dtype: Literal["string", "datetime", "date", "float", "integer"] = "string"
     """The data type of this dimension's items."""
     ordered: bool = False
     """If True, the order of the dimension items is meaningful (e.g. chronological time)."""
@@ -85,7 +85,7 @@ class Lookup(MathComponent):
 
     default: AttrStr | float | int | bool = float("nan")
     """The default value for the lookup, if not set in the data."""
-    dtype: Literal["integer", "float", "string", "bool", "datetime", "date"] = "string"
+    dtype: Literal["float", "string", "bool", "datetime", "date"] = "string"
     """The lookup data type."""
     resample_method: Literal["mean", "sum", "first"] = "first"
     """If resampling is applied over any of the lookup's dimensions, the method to use to aggregate the data."""
