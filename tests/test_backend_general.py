@@ -502,6 +502,48 @@ class TestAdders:
             f"global_expressions:{expr_name}:0 | The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
         )
 
+    def test_add_two_same_expr_nodim(self, solved_model_func):
+        """Cannot set multiple equation expressions for a dimensionless global expression"""
+        eq = {"expression": "bigM"}
+        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
+            solved_model_func.backend.add_global_expression(
+                "foo", {"equations": [eq, eq]}
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "global_expressions:foo:1 | trying to set two equations for the same component.",
+        )
+
+    def test_add_two_same_expr_with_shape(self, solved_model_func):
+        """Cannot set multiple equation expressions for a global expression with dimensions"""
+        eq = {"expression": "flow_cap + 1"}
+        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
+            solved_model_func.backend.add_global_expression(
+                "foo",
+                {"foreach": ["techs", "carriers", "nodes"], "equations": [eq, eq]},
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "global_expressions:foo:1 | trying to set two equations for the same index",
+        )
+
+    def test_add_two_same_expr_with_shape_partial(self, solved_model_func):
+        """Cannot set multiple equation expressions for any array item in a global expression array."""
+        eq1 = {
+            "expression": "flow_cap + 1",
+            "where": "[test_supply_elec, test_demand_elec] in techs",
+        }
+        eq2 = {"expression": "flow_cap + 1", "where": "[test_supply_elec] in techs"}
+        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
+            solved_model_func.backend.add_global_expression(
+                "foo",
+                {"foreach": ["techs", "carriers", "nodes"], "equations": [eq1, eq2]},
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "global_expressions:foo:1 | trying to set two equations for the same index",
+        )
+
     def test_add_allnull_expr(self, solved_model_func, dummy_int):
         """If `where` string resolves to False in all array elements, the component will be built with its default."""
         constr_dict = {
