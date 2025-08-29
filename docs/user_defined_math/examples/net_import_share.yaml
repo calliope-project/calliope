@@ -21,7 +21,7 @@ parameters:
   net_import_share:
     description: The share of carrier out/inflows that transmission import/export at a node can account for.
     default: 1
-    unit: fraction
+    unit: unitless
 
 constraints:
   net_import_share_max:

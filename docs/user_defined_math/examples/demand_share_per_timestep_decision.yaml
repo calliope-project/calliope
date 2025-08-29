@@ -60,9 +60,9 @@ variables:
       max: .inf
 
 checks:
-  demand_share_is_unitless:
+  demand_share_is_fraction:
     where: demand_share_limit > 1 OR demand_share_limit < 0
-    message: The demand share limit must be a unitless of demand, i.e. between 0 and 1.
+    message: The demand share limit must be a fraction of demand, i.e. between 0 and 1.
     errors: raise
 
 # The two main constraints enforce that the shares are the same in each timestep,
