@@ -13,6 +13,8 @@ import numpy as np
 import xarray as xr
 from pydantic import BaseModel, ConfigDict
 
+from calliope.exceptions import ModelWarning, warn
+from calliope.preprocess import model_math
 from calliope.schemas import ModelStructure
 from calliope.schemas.general import AttrStr, NonEmptyUniqueList
 from calliope.util.tools import listify
@@ -20,7 +22,7 @@ from calliope.util.tools import listify
 LOGGER = logging.getLogger(__name__)
 
 
-PostprocessFunction = Callable[[ModelStructure], xr.DataArray | None]
+PostprocessFunction = Callable[[xr.Dataset, ModelStructure], xr.DataArray | None]
 _F = TypeVar("_F", bound=PostprocessFunction)
 
 
@@ -149,27 +151,28 @@ def _apply_zero_threshold(results: xr.Dataset, zero_threshold: float) -> None:
         )
 
 
-# def postprocess_results(model: ModelStructure) -> xr.Dataset:
-#     """Run compatible postprocessors in deterministic order."""
-#     if model.config.solve.postprocessing_active:
-#         warn(
-#             "Model postprocessing will be set to `False` in a future release."
-#             "It can be reactivated using `config.solve.postprocessing_active: True`.",
-#             FutureWarning,
-#         )
-#         applicable_postprocesses = REGISTRY._get_applicable(model.math_priority)
+def postprocess_results(results: xr.Dataset, model: ModelStructure) -> xr.Dataset:
+    """Run compatible postprocessors in deterministic order."""
+    if model.config.solve.postprocessing_active:
+        warn(
+            "Model postprocessing will be set to `False` in a future release."
+            "It can be reactivated using `config.solve.postprocessing_active: True`.",
+            FutureWarning,
+        )
+        math_priority = model_math.get_math_priority(model.config.init)
+        applicable_postprocesses = REGISTRY._get_applicable(math_priority)
 
-#         for settings, func in applicable_postprocesses:
-#             name = settings.name
-#             try:
-#                 # Store postprocesses in the model results.
-#                 LOGGER.info("Postprocessing: applying %s postprocess function.", name)
-#                 postprocessed_data = func(model)
-#                 if postprocessed_data is not None:
-#                     model.results[name] = postprocessed_data
-#             except Exception as ex:
-#                 raise ModelWarning(f"Postprocess '{name}' failed. Skipping.") from ex
+        for settings, func in applicable_postprocesses:
+            name = settings.name
+            try:
+                # Store postprocesses in the model results.
+                LOGGER.info("Postprocessing: applying %s postprocess function.", name)
+                postprocessed_data = func(results, model)
+                if postprocessed_data is not None:
+                    results[name] = postprocessed_data
+            except Exception as ex:
+                raise ModelWarning(f"Postprocess '{name}' failed. Skipping.") from ex
 
-#     _apply_zero_threshold(results, config.solve.zero_threshold)
+    _apply_zero_threshold(results, model.config.solve.zero_threshold)
 
-#     return results
+    return results

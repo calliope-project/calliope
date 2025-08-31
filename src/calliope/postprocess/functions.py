@@ -6,46 +6,45 @@ from calliope.postprocess.orchestrator import postprocessor
 from calliope.schemas import ModelStructure
 
 
-def _get_data(name: str, model: ModelStructure) -> xr.DataArray:
+def _get_data(name: str, results: xr.Dataset, model: ModelStructure) -> xr.DataArray:
     """Get an element from either inputs or results."""
     try:
-        data = model.results[name]
+        data = results[name]
     except KeyError:
         data = model.inputs[name]
     return data
 
 
-def _get_total_generation(model: ModelStructure) -> xr.DataArray:
+def _get_total_generation(results: xr.Dataset, model: ModelStructure) -> xr.DataArray:
     """Obtain scaled production by timestep weight."""
     generation = (
-        (
-            model.results["flow_out"]
-            + model.results.get("flow_export", xr.DataArray(0)).fillna(0)
-        )
+        (results["flow_out"] + results.get("flow_export", xr.DataArray(0)).fillna(0))
         * model.inputs.timestep_weights
     ).sum(dim=["timesteps", "nodes"], min_count=1)
     return generation
 
 
 @postprocessor(math=["base"], order=0, active=True)
-def capacity_factor(model: ModelStructure) -> xr.DataArray:
+def capacity_factor(results: xr.Dataset, model: ModelStructure) -> xr.DataArray:
     """Calculation of per-technology capacity factors."""
-    flow_cap = _get_data("flow_cap", model)
+    flow_cap = _get_data("flow_cap", results, model)
 
     capacity_factors = (
-        model.results["flow_out"]
+        results["flow_out"]
         / (flow_cap.where(lambda x: x > 0) * model.inputs.timestep_resolution)
-    ).where(model.results["flow_out"].notnull())
+    ).where(results["flow_out"].notnull())
 
     return capacity_factors
 
 
 @postprocessor(math=["base"], order=0, active=True)
-def systemwide_capacity_factor(model: ModelStructure) -> xr.DataArray:
+def systemwide_capacity_factor(
+    results: xr.Dataset, model: ModelStructure
+) -> xr.DataArray:
     """Calculation of systemwide capacity factors."""
-    flow_cap = _get_data("flow_cap", model)
+    flow_cap = _get_data("flow_cap", results, model)
 
-    prod_sum = (model.results["flow_out"] * model.inputs.timestep_weights).sum(
+    prod_sum = (results["flow_out"] * model.inputs.timestep_weights).sum(
         dim=["timesteps", "nodes"], min_count=1
     )
 
@@ -58,7 +57,9 @@ def systemwide_capacity_factor(model: ModelStructure) -> xr.DataArray:
 
 
 @postprocessor(math=["base"], order=0, active=True)
-def systemwide_levelised_cost(model: ModelStructure) -> xr.DataArray:
+def systemwide_levelised_cost(
+    results: xr.Dataset, model: ModelStructure
+) -> xr.DataArray:
     """Calculates systemwide levelised costs indexed by techs, carriers and costs.
 
     * the weight of timesteps is accounted for.
@@ -69,15 +70,15 @@ def systemwide_levelised_cost(model: ModelStructure) -> xr.DataArray:
       the actual costs in the results remain untouched.
     """
     # Here we scale production by timestep weight
-    cost = model.results["cost"].sum(dim="nodes", min_count=1)
-    generation = _get_total_generation(model)
+    cost = results["cost"].sum(dim="nodes", min_count=1)
+    generation = _get_total_generation(results, model)
     levelised_cost = cost / generation.where(lambda x: x > 0)
 
     return levelised_cost
 
 
 @postprocessor(math=["base"], order=0, active=True)
-def total_levelised_cost(model: ModelStructure) -> xr.DataArray:
+def total_levelised_cost(results: xr.Dataset, model: ModelStructure) -> xr.DataArray:
     """Calculates total levelised costs by carriers and costs.
 
     * the weight of timesteps is considered when computing levelised costs:
@@ -87,8 +88,8 @@ def total_levelised_cost(model: ModelStructure) -> xr.DataArray:
       CAUTION: this scaling is temporary during levelised cost computation -
       the actual costs in the results remain untouched.
     """
-    cost = model.results["cost"].sum(dim="nodes", min_count=1)
-    generation = _get_total_generation(model)
+    cost = results["cost"].sum(dim="nodes", min_count=1)
+    generation = _get_total_generation(results, model)
 
     # `cost` is the total cost of the system
     # `generation`` is only the generation of supply and conversion technologies
@@ -102,11 +103,11 @@ def total_levelised_cost(model: ModelStructure) -> xr.DataArray:
 
 
 @postprocessor(math=["base"], order=0, active=True)
-def unmet_sum(model: ModelStructure) -> xr.DataArray | None:
+def unmet_sum(results: xr.Dataset, model: ModelStructure) -> xr.DataArray | None:
     """Calculate the sum of unmet demand/supply."""
-    if {"unmet_demand", "unused_supply"} & set(model.results.data_vars.keys()):
-        unmet_sum = model.results.get("unmet_demand", xr.DataArray(0))
-        unmet_sum += model.results.get("unused_supply", xr.DataArray(0))
+    if {"unmet_demand", "unused_supply"} & set(results.data_vars.keys()):
+        unmet_sum = results.get("unmet_demand", xr.DataArray(0))
+        unmet_sum += results.get("unused_supply", xr.DataArray(0))
     else:
         unmet_sum = None
     return unmet_sum
