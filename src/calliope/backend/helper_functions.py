@@ -17,11 +17,11 @@ import pandas as pd
 import xarray as xr
 
 from calliope.exceptions import BackendError
+from calliope.schemas.math_schema import CalliopeBuildMath
 from calliope.util import DTYPE_OPTIONS
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
-    from calliope.schemas.math_schema import CalliopeBuildMath
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
 ] = {"where": {}, "expression": {}}

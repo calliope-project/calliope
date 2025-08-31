@@ -1,18 +1,14 @@
-from calliope.schemas import (
-    config_schema,
-    general,
-    math_schema,
-    model_def_schema,
-    runtime_attrs_schema,
-)
+from calliope.schemas.config_schema import CalliopeConfig
+from calliope.schemas.general import CalliopeBaseModel as __CalliopeBaseModel
+from calliope.schemas.math_schema import CalliopeMath
+from calliope.schemas.model_def_schema import CalliopeModelDef
+from calliope.schemas.runtime_attrs_schema import CalliopeRuntime
 
 
-class CalliopeAttrs(general.CalliopeBaseModel):
+class CalliopeAttrs(__CalliopeBaseModel):
     """All Calliope attributes."""
 
-    definition: model_def_schema.CalliopeModelDef = model_def_schema.CalliopeModelDef()
-    config: config_schema.CalliopeConfig = config_schema.CalliopeConfig()
-    math: math_schema.CalliopeMath = math_schema.CalliopeMath()
-    runtime: runtime_attrs_schema.CalliopeRuntime = (
-        runtime_attrs_schema.CalliopeRuntime()
-    )
+    definition: CalliopeModelDef = CalliopeModelDef()
+    config: CalliopeConfig = CalliopeConfig()
+    math: CalliopeMath = CalliopeMath()
+    runtime: CalliopeRuntime = CalliopeRuntime()
