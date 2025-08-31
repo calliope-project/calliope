@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import xarray as xr
 
@@ -7,6 +8,9 @@ from calliope.schemas.general import CalliopeBaseModel as __CalliopeBaseModel
 from calliope.schemas.math_schema import CalliopeMath
 from calliope.schemas.model_def_schema import CalliopeModelDef
 from calliope.schemas.runtime_attrs_schema import CalliopeRuntime
+
+if TYPE_CHECKING:
+    from calliope.backend.backend_model import BackendModel
 
 
 class CalliopeAttrs(__CalliopeBaseModel):
@@ -27,8 +31,9 @@ class ModelStructure:
     """
 
     inputs: xr.Dataset
-    results: xr.Dataset
+    backend: "BackendModel"
     config: CalliopeConfig
     definition: CalliopeModelDef
     math: CalliopeMath
+    results: xr.Dataset
     runtime: CalliopeRuntime
