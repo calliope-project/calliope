@@ -17,7 +17,7 @@ from calliope import _version, backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import CalliopeAttrs, config_schema
+from calliope.schemas import CalliopeAttrs, ModelStructure, config_schema
 from calliope.util.logging import log_time
 
 if TYPE_CHECKING:
@@ -89,7 +89,7 @@ def read_yaml(
     )
 
 
-class Model:
+class Model(ModelStructure):
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
