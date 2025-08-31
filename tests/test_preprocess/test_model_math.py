@@ -51,8 +51,7 @@ class TestInitMath:
 
     @pytest.fixture(scope="class")
     def math_data(self, extra_math, def_path):
-        math_paths = model_math.initialise_math_paths(extra_math, def_path)
-        return model_math.load_math(math_paths)
+        return model_math.initialise_math(extra_math, def_path)
 
     def test_loaded_internal(self, math_data, extra_math):
         """Loaded math should contain both user defined and internal files."""
@@ -73,7 +72,7 @@ class TestInitMath:
         """Users should be warned when overwritting pre-defined math."""
         extra_math = {"base": user_math_path}
         with caplog.at_level(logging.WARNING, logger=LOGGER):
-            model_math.initialise_math_paths(extra_math, def_path)
+            model_math.initialise_math(extra_math, def_path)
         assert "Math init | Overwriting pre-defined 'base' math with custom-math.yaml."
 
 
@@ -128,7 +127,7 @@ class TestBuildMath:
             math.union(math_options[i], allow_override=True)
         expected_math = math_schema.CalliopeBuildMath(**math).model_dump()
         with caplog.at_level(logging.INFO):
-            built_math = model_math.build_applied_math(math_order, math_options)
+            built_math = model_math.build_math(math_order, math_options)
         assert expected_math == built_math.model_dump()
         assert str(math_order) in caplog.text
 
@@ -139,7 +138,7 @@ class TestBuildMath:
             exceptions.ModelError,
             match="Requested math 'foobar_fail' was not initialised.",
         ):
-            model_math.build_applied_math(wrong_names, math_options)
+            model_math.build_math(wrong_names, math_options)
 
 
 class TestValidateMathDict:
@@ -154,7 +153,7 @@ class TestValidateMathDict:
 
     def test_base_math(self, caplog, init_math, math_priority):
         with caplog.at_level(logging.INFO, logger=LOGGER):
-            model_math.build_applied_math(math_priority, init_math, validate=True)
+            model_math.build_math(math_priority, init_math, validate=True)
         assert "Math build | Validated math strings." in caplog.text
 
     @pytest.mark.parametrize(
@@ -180,7 +179,7 @@ class TestValidateMathDict:
             math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
 
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            model_math.build_applied_math(math_priority, init_math, math_dict)
+            model_math.build_math(math_priority, init_math, math_dict)
         assert check_error_or_warning(excinfo, errors_to_check)
 
     @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
@@ -190,7 +189,7 @@ class TestValidateMathDict:
         math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
 
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            model_math.build_applied_math(math_priority, init_math, math_dict)
+            model_math.build_math(math_priority, init_math, math_dict)
         errorstrings = str(excinfo.value).split("\n")
         # marker should be at the "=" sign, i.e., 2 characters from the end
         assert len(errorstrings[-2]) - 2 == len(errorstrings[-1])
