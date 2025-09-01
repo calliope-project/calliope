@@ -85,8 +85,9 @@ class ModelDataFactory:
             attributes (dict): Attributes to attach to the model Dataset.
         """
         self.config: Init = init_config
-        self.math = model_math.build_applied_math(
-            self.math_priority,
+        math_priority = model_math.get_math_priority(self.config)
+        self.math = model_math.build_math(
+            math_priority,
             math.model_dump(),
             validate=init_config.pre_validate_math_strings,
         )
@@ -129,15 +130,6 @@ class ModelDataFactory:
             self._update_dtypes(self.dataset.coords)
         )
         self.dataset = self._update_dtypes(self.dataset)
-
-    @property
-    def math_priority(self) -> list[str]:
-        """Order of math formulations, with the last overwriting previous ones."""
-        names = ["base"]
-        if self.config.mode != "base":
-            names.append(self.config.mode)
-        names += self.config.extra_math
-        return names
 
     def init_from_data_tables(self, data_tables: list[data_tables.DataTable]):
         """Initialise the model definition and dataset using data loaded from file / in-memory objects.

@@ -7,12 +7,12 @@ import logging
 import numpy as np
 import xarray as xr
 
+from calliope.schemas import ModelStructure
+
 LOGGER = logging.getLogger(__name__)
 
 
-def postprocess_model_results(
-    results: xr.Dataset, model_data: xr.Dataset, zero_threshold: float
-) -> xr.Dataset:
+def postprocess_model_results(results: xr.Dataset, model: ModelStructure) -> xr.Dataset:
     """Post-processing of model results.
 
     Adds additional post-processed result variables to the given model results
@@ -20,30 +20,33 @@ def postprocess_model_results(
     All instances of unreasonably low numbers (set by zero_threshold) will be removed.
 
     Args:
-        results (xarray.Dataset): Output from the solver backend.
-        model_data (xarray.Dataset): Calliope model data.
-        zero_threshold (float): Numbers below this value will be assumed to be zero
+        results (Dataset): Output from the solver backend.
+        model (ModelStructure): A calliope model instance.
 
     Returns:
-        xarray.Dataset: input-results dataset.
+        Dataset: input-results dataset.
     """
-    results["capacity_factor"] = capacity_factor(results, model_data)
-    results["systemwide_capacity_factor"] = capacity_factor(
-        results, model_data, systemwide=True
-    )
-    results["systemwide_levelised_cost"] = systemwide_levelised_cost(
-        results, model_data
-    )
-    results["total_levelised_cost"] = systemwide_levelised_cost(
-        results, model_data, total=True
-    )
+    if model.config.solve.postprocessing_active:
+        results["capacity_factor"] = capacity_factor(results, model.inputs)
+        results["systemwide_capacity_factor"] = capacity_factor(
+            results, model.inputs, systemwide=True
+        )
+        results["systemwide_levelised_cost"] = systemwide_levelised_cost(
+            results, model.inputs
+        )
+        results["total_levelised_cost"] = systemwide_levelised_cost(
+            results, model.inputs, total=True
+        )
+        results["unmet_sum"] = unmet_sum(results)
 
-    results = clean_results(results, zero_threshold)
+    results = apply_zero_threshold(results, model.config.solve.zero_threshold)
 
     return results
 
 
-def capacity_factor(results, model_data, systemwide=False):
+def capacity_factor(
+    results: xr.Dataset, model_data: xr.Dataset, systemwide=False
+) -> xr.DataArray:
     """Calculation of capacity factors.
 
     Processes whether `flow_cap` is a parameter or a result, then calculates the
@@ -125,41 +128,36 @@ def systemwide_levelised_cost(
     return levelised_cost
 
 
-def clean_results(results, zero_threshold):
-    """Remove unreasonably small values and unmet_demand if it was never used.
+def unmet_sum(results: xr.Dataset) -> xr.DataArray:
+    """Calculate the sum of unmet demand/supply."""
+    if {"unmet_demand", "unused_supply"} & set(results.data_vars.keys()):
+        unmet_sum = results.get("unmet_demand", xr.DataArray(0))
+        unmet_sum += results.get("unused_supply", xr.DataArray(0))
+    else:
+        unmet_sum = xr.DataArray(np.nan)
+    return unmet_sum
+
+
+def apply_zero_threshold(results: xr.Dataset, zero_threshold: float) -> xr.Dataset:
+    """Remove unreasonably small values in-place.
 
     Used to avoid floating point errors caused by solver output.
-    zero_threshold is a value set in model configuration. If not set, defaults
-    to zero (i.e. doesn't do anything). Reasonable value = 1e-12.
+    Reasonable value = 1e-12.
     """
-    threshold_applied = []
-    for k, v in results.data_vars.items():
-        # If there are any values in the data variable which fall below the
-        # threshold, note the data variable name and set those values to zero
-        if v.where(abs(v) < zero_threshold, drop=True).sum():
-            threshold_applied.append(k)
-            with np.errstate(invalid="ignore"):
-                v.values[abs(v.values) < zero_threshold] = 0
-            v.loc[{}] = v.values
+    if zero_threshold != 0:
+        for name in list(results.data_vars):
+            # If there are any values in the data variable which fall below the
+            # threshold, note the data variable name and set those values to zero
+            results[name] = xr.where(
+                np.abs(results[name]) < zero_threshold, 0, results[name]
+            )
 
-    if threshold_applied:
-        comment = "Postprocessing: All values < {} set to 0 in {}".format(
-            zero_threshold, ", ".join(threshold_applied)
+        LOGGER.info(
+            "Postprocessing: applied zero threshold %s to model results.",
+            zero_threshold,
         )
-        LOGGER.warning(comment)
     else:
-        comment = f"Postprocessing: zero threshold of {zero_threshold} not required"
-        LOGGER.info(comment)
-
-    # Combine unused_supply and unmet_demand into one variable
-    if (
-        "unmet_demand" in results.data_vars.keys()
-        or "unused_supply" in results.data_vars.keys()
-    ):
-        results["unmet_demand"] = results.get("unmet_demand", 0) + results.get(
-            "unused_supply", 0
+        LOGGER.info(
+            "Postprocessing: skipping zero threshold application (threshold equals 0)."
         )
-
-        results = results.drop_vars("unused_supply")
-
     return results

@@ -13,11 +13,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope import _version, backend, exceptions, io, preprocess
+from calliope import _version, backend, exceptions, io, postprocess, preprocess
 from calliope.attrdict import AttrDict
-from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import CalliopeAttrs, config_schema
+from calliope.schemas import CalliopeAttrs, ModelStructure, config_schema
 from calliope.util.logging import log_time
 
 if TYPE_CHECKING:
@@ -89,7 +88,7 @@ def read_yaml(
     )
 
 
-class Model:
+class Model(ModelStructure):
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
@@ -372,9 +371,7 @@ class Model:
 
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
-            results = postprocess_results.postprocess_model_results(
-                results, self.inputs, self.config.solve.zero_threshold
-            )
+            results = postprocess.postprocess_model_results(results, self)
 
         self.math = self.math.update({"build": self.backend.math.model_dump()})
         self.runtime = self.runtime.update(
@@ -720,9 +717,7 @@ class Model:
                 time_since_solve_start=True,
                 comment=f"Optimisation model | SPORE {spore} complete",
             )
-            results = postprocess_results.postprocess_model_results(
-                results, self.inputs, self.config.solve.zero_threshold
-            )
+            results = postprocess.postprocess_model_results(results, self)
 
             spores_config.save_per_spore_path.mkdir(parents=True, exist_ok=True)
             LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
