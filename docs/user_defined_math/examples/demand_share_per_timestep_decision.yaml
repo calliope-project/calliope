@@ -33,7 +33,7 @@ parameters:
     unit: unitless
 
   demand_share_limit:
-    description: The total share of demand (as a unitless) that the technologies must meet in total.
+    description: The total share of demand that the technologies must meet in total.
     default: 1
     unit: unitless
 
