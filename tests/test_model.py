@@ -144,6 +144,20 @@ class TestModelSolve:
         ):
             simple_supply.solve()
 
+    @pytest.mark.parametrize("setting", [True, False])
+    def test_solve_postprocess(self, setting, simple_supply_build_func):
+        """No postprocess data should be added when the toggle is off."""
+        model = simple_supply_build_func
+        model.config = model.config.update({"solve.postprocessing_active": setting})
+        model.solve()
+        for postprocess in [
+            "capacity_factor",
+            "systemwide_capacity_factor",
+            "systemwide_levelised_cost",
+            "total_levelised_cost",
+        ]:
+            assert setting == (postprocess in model.results)
+
 
 class TestOperateMode:
     @contextmanager
