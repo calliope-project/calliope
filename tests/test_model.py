@@ -10,7 +10,7 @@ import xarray as xr
 import calliope
 import calliope.backend
 import calliope.preprocess
-from calliope.model import Model, read_netcdf, read_yaml
+from calliope.model import Model, read_dict, read_netcdf, read_yaml
 from calliope.schemas import CalliopeAttrs
 from calliope.schemas.general import CalliopeBaseModel
 
@@ -38,7 +38,7 @@ def model_from_dict(model_from_yaml, minimal_test_model_path):
         "config": model_from_yaml.config.model_dump(),
         **model_from_yaml.definition.model_dump(),
     }
-    return Model.from_dict(dict_def, definition_path=minimal_test_model_path)
+    return read_dict(dict_def, definition_path=minimal_test_model_path)
 
 
 @pytest.fixture(scope="class")
