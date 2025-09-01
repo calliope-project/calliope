@@ -371,7 +371,7 @@ class Model(ModelStructure):
 
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
-            results = postprocess.postprocess_results(results, self)
+            results = postprocess.postprocess_model_results(results, self)
 
         self.math = self.math.update({"build": self.backend.math.model_dump()})
         self.runtime = self.runtime.update(
@@ -717,7 +717,7 @@ class Model(ModelStructure):
                 time_since_solve_start=True,
                 comment=f"Optimisation model | SPORE {spore} complete",
             )
-            results = postprocess.postprocess_results(results, self)
+            results = postprocess.postprocess_model_results(results, self)
 
             spores_config.save_per_spore_path.mkdir(parents=True, exist_ok=True)
             LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
