@@ -7,7 +7,7 @@ There are essentially three ways to run a Calliope model:
 3. By generating and then executing scripts with the `#!shell calliope generate_runs` command-line tool, which is primarily designed for running many scenarios on a high-performance cluster (see the [Generating scripts](../advanced/scripts.md) section in the advanced docs).
 
 !!! example
-    Refer to the [examples and tutorials section](examples/overview.md) for a more practical look at how to run a Calliope model.
+    Refer to the [examples and tutorials section](../examples/overview.md) for a more practical look at how to run a Calliope model.
 
 ## Easiest to start: using the command line interface
 

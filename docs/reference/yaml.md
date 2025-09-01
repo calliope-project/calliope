@@ -115,7 +115,7 @@ import:
 Data defined in the current and imported file(s) must be mutually exclusive.
 If both the imported file and the current file define the same option, Calliope will raise an exception.
 
-As you will see in our [standard model directory structure](../getting_started/building.md#model-directory-layout), we tend to store our model definition in separate files.
+As you will see in our [standard model directory structure](../getting_started/creating.md#model-directory-layout), we tend to store our model definition in separate files.
 In this case, our `model.yaml` file tends to have the following `import` statement:
 
 ```yaml

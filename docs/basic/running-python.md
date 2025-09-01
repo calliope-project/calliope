@@ -26,7 +26,7 @@ After the model has been solved, an xarray Dataset containing results (`model.re
 At this point, the model can be saved with either [calliope.Model.to_csv][] or [calliope.Model.to_netcdf][], which saves all inputs and results, and is equivalent to the corresponding `--save` options of the command-line tool.
 
 !!! example
-    An example of running in an interactive Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the [tutorials](examples/overview.md).
+    An example of running in an interactive Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the [tutorials](../examples/overview.md).
     You can download and run the embedded notebooks on your own machine (if both Calliope and the Jupyter Notebook are installed).
 
 ## Applying a scenario or override when running in Python

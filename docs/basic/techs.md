@@ -61,7 +61,7 @@ Additional cost classes can be created simply by adding them to the definition o
 ??? info "Costs in the objective function"
     By default, all defined cost classes are used in the objective function, i.e., the default objective is to minimize total costs.
     Limiting the considered costs can be achieved by [customising the in-built objective function](../user_defined_math/customise.md) to only focus on e.g. monetary costs (`[monetary] in costs`),
-    or updating the `objective_cost_weights` indexed parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
+    or updating the `objective_cost_weights` data_definitions-defined parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
 
     ```yaml
     parameters:
@@ -138,7 +138,7 @@ techs:
       dims: costs
 ```
 
-If you forget to use the [indexed parameter](parameters.md) format for a parameter starting with `cost_` then our YAML schema will raise an error.
+If you forget to use the [data_definitions](../basic/data_definitions.md) format for a parameter starting with `cost_` then our YAML schema will raise an error.
 For example, this is not valid and will create an error:
 
 ```yaml
@@ -147,11 +147,11 @@ techs:
     cost_custom: 1
 ```
 
-### Using the indexed parameter format
+### Using the data_definitions format to define parameter data
 
-The [indexed parameter](parameters.md) format allows you to add dimensions to your data.
+The [data_definitions](../basic/data_definitions.md) format allows you to add dimensions to your data.
 By defining just a data value, the resulting parameter will only be indexed over the `techs` dimension (+ optionally the `nodes` dimension if you provide a new value for it at a [node](nodes.md)).
-By using the indexed parameter format, you can add new dimensions.
+By using the data_definitions format, you can add new dimensions.
 We saw this above with `costs`, but you can add _any_ dimension _except_ `nodes`.
 
 !!! example

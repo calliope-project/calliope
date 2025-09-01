@@ -127,7 +127,7 @@ supply_file.csv:
     ```
 
 !!! info "See also"
-    [`data_tables` introduction](creating/data_tables.md); [`data_tables` tutorial][loading-tabular-data].
+    [`data_tables` introduction](basic/data_tables.md); [`data_tables` tutorial][loading-tabular-data].
 
 ### Negative → positive demand and carrier consumption values
 
@@ -375,7 +375,7 @@ Investment costs are split out into the component caused by annual operation and
 
 ### Explicitly triggering MILP and storage decision variables/constraints
 
-For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option](./math/milp.md).
+For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option](math/milp.md).
 
 In v0.6, we inferred that a mixed-integer linear model was desired based on the user defining certain parameters.
 For example, defining `units_max` would trigger the integer `units` decision variable.
@@ -752,7 +752,7 @@ This means you could define different output carriers for a `supply` technology,
 
 ### `templates` for nodes
 
-The new [`templates` key](creating/yaml.md#reusing-definitions-through-templates) makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
+The new [`templates` key](reference/yaml.md#reusing-definitions-through-templates) makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
 
 So, to achieve this result:
 
@@ -902,11 +902,11 @@ You can "switch off" a constraint for a given carrier by setting its value to `n
 
 ### Defining parameters outside the scope of `nodes` and `techs`
 
-We now have a top-level key: `parameters` in which you can use our indexed parameter syntax to define any model parameters that you want, without them necessarily being linked to a node/technology.
+We now have a top-level key `data_definitions` in which you can use our data_definitions syntax to define any model parameters that you want, without them necessarily being linked to a node/technology.
 For instance, to define a parameter that applies over the `carriers` dimension:
 
 ```yaml
-parameters:
+data_definitions:
   my_new_param:
     data: [1, 2, 3]
     index: [heat, electricity, waste]
@@ -916,7 +916,7 @@ parameters:
 Or to define a single value that you might use to limit the total emissions in your system:
 
 ```yaml
-parameters:
+data_definitions:
   emissions_limit:
     data: 100
     index: emissions
@@ -924,18 +924,18 @@ parameters:
 ```
 
 !!! info "See also"
-    [Defining parameters when you create your model](creating/parameters.md).
+    [Defining parameters via `data_definitions`](basic/data_definitions.md).
 
 ### Indexing parameters over arbitrary dimensions
 
-At the `tech` level, `node` level, and the top-level (via the [`parameters` key](#defining-parameters-outside-the-scope-of-nodes-and-techs)), you can extend the dimensions a parameter is indexed over.
+At the `tech` level, `node` level, and the top-level (via the [`data_definitions` key](#defining-parameters-outside-the-scope-of-nodes-and-techs)), you can extend the dimensions a parameter is indexed over.
 
 At the tech level, this allows you to define [different values for different carriers](#differentiating-capacities-and-efficiencies-between-carriers).
 At any level, it allows you to define a brand new model dimension and your values over those.
 For example, if you want to apply some simplified piecewise constraints:
 
 ```yaml
-parameters:
+data_definitions:
   cost_flow_cap_piecewise_slopes:
     data: [5, 7, 14]
     index: [0, 1, 2]
@@ -958,10 +958,10 @@ nodes:
 ```
 
 !!! note
-    1. Just defining new parameters is not enough to have an effect on the optimisation problem.
+    1. Just defining data for new parameters is not enough to have an effect on the optimisation problem.
     You also need to [define your own math](user_defined_math/index.md).
-    2. Because we process your YAML files to create the `nodes` and `techs` dimensions you will find in your Calliope model, you cannot use `nodes`/`techs` as dimensions of indexed parameters under the `nodes` or `techs` keys.
-    It _is_ possible to refer to `nodes` and `techs` as dimensions under the top-level `parameters` key.
+    2. Because we process your YAML files to create the `nodes` and `techs` dimensions you will find in your Calliope model, you cannot use `nodes`/`techs` as dimensions of parameters defined through the data_definitions syntax under the `nodes` or `techs` keys.
+    It _is_ possible to refer to `nodes` and `techs` as dimensions under the top-level `data_definitions` key.
 
 !!! info "See also"
     [Defining parameters when you create your model](basic/data_definitions.md).
@@ -984,4 +984,4 @@ You can add your own math to update the pre-defined math and to represent the ph
 When adding your own math, you can add [piecewise linear constraints](user_defined_math/components.md#piecewise-constraints), which is a new type of constraint compared to what could be defined in v0.6.
 
 !!! info "See also"
-    Our [pre-defined](modes/index.md) and [user-defined](user_defined_math/index.md) math documentation.
+    Our [pre-defined](basic/modes.md) and [user-defined](user_defined_math/index.md) math documentation.
