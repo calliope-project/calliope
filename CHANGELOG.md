@@ -4,6 +4,8 @@
 
 |new| `config.solve.postprocess_active` can be used to skip postprocessing to save computation time, or avoid crashes if `base` math is made incompatible with them.
 
+|fixed| All math components units and default values (#662).
+
 |changed| pre-validation of math strings, in search of parsing errors, is undertaken at model instantiation and defaults to _not_ run to reduce model init time.
 
 |changed| Math dictionaries can be injected on loading a model from YAML/dict when using the Python API (`calliope.read_yaml(...)`/`calliope.Model.from_dict(...)`) using the `math_dict` argument.

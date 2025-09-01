@@ -328,6 +328,7 @@ global_expressions:
     description: >-
       The investment costs associated with the binary purchase of a technology.
     default: 0
+    unit: cost
     foreach: [nodes, techs, costs]
     where: cost_purchase AND purchased_units
     order: -1
@@ -349,8 +350,8 @@ global_expressions:
       cost_investment_area_use OR cost_investment_purchase
     equations:
       - expression: >-
-          sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
-          default_if_empty(cost_investment_storage_cap, 0) +
-          default_if_empty(cost_investment_source_cap, 0) +
-          default_if_empty(cost_investment_area_use, 0) +
-          default_if_empty(cost_investment_purchase, 0)
+          sum(cost_investment_flow_cap, over=carriers) +
+          cost_investment_storage_cap +
+          cost_investment_source_cap +
+          cost_investment_area_use +
+          cost_investment_purchase
