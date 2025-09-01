@@ -44,10 +44,10 @@ from typing_extensions import NotRequired, TypedDict, Unpack
 
 from calliope.backend.helper_functions import ParsingHelperFunction
 from calliope.exceptions import BackendError
+from calliope.schemas.math_schema import CalliopeBuildMath
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
-    from calliope.schemas.math_schema import CalliopeBuildMath
 
 pp.ParserElement.enablePackrat()
 

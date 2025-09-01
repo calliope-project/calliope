@@ -225,7 +225,7 @@ class TestGetters:
                 "Set as value between 1 (no loss) and 0 (all lost)."
             ),
             "default": 1.0,
-            "unit": "fraction.",
+            "unit": "unitless.",
         }
 
     def test_get_parameter_as_vals(self, solved_model_cls):

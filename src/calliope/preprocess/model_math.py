@@ -11,6 +11,7 @@ from calliope.attrdict import AttrDict
 from calliope.backend import parsing
 from calliope.exceptions import ModelError, print_warnings_and_raise_errors
 from calliope.io import read_rich_yaml
+from calliope.schemas.config_schema import Init
 from calliope.schemas.math_schema import CalliopeBuildMath
 from calliope.util.tools import relative_path
 
@@ -25,7 +26,7 @@ ORDERED_COMPONENTS_T = typing.Literal[
 ]
 
 
-def initialise_math_paths(
+def initialise_math(
     extra_math: dict[str, str] | None = None, model_def_path: str | Path | None = None
 ) -> AttrDict:
     """Combines internal and user math file paths into a unified dictionary.
@@ -34,41 +35,35 @@ def initialise_math_paths(
         extra_math (dict[str, str] | None, optional): names and paths to extra math. Defaults to None.
         model_def_path (str | Path | None, optional): Path to the model definition. Defaults to None.
 
-    Raises:
-        ModelWarning: pre-defined file has been overwritten.
-
-    Returns:
-        AttrDict: dataset with individual math paths.
-    """
-    LOGGER.info("Math init | loading pre-defined math.")
-
-    math_dataset = AttrDict({name.stem: str(name) for name in MATH_FILE_DIR.iterdir()})
-
-    if extra_math is not None:
-        for name, path in extra_math.items():
-            if name in math_dataset:
-                LOGGER.warning(
-                    f"Math init | Overwriting pre-defined '{name}' math with {path}."
-                )
-            math_dataset[name] = relative_path(model_def_path, path)
-
-    return math_dataset
-
-
-def load_math(math_paths: dict[str, str | Path]) -> AttrDict:
-    """Load all math files.
-
-    Args:
-        math_paths (dict[str, str | Path]): names and paths to math YAML definitions.
-
     Returns:
         AttrDict: dataset with individual math options.
     """
+    LOGGER.info("Math init | loading pre-defined math.")
+
+    math_paths = AttrDict({name.stem: str(name) for name in MATH_FILE_DIR.iterdir()})
+
+    if extra_math is not None:
+        for name, path in extra_math.items():
+            if name in math_paths:
+                LOGGER.warning(
+                    f"Math init | Overwriting pre-defined '{name}' math with {path}."
+                )
+            math_paths[name] = relative_path(model_def_path, path)
+
     LOGGER.info(f"Math init | loading math files {set(math_paths)}.")
     return AttrDict({name: read_rich_yaml(path) for name, path in math_paths.items()})
 
 
-def build_applied_math(
+def get_math_priority(init_config: Init) -> list[str]:
+    """Order of math formulations, with the last overwriting previous ones."""
+    names = ["base"]
+    if init_config.mode != "base":
+        names.append(init_config.mode)
+    names += init_config.extra_math
+    return names
+
+
+def build_math(
     priority: list[str],
     math_dataset: dict,
     overwrite: dict | None = None,

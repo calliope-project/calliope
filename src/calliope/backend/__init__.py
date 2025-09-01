@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import xarray as xr
 
 from calliope.attrdict import AttrDict
+from calliope.backend.backend_model import BackendModel
 from calliope.backend.gurobi_backend_model import GurobiBackendModel
 from calliope.backend.latex_backend_model import (
     ALLOWED_MATH_FILE_FORMATS,
@@ -12,10 +13,7 @@ from calliope.backend.latex_backend_model import (
 )
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError
-
-if TYPE_CHECKING:
-    from calliope.backend.backend_model import BackendModel
-    from calliope.schemas import config_schema, math_schema
+from calliope.schemas import config_schema, math_schema
 
 
 def get_model_backend(

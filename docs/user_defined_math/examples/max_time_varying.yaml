@@ -15,6 +15,7 @@ parameters:
   flow_cap_max_relative_per_ts:
     description: The relative quantity of flow capacity used to limit generator outflow in each timestep.
     default: 1
+    unit: $\frac{\text{energy}}{\text{power}}$.
 
 constraints:
   max_time_varying_flow_cap:

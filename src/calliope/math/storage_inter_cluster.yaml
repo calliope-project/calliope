@@ -128,6 +128,8 @@ variables:
     description: >-
       The virtual carrier stored by any technology using storage between days of the entire timeseries.
       Only together with `storage` does this variable's values gain physical significance.
+    unit: energy
+    default: 0
     foreach: [nodes, techs, datesteps]
     where: "include_storage==True OR base_tech==storage"
     bounds:
@@ -139,6 +141,7 @@ variables:
     description: >-
       Virtual variable to limit the maximum value of `storage` in a given representative day.
     unit: energy
+    default: .inf
     foreach: [nodes, techs, clusters]
     where: "include_storage==True OR base_tech==storage"
     bounds:
@@ -150,6 +153,7 @@ variables:
     description: >-
       Virtual variable to limit the minimum value of `storage` in a given representative day.
     unit: energy
+    default: -.inf
     foreach: [nodes, techs, clusters]
     where: "include_storage==True OR base_tech==storage"
     bounds:

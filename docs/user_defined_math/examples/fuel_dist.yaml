@@ -24,12 +24,15 @@ parameters:
   fuel_import_max:
     description: The maximum amount of fuel that can be imported
     default: .inf
+    unit: energy
   fuel_export_max:
     description: The maximum amount of fuel that can be exported
     default: .inf
+    unit: energy
   cost_fuel_distribution:
     description: The cost to import / revenue to export fuel
     default: 0
+    unit: energy
 
 lookups:
   allow_fuel_distribution:
@@ -43,6 +46,8 @@ variables:
       between model nodes. Positive values indicate carrier imports at a node,
       negative values for carrier exports.
     foreach: [nodes, carriers, timesteps]
+    unit: energy
+    default: 0
     # change [fuel1, fuel2] to match the carriers you want to allow to
     # be distributed within the system.
     where: "allow_fuel_distribution"
@@ -113,6 +118,8 @@ global_expressions:
     description: >
       Cost of importing / exporting fuel. Exporting fuel will
       provide a node with revenue, while importing it will incur a cost.
+    unit: cost
+    default: 0
     foreach: [nodes, carriers, costs, timesteps]
     where: fuel_distributor AND cost_fuel_distribution
     equations:

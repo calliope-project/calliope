@@ -15,12 +15,11 @@ import xarray as xr
 from typing_extensions import NotRequired, TypedDict
 
 from calliope.backend import expression_parser
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, math_schema
 from calliope.util import tools
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
-    from calliope.schemas.math_schema import CalliopeBuildMath
 
 
 pp.ParserElement.enablePackrat()
@@ -32,7 +31,7 @@ class EvalAttrs(TypedDict):
 
     equation_name: str
     backend_interface: BackendModel
-    math: CalliopeBuildMath
+    math: math_schema.CalliopeBuildMath
     input_data: xr.Dataset
     helper_functions: dict[str, Callable]
     apply_where: NotRequired[bool]

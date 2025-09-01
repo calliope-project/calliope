@@ -207,8 +207,18 @@ class Solve(CalliopeBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {"title": "Model Solve Configuration"}
+
+    postprocessing_active: bool = True
+    """If enabled, all active postprocessing functions will be run after the model solves."""
+
     save_logs: Path | None = None
     """If given, should be a path to a directory in which to save optimisation logs."""
+
+    shadow_prices: UniqueList[str] = Field(default_factory=list)
+    """Names of model constraints."""
+
+    solver: str = Field(default="cbc")
+    """Solver to use. Any solvers that have Pyomo interfaces can be used. Refer to the Pyomo documentation for the latest list."""
 
     solver_io: str | None = None
     """
@@ -219,16 +229,11 @@ class Solve(CalliopeBaseModel):
     solver_options: dict = Field(default_factory=dict)
     """Any solver options, as key-value pairs, to pass to the chosen solver"""
 
-    solver: str = Field(default="cbc")
-    """Solver to use. Any solvers that have Pyomo interfaces can be used. Refer to the Pyomo documentation for the latest list."""
+    spores: SolveSpores = SolveSpores()
+    """Spores configuration."""
 
     zero_threshold: float = Field(default=1e-10)
     """On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero."""
-
-    shadow_prices: UniqueList[str] = Field(default_factory=list)
-    """Names of model constraints."""
-
-    spores: SolveSpores = SolveSpores()
 
 
 class CalliopeConfig(CalliopeBaseModel):

@@ -4,7 +4,7 @@ import pytest
 
 from calliope import AttrDict
 from calliope.io import read_rich_yaml
-from calliope.preprocess import initialise_math_paths, load_math
+from calliope.preprocess import initialise_math
 from calliope.schemas import math_schema
 
 
@@ -89,7 +89,7 @@ class TestCalliopeBuildMath:
     @pytest.fixture
     def base_math_raw(self) -> AttrDict:
         """Unvalidated Calliope base math."""
-        return load_math(initialise_math_paths())["base"]
+        return initialise_math()["base"]
 
     @pytest.fixture
     def base_math_validated(self, base_math_raw) -> AttrDict:

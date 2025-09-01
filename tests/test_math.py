@@ -32,7 +32,7 @@ def create_full_math(internal_math: list[str], custom_math: dict | None = None):
     }
     if custom_math:
         math_dataset["custom_math"] = AttrDict(custom_math)
-    build_math = model_math.build_applied_math(list(math_dataset.keys()), math_dataset)
+    build_math = model_math.build_math(list(math_dataset.keys()), math_dataset)
 
     return AttrDict(build_math.model_dump())
 

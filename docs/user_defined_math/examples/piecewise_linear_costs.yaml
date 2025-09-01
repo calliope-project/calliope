@@ -20,13 +20,18 @@ dimensions:
 parameters:
   cost_flow_cap_piecewise_slopes:
     description: The gradient of each of the piecewise limiting line defining the convex, non-linear cost curve
+    unit: unitless
+
   cost_flow_cap_piecewise_intercept:
     description: The y-axis intercept of each of the piecewise limiting line defining the convex, non-linear cost curve
+    unit: unitless
 
 variables:
   piecewise_cost_investment:
     description: Investment cost that increases monotonically
     foreach: [nodes, techs, costs]
+    default: 0
+    unit: cost
     where: >
         cost_flow_cap_piecewise_slopes AND cost_flow_cap_piecewise_intercept
         AND purchased_units
@@ -58,9 +63,9 @@ global_expressions:
       OR cost_investment_purchase OR piecewise_cost_investment)
     equations:
       - expression: >
-          sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
-          default_if_empty(cost_investment_storage_cap, 0) +
-          default_if_empty(cost_investment_source_cap, 0) +
-          default_if_empty(cost_investment_area_use, 0) +
-          default_if_empty(cost_investment_purchase, 0) +
-          default_if_empty(piecewise_cost_investment, 0)
+          sum(cost_investment_flow_cap, over=carriers) +
+          cost_investment_storage_cap +
+          cost_investment_source_cap +
+          cost_investment_area_use +
+          cost_investment_purchase +
+          piecewise_cost_investment
