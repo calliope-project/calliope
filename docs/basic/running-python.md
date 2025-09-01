@@ -11,7 +11,7 @@ model.solve()
 
 !!! note
     If the model definition is not specified (i.e. `model = Model()`), an error is raised.
-    See the example models introduced in the [examples and tutorials](examples/overview.md) section for information on instantiating a simple model without specifying a custom model configuration.
+    See the example models introduced in the [examples and tutorials](../examples/overview.md) section for information on instantiating a simple model without specifying a custom model configuration.
 
 Other ways to load a model in Python are:
 

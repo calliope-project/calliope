@@ -22,7 +22,6 @@ MODEL_PATH = Path(__file__).parent / "dummy_model" / "model.yaml"
 
 BASE_MATH_NAV_PATH = ["Math", "Built-in base math"]
 OTHER_MATH_NAV_PATH = ["Math", "Other built-in math"]
-AUTO_POP_MARKER = "this will be auto-populated"
 
 PREPEND_SNIPPET = """
 # {title}
@@ -83,7 +82,14 @@ def on_files(files: list, config: dict, **kwargs):
             """
             )
 
-        write_file(f"{override}.yaml", text, custom_documentation, files, config)
+        write_file(
+            f"{override}.yaml",
+            text,
+            custom_documentation,
+            files,
+            config,
+            output_path=Path("math/built_in"),
+        )
 
     return files
 
@@ -95,6 +101,7 @@ def write_file(
     files: list[File],
     config: dict,
     base_math: bool = False,
+    output_path: Path = Path("math"),
 ) -> None:
     """Parse math files and produce markdown documentation.
 
@@ -105,8 +112,9 @@ def write_file(
         files (list[File]): math files to parse.
         config (dict): documentation configuration.
         base_math (bool, optional): whether the math is the base math or an override. Defaults to False.
+        output_path (Path, optional): path to output directory for the markdown file. Defaults to Path("math").
     """
-    output_file = (Path("math") / filename).with_suffix(".md")
+    output_file = (output_path / filename).with_suffix(".md")
     output_full_filepath = Path(TEMPDIR.name) / output_file
     output_full_filepath.parent.mkdir(exist_ok=True, parents=True)
 
@@ -147,8 +155,6 @@ def write_file(
     if base_math:
         nav_reference[second_level_page_name] = output_file.as_posix()
     else:
-        if AUTO_POP_MARKER in nav_reference[second_level_page_name]:
-            nav_reference[second_level_page_name].remove(AUTO_POP_MARKER)
         nav_reference[second_level_page_name].append(output_file.as_posix())
 
     title = math_documentation.name

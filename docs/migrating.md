@@ -375,7 +375,7 @@ Investment costs are split out into the component caused by annual operation and
 
 ### Explicitly triggering MILP and storage decision variables/constraints
 
-For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option](math/milp.md).
+For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option](math/built_in/index.md).
 
 In v0.6, we inferred that a mixed-integer linear model was desired based on the user defining certain parameters.
 For example, defining `units_max` would trigger the integer `units` decision variable.

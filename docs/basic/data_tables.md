@@ -262,7 +262,7 @@ In this section we will show some examples of loading data and provide the equiv
         cost_storage_cap.data: 150
     ```
 
-    1. To limit repetition, we have defined [templates](yaml.md#reusing-definitions-through-templates) for our costs.
+    1. To limit repetition, we have defined [templates](../reference/yaml.md#reusing-definitions-through-templates) for our costs.
 
 !!! info "See also"
     Our [data table loading tutorial][loading-tabular-data] has more examples of loading tabular data into your model.

@@ -117,7 +117,7 @@ nav:
   - Math:
     - Built-in base math: math/base/index.md
     - Other built-in math:
-      - "this will be auto-populated"
+      - math/built_in/index.md
     - User-defined math:
       - user_defined_math/index.md
       - user_defined_math/components.md
