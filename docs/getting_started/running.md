@@ -2,12 +2,12 @@
 
 There are essentially three ways to run a Calliope model:
 
-1. With the `calliope run` command-line tool (see below, the more detailed explanation in [Running in the command line](../basic/running-cli.md) and the [CLI reference](reference/cli.md)).
+1. With the `calliope run` command-line tool (see below, the more detailed explanation in [Running in the command line](../basic/running-cli.md) and the [CLI reference](../reference/cli.md)).
 2. By programmatically creating and running a model from within other Python code, or in an interactive Python session (see [Running in Python](../basic/running-python.md)).
 3. By generating and then executing scripts with the `#!shell calliope generate_runs` command-line tool, which is primarily designed for running many scenarios on a high-performance cluster (see the [Generating scripts](../advanced/scripts.md) section in the advanced docs).
 
 !!! example
-    Refer to the [examples and tutorials section](examples/index.md) for a more practical look at how to run a Calliope model.
+    Refer to the [examples and tutorials section](examples/overview.md) for a more practical look at how to run a Calliope model.
 
 ## Easiest to start: using the command line interface
 
@@ -33,7 +33,7 @@ Large models will take time to solve.
 The easiest is often to just let a model run on a remote device (another computer, or a high performance computing cluster) and forget about it until it is done.
 However, if you need results *now*, there are ways to improve solution time.
 
-Details on strategies to improve solution times are given in the [troubleshooting](troubleshooting.md) section.
+Details on strategies to improve solution times are given in the [troubleshooting](../troubleshooting.md) section.
 
 ## Debugging failing runs
 
@@ -45,4 +45,4 @@ Calliope will attempt to diagnose some common errors and raise an appropriate er
 Calliope will be able to construct the model and pass it on to the solver, but the solver (after a potentially long time) will abort with a message stating that the model is infeasible.
 * There is a bug in Calliope causing the model to crash either before being passed to the solver, or after the solver has completed and when results are passed back to Calliope.
 
-Calliope provides help in diagnosing all of these model issues. For details, see the [troubleshooting](troubleshooting.md) section.
+Calliope provides help in diagnosing all of these model issues. For details, see the [troubleshooting](../troubleshooting.md) section.

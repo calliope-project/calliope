@@ -117,7 +117,7 @@ More details on how techs are defined is in the [techs documentation](../basic/t
 
 ## Nodes
 
-The model's [nodes](nodes.md) are the locations in space where technologies can be placed and are defined under the `nodes` top-level key.
+The model's [nodes](../basic/nodes.md) are the locations in space where technologies can be placed and are defined under the `nodes` top-level key.
 A model can specify any number of nodes.
 These nodes can be linked together by transmission technologies.
 By consuming a carrier in one node and outputting it in another, linked node, transmission technologies allow resources to be drawn from the system at a different node from where they are brought into it.
@@ -195,7 +195,7 @@ data_tables:
 
 More detail on how to use this powerful feature and how to structure your CSV files is in the [data tables documentation](../basic/data_tables.md).
 
-The [examples and tutorials section](../examples/index.md) is also particularly useful to see in small example models how this feature works.
+The [examples and tutorials section](../examples/overview.md) is also particularly useful to see in small example models how this feature works.
 
 ## Data definitions
 

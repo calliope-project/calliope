@@ -30,7 +30,7 @@ Each override is given by a name (e.g. `high_cost`) and any number of model sett
 In the above example, one override defines higher costs for an `onshore_wind` technology.
 The other two other overrides specify different time subsets, so would run an otherwise identical model over two different periods of timeseries data.
 
-One or several overrides can be applied when [running a model](../running.md).
+One or several overrides can be applied when [running a model](../getting_started/running.md).
 Overrides can also be combined into scenarios to make applying them at run-time easier.
 Scenarios consist of a name and a list of override names which together form that scenario.
 

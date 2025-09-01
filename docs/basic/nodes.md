@@ -13,7 +13,7 @@ This can be an empty dictionary (`techs: {}`), which you may use if your node is
 
 Nodes can have arbitrary parameter data assigned which will be available in the optimisation problem, indexed over the `nodes` dimension (see `custom_node_parameter` in the example below).
 
-They can also have parameters that use the [indexed parameter syntax](parameters.md) to define node+other dimension data (`custom_node_flow_out_max` in the example below)
+They can also have parameters that use the [are populated by data_definitions](data_definitions.md) to define node+other dimension data (`custom_node_flow_out_max` in the example below)
 In the below example, `custom_node_flow_out_max` at `region1` could be used to create [your own math](../user_defined_math/index.md) constraint that limits the total outflow of the carriers electricity and gas at that node.
 
 ```yaml

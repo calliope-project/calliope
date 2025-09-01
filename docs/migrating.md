@@ -175,7 +175,7 @@ This split means you can change configuration options on-the-fly if you are work
     ```
 
 !!! info "See also"
-    [Introduction to configuring your model](creating/config.md).
+    [Configuring your model](basic/config.md).
 
 ### `locations` → `nodes`
 
@@ -311,7 +311,7 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
     ```
 
 !!! note
-    You can use [`templates`](creating/yaml.md#reusing-definitions-through-templates) to minimise duplications in the new transmission technology definition.
+    You can use [`templates`](reference/yaml.md#reusing-definitions-through-templates) to minimise duplications in the new transmission technology definition.
 
 ### Renaming parameters/decision variables without core changes in function
 
@@ -345,10 +345,10 @@ Along with [changing the YAML hierarchy of model configuration](#model-and-run-�
 * `run.operation.horizon` → `config.build.operate.horizon`
 * `run.operation.use_cap_results` → `config.build.operate.use_cap_results`
 
-We have also moved some _data_ out of the configuration and into the [top-level `parameters` section](creating/parameters.md):
+We have also moved some _data_ out of the configuration and into the [top-level `data_definitions` key](basic/data_definitions.md):
 
-* `run.objective_options.cost_class` → `parameters.objective_cost_weights`
-* `run.bigM` → `parameters.bigM`
+* `run.objective_options.cost_class` → `data_definitions.objective_cost_weights`
+* `run.bigM` → `data_definitions.bigM`
 
 !!! info "See also"
     [Our full list of internally defined configuration options][model-configuration-schema].
@@ -375,7 +375,7 @@ Investment costs are split out into the component caused by annual operation and
 
 ### Explicitly triggering MILP and storage decision variables/constraints
 
-For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option](./pre_defined_math/index.md).
+For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option](./math/milp.md).
 
 In v0.6, we inferred that a mixed-integer linear model was desired based on the user defining certain parameters.
 For example, defining `units_max` would trigger the integer `units` decision variable.
@@ -718,7 +718,7 @@ Visualisation has moved to a separate tool, [Calligraph](https://calligraph.read
 We made this decision due to the wide variety of visualisations that we saw being created outside our plotting module.
 It has proven impossible to keep our plotting methods agile given the almost infinite tweaks that libraries like [matplotlib](https://matplotlib.org/) and [plotly](https://plotly.com/) allow.
 
-If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/index.md).
+If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/overview.md).
 
 ### Clustering
 
@@ -964,7 +964,7 @@ nodes:
     It _is_ possible to refer to `nodes` and `techs` as dimensions under the top-level `parameters` key.
 
 !!! info "See also"
-    [Defining parameters when you create your model](creating/parameters.md).
+    [Defining parameters when you create your model](basic/data_definitions.md).
 
 ### Loading non-timeseries tabular data
 
@@ -972,7 +972,7 @@ With the [change in loading timeseries data](#filedf-→-data_tables-section), w
 Technically, you can now define all your data in tables (although we would still recommend a mix of YAML and tabular model definition).
 
 !!! info "See also"
-    `data_tables` [introduction](creating/data_tables.md) and [tutorial][loading-tabular-data].
+    `data_tables` [introduction](basic/data_tables.md) and [tutorial][loading-tabular-data].
 
 ### YAML-based math syntax
 
@@ -984,4 +984,4 @@ You can add your own math to update the pre-defined math and to represent the ph
 When adding your own math, you can add [piecewise linear constraints](user_defined_math/components.md#piecewise-constraints), which is a new type of constraint compared to what could be defined in v0.6.
 
 !!! info "See also"
-    Our [pre-defined](pre_defined_math/index.md) and [user-defined](user_defined_math/index.md) math documentation.
+    Our [pre-defined](modes/index.md) and [user-defined](user_defined_math/index.md) math documentation.

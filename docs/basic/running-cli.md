@@ -26,7 +26,7 @@ $ calliope run testmodel/model.yaml --save_netcdf=results.nc --save_csv=outputs
 ## Applying a scenario or override on the command line
 
 !!! note "See also"
-    See the [Scenarios and overrides](creating/scenarios.md) section for details on how to define scenarios.
+    See the [Scenarios and overrides](scenarios.md) section for details on how to define scenarios.
 
 The `--scenario` option can be used in three different ways:
 

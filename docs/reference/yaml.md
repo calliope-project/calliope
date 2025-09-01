@@ -115,7 +115,7 @@ import:
 Data defined in the current and imported file(s) must be mutually exclusive.
 If both the imported file and the current file define the same option, Calliope will raise an exception.
 
-As you will see in our [standard model directory structure](index.md#structuring-your-model-directory), we tend to store our model definition in separate files.
+As you will see in our [standard model directory structure](../getting_started/building.md#model-directory-layout), we tend to store our model definition in separate files.
 In this case, our `model.yaml` file tends to have the following `import` statement:
 
 ```yaml
@@ -474,7 +474,7 @@ This can be useful to streamline setting costs for different technologies.
 
 Generally, if the imported file and the current file define the same option, Calliope will raise an exception.
 
-However, you can define `overrides` which you can then reference when loading your Calliope model (see [Scenarios and overrides](scenarios.md)). These `override` settings will override any data that match the same name and will add new data if it wasn't already there.
+However, you can define `overrides` which you can then reference when loading your Calliope model (see [Scenarios and overrides](../basic/scenarios.md)). These `override` settings will override any data that match the same name and will add new data if it wasn't already there.
 
 It will do so by following the entire nesting chain. For example:
 

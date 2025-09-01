@@ -13,7 +13,7 @@ This includes [operate](#operate-mode) and [spores](#spores-mode) modes.
 !!! note
 
     The `base` mode is called base because it is active by default.
-    However, it is possible to heavily modify or even completely replace this built-in base math. FIXMICH: link to where we describe how to do that.
+    However, it is possible to heavily modify or even completely replace this built-in base math. See the documentation on [user-defined custom math](../user_defined_math/index.md) for more on this.
 
 In addition to perfect foresight optimisation, we have a [receding horizon "operate" optimisation mode](#operate-mode) and the ["SPORES" mode](#spores-mode) to generate alternative system configurations that are within a small deviation of the optimal cost that is computed in `base` mode. Read on to find out more about each of these run modes.
 

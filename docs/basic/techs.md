@@ -44,10 +44,10 @@ ccgt:
 1. This is an example of when using quotation marks is important.
 Without them, the colour code would be interpreted as a YAML comment!
 2. the period at the start of `.inf` will ensure it is read in as a floating point number (`float` type) representing an infinite amount, rather than as the text string `"inf"`.
-3. Costs require us to explicitly define data in the [indexed parameter](parameters.md) format so that we can define the cost class (in this case: `monetary`).
+3. Costs require us to explicitly define data by the [data_definitions](data_definitions.md) format so that we can define the cost class (in this case: `monetary`).
 
 Each technology must specify an abstract base technology and its carrier (`carrier_out` in the case of a `supply` technology).
-Specifying a `color` and a `name` is optional but useful when you want to [visualise or otherwise report your results](../analysing.md).
+Specifying a `color` and a `name` is optional but useful when you want to [visualise or otherwise report your results](../getting_started/analysing.md).
 
 The rest of the data for the technology is used in the optimisation problem: to set constraints and to link the technology to the objective function (via costs).
 In the above example, we have a capacity limit `flow_cap_max`, conversion efficiency `flow_out_eff`, the life time (used in [levelised cost calculations](../reference/api/postprocess.md)), and the resource available for consumption `source_use_max`.
@@ -74,7 +74,7 @@ Additional cost classes can be created simply by adding them to the definition o
 ## Sharing configuration with templates
 
 To share definitions between technologies and/or nodes, you can use configuration templates (the `template` key).
-This allows a technology/node to inherit definitions from [`template` definitions](yaml.md#reusing-definitions-through-templates).
+This allows a technology/node to inherit definitions from [`template` definitions](../reference/yaml.md#reusing-definitions-through-templates).
 Note that `template` is different to setting a `base_tech`.
 Setting a base_tech does not entail any configuration options being inherited;
 `base_tech` is only used when building the optimisation problem (i.e., in the `math`).

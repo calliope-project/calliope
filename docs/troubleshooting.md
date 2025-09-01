@@ -97,7 +97,7 @@ Then, run `operate` mode with these capacities to get a higher resolution operat
 If necessary, this process could be iterated.
 
 !!! info "See also"
-    [Documentation on `operate` mode](pre_defined_math/index.md#operate-mode)
+    [Documentation on `operate` mode](basic/modes.md#operate-mode)
 
 ## Influence of solver choice on speed
 

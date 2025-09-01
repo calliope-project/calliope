@@ -201,7 +201,7 @@ As the name suggests, it applies no cost or efficiency losses to this transmissi
 
 We can see that those technologies which rely on `free_transmission` inherit a lot of this information from elsewhere in the model definition.
 `free_transmission` is defined in `templates`, which makes it inheritable.
-[Templates](../../creating/yaml.md#reusing-definitions-through-templates) allow us to avoid excessive repetition in our model definition.
+[Templates](../../reference/yaml.md#reusing-definitions-through-templates) allow us to avoid excessive repetition in our model definition.
 
 Technologies and nodes can inherit from anything defined in `templates`.
 items in `templates` can also inherit from each other, so you can create inheritance chains.

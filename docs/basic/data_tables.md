@@ -323,7 +323,7 @@ override:
     data_tables.tech_data.select.scenarios: scenario2  # (1)!
 ```
 
-1. We use the dot notation as a shorthand for [abbreviate nested dictionaries](yaml.md#abbreviated-nesting).
+1. We use the dot notation as a shorthand for [abbreviate nested dictionaries](../reference/yaml.md#abbreviated-nesting).
 
 ## Adding dimensions
 

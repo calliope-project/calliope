@@ -58,7 +58,7 @@ Which will add the new dimension `my_new_dim` to your model: `model.inputs.my_ne
 
 When you specify data through `data_definitions`, you may be populating either a parameter or what Calliope calls a "lookup". A lookup is essentially a "helper parameter" with non-numeric values, for example, a string or a boolean (True/False) value.
 
-Whether your data definition becomes a parameter or a lookup depends on the defined model math [see the documentation on user-defined math](user_defined_math/customise.md) for more on how to create new parameters and lookups.
+Whether your data definition becomes a parameter or a lookup depends on the defined model math [see the documentation on user-defined math](../user_defined_math/customise.md) for more on how to create new parameters and lookups.
 
 ## Broadcasting data along indexed dimensions
 

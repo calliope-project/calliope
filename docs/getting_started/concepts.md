@@ -4,7 +4,7 @@ This page explains the basic concepts and ideas behind Calliope.
 We then move on to describing how to [create](creating.md), [run](running.md), and [analyse](analysing.md) a Calliope model.
 
 !!! note
-    The [examples and tutorials section](../examples/index.md) contains more hands-on examples of how to build and work with Calliope models. We still recommend that you first read the section you are currently looking at - "Getting started" - before going to the examples and tutorials.
+    The [examples and tutorials section](../examples/overview.md) contains more hands-on examples of how to build and work with Calliope models. We still recommend that you first read the section you are currently looking at - "Getting started" - before going to the examples and tutorials.
 
 ## What Calliope does
 
@@ -81,15 +81,15 @@ One important Calliope-specific feature is the ability to spread your model acro
 Typically, you will have a main model file (e.g., `model.yaml`), from which you import other files.
 
 You will see many examples of YAML as you proceed through the documentation, and most of what is happening should be intuitively understandable.
-However, if you want a more detailed and systematic description of how YAML is used in Calliope, you can refer to our [YAML reference](reference/yaml.md).
+However, if you want a more detailed and systematic description of how YAML is used in Calliope, you can refer to our [YAML reference](../reference/yaml.md).
 
 ### Model configuration (including math) and model definition (data)
 
 Within the YAML file(s) that define your model, we distinguish between model configuration and model definition:
 
-* The model **configuration** are the options provided to Calliope to do its work, and this includes specifying what maths to use. Specifying what maths to use means specifying what kinds of model components will exist and how they will behave. The configuration is listed under the top-level key [`config`](config.md).
+* The model **configuration** are the options provided to Calliope to do its work, and this includes specifying what maths to use. Specifying what maths to use means specifying what kinds of model components will exist and how they will behave. The configuration is listed under the top-level key [`config`](../basic/config.md).
 
-* The model **definition** is your representation of the physical system you are modelling and includes the data with which the components specified in the math will be "populated". It spans across the four top-level keys [`techs`](techs.md), [`nodes`](nodes.md), [`data_definitions`](parameters.md), and [`data_tables`](data_tables.md).
+* The model **definition** is your representation of the physical system you are modelling and includes the data with which the components specified in the math will be "populated". It spans across the four top-level keys [`techs`](../basic/techs.md), [`nodes`](../basic/nodes.md), [`data_definitions`](../basic/data_definitions.md), and [`data_tables`](../basic/data_tables.md).
 
 !!! note
     Later, once you start looking at Calliope model data from a successful model run, you will see three main types of numerical data, which are a mix of model inputs and outputs:
@@ -119,7 +119,7 @@ Calliope follows a strict order of priority when applying math: **base math -> m
 
 ### Overrides and scenarios
 
-The final two basic concepts to know about are **overrides** and **scenarios**. They are defined in the top-level YAML keys [`overrides` and `scenarios`](scenarios.md).
+The final two basic concepts to know about are **overrides** and **scenarios**. They are defined in the top-level YAML keys [`overrides` and `scenarios`](../basic/scenarios.md).
 
 Their purpose is define alternatives to the model configuration/definition that you can refer to when you initialise your model.
 For example, you might want to explore several pre-defined capacity expansion plans in a model of the European power grid.

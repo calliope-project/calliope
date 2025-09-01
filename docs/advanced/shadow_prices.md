@@ -26,7 +26,7 @@ If you [define any of your own math constraints](../user_defined_math/components
 ## Shadow prices when using the command-line tool
 
 By specifying constraints in the YAML configuration (see above), shadow price tracking will be activated and the shadow prices of those constraints you have listed will be available in the results dataset, prefixed with `shadow_price_`.
-For instance, listing `system_balance` in the configuration will lead to `shadow_price_system_balance` being available in the optimisation results that are saved to file on calling [`calliope run ...`](../running.md#running-with-the-command-line-tool).
+For instance, listing `system_balance` in the configuration will lead to `shadow_price_system_balance` being available in the optimisation results that are saved to file on calling [`calliope run ...`](../basic/running-cli.md).
 
 ## Shadow prices when running in Python
 
