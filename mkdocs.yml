@@ -112,6 +112,8 @@ nav:
     - Data tables: basic/data_tables.md
     - Data definitions: basic/data_definitions.md
     - Scenarios and overrides: basic/scenarios.md
+    - Running in the command line: basic/running-cli.md
+    - Running in Python: basic/running-python.md
   - Math:
     - Built-in base math: math/base/index.md
     - Other built-in math:
