@@ -1,58 +1,50 @@
 # Calliope: energy system modelling made simple
 
+Calliope focuses on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
+Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents.
+In an optional operational mode it can also test a pre-defined system under different operational conditions.
+
 !!! tip
 
     If you are new to Calliope, we recommend that you first read through the [getting started guide](getting_started/concepts.md), then review the [examples and tutorials](examples/overview.md). The remaining sections primarily contain reference material that is most useful if you already know the basics and need to look up something.
-
-!!! warning
-
-    Calliope version 0.7 is available as a pre-release with the purpose of gathering feedback from users.
-    To install the pre-release as a user:
-
-    ```shell
-    mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
-    ```
-
-    Visualisation of results has moved to a separate tool, [Calligraph](https://calligraph.readthedocs.io/).
-
-    To see a full list of changes, read our [page on migrating between v0.6 and v0.7](migrating.md).
-
-    If you want to install the most recent _stable_ version of Calliope, see our [v0.6.10 documentation](https://calliope.readthedocs.io/en/v0.6.10/).
 
 !!! note
 
     This is the documentation for version {{ calliope_version }} ([version history](version_history.md)).
     See the [main project website at www.callio.pe](https://www.callio.pe/) for more general information, including a gallery of models built with Calliope, and other useful information.
 
-Calliope focuses on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
-Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents.
-In an optional operational mode it can also test a pre-defined system under different operational conditions.
-The [Calligraph companion tool](https://calligraph.readthedocs.io/) allows interactive exploration of results.
+    This version of Calliope is available as a pre-release with the purpose of gathering feedback from users.
+    To install the pre-release:
 
-Visualising with Calligraph:
+    ```shell
+    mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
+    ```
 
-<video controls>
-    <source src="https://spontaneous-choux-e05fa1.netlify.app/calligraph.mp4" type="video/mp4">
-</video>
+    To see a full list of changes, read our [page on migrating between v0.6 and v0.7](migrating.md).
 
-Visualising with Plotly:
+    If you want to install the most recent _stable_ version of Calliope, see our [v0.6.10 documentation](https://calliope.readthedocs.io/en/v0.6.10/).
 
-<object type="text/html" data="img/plotly_frontpage_timeseries.html" width="100%" height="400px"></object>
 
 A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials.
-Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of [xarray Datasets](https://docs.xarray.dev/en/v2022.03.0/user-guide/data-structures.html#dataset) which in turn can easily be converted into [Pandas data structures](https://pandas.pydata.org/pandas-docs/version/1.5/user_guide/dsintro.html#dsintro) for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
+Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of [xarray Datasets](https://docs.xarray.dev/en/v2022.03.0/user-guide/data-structures.html#dataset) which in turn can easily be converted into [Pandas data structures](https://pandas.pydata.org/pandas-docs/version/1.5/user_guide/dsintro.html#dsintro) for further analysis.
+
+<object type="text/html" data="img/plotly_frontpage_timeseries.html" width="100%" height="400px"></object>
 
 Calliope is developed in the open [on GitHub](https://github.com/calliope-project/calliope) and contributions are very welcome (see the [section on contributing](contributing.md)).
 
 Key features of Calliope include:
 
+* Free and open-source (available under the Apache 2.0 license)
 * Model specification in an easy-to-read and machine-processable YAML format
 * Generic technology definition allows modelling any mix of production, storage and consumption
 * Resolved in space: define locations with individual resource potentials
 * Resolved in time: read time series with arbitrary resolution
 * Able to run on high-performance computing (HPC) clusters
 * Uses a state-of-the-art Python toolchain based on [Pyomo](https://pyomo.readthedocs.io/en/stable/), [xarray](https://docs.xarray.dev/en/stable/), and [Pandas](https://pandas.pydata.org/)
-* Freely available under the Apache 2.0 license
+* [Calligraph companion tool](https://calligraph.readthedocs.io/) for interactive exploration of results - see the example below:
+<video controls>
+    <source src="https://spontaneous-choux-e05fa1.netlify.app/calligraph.mp4" type="video/mp4">
+</video>
 
 ## Acknowledgements
 

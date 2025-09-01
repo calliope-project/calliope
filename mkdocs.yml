@@ -106,11 +106,11 @@ nav:
   - Troubleshooting: troubleshooting.md
   - Building blocks:
     - Model configuration: basic/config.md
+    - Modes: basic/modes.md
     - Technologies: basic/techs.md
     - Nodes: basic/nodes.md
     - Data tables: basic/data_tables.md
-    - Modes: basic/modes.md
-    - Indexed parameters: basic/parameters.md
+    - Data definitions: basic/data_definitions.md
     - Scenarios and overrides: basic/scenarios.md
   - Math:
     - Built-in base math: math/base/index.md

@@ -1,13 +1,5 @@
 # Loading tabular data (`data_tables`)
 
-We have chosen YAML syntax to define Calliope models as it is human-readable.
-However, when you have a large dataset, the YAML files can become large and ultimately not as readable as we would like.
-For instance, for parameters that vary in time we would have a list of 8760 values and timestamps to put in our YAML file!
-
-Therefore, alongside your YAML model definition, you can load tabular data from CSV files (or from in-memory [pandas.DataFrame][] objects) under the `data_tables` top-level key.
-As of Calliope v0.7.0, this tabular data can be of _any_ kind.
-Prior to this, loading from file was limited to timeseries data.
-
 The full syntax from loading tabular data can be found in the associated [schema][data-table-schema].
 In brief it is:
 

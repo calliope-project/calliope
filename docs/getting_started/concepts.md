@@ -52,6 +52,10 @@ As we will see further below, all of these building blocks are supplied in Calli
 
 ![Visual description of the Calliope terminology.](../img/description_of_system.svg)
 
+Many of the model variables (e.g. the power output from a power plant) and parameters (e.g. the demand for electricity) vary through time.
+To deal with this, Calliope also has a concept of time through discrete **timesteps**.
+Thus, Calliope represents space as discrete nodes and time as discrete timesteps.
+
 Putting all of these possibilities together allows a modeller to create a model that is as simple or complex as necessary to answer a given research question.
 Calliope's syntax ensures these models are intuitive, and easy to understand and share.
 

@@ -1,10 +1,11 @@
 
 # Technologies (`techs`)
 
-The `techs` section in the model configuration specifies all of the model's technologies.
+The `techs` section in the model definition specifies all of the model's technologies.
 
-Calliope allows a modeller to define technologies with arbitrary characteristics by defining one of the abstract base techs as `base_tech`.
-This establishes the basic characteristics in the optimisation model (decision variables and constraints) applied to the technology:
+## Base techs
+
+The choice of `base_tech` in the tech's specification establishes its basic characteristics in the optimisation model (decision variables and constraints) applied to the technology:
 
 * `supply`: Draws from a source to produce a carrier.
 * `demand`: Consumes a carrier to supply to an external sink.
@@ -12,13 +13,7 @@ This establishes the basic characteristics in the optimisation model (decision v
 * `transmission`: Transmits a carrier from one node to another.
 * `conversion`: Converts from one carrier to another.
 
-??? info "Sharing configuration with templates"
-
-    To share definitions between technologies and/or nodes, you can use configuration templates (the `template` key).
-    This allows a technology/node to inherit definitions from [`template` definitions](yaml.md#reusing-definitions-through-templates).
-    Note that `template` is different to setting a `base_tech`.
-    Setting a base_tech does not entail any configuration options being inherited;
-    `base_tech` is only used when building the optimisation problem (i.e., in the `math`).
+## Basic example
 
 The following example shows the definition of a `ccgt` technology, i.e. a combined cycle gas turbine that delivers electricity:
 
@@ -48,7 +43,7 @@ ccgt:
 
 1. This is an example of when using quotation marks is important.
 Without them, the colour code would be interpreted as a YAML comment!
-2. the period at the start of `.inf` will ensure it is read in as a `float` type.
+2. the period at the start of `.inf` will ensure it is read in as a floating point number (`float` type) representing an infinite amount, rather than as the text string `"inf"`.
 3. Costs require us to explicitly define data in the [indexed parameter](parameters.md) format so that we can define the cost class (in this case: `monetary`).
 
 Each technology must specify an abstract base technology and its carrier (`carrier_out` in the case of a `supply` technology).
@@ -76,6 +71,14 @@ Additional cost classes can be created simply by adding them to the definition o
         dims: costs
     ```
 
+## Sharing configuration with templates
+
+To share definitions between technologies and/or nodes, you can use configuration templates (the `template` key).
+This allows a technology/node to inherit definitions from [`template` definitions](yaml.md#reusing-definitions-through-templates).
+Note that `template` is different to setting a `base_tech`.
+Setting a base_tech does not entail any configuration options being inherited;
+`base_tech` is only used when building the optimisation problem (i.e., in the `math`).
+
 ## Transmission technologies
 
 You will see in [`nodes`](nodes.md) page that you make it possible for investment in technologies at nodes by specifying the technology name under the node key.
@@ -85,6 +88,7 @@ Instead, you associate transmission technologies with nodes in `techs`:
 ```yaml
 techs:
   ac_transmission:
+    base_tech: transmission
     link_from: region1  # (1)!
     link_to: region2
     flow_cap_max: 100

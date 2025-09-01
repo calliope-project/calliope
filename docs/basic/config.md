@@ -1,20 +1,6 @@
 
 # Model configuration (`config`)
 
-The model configuration specifies the information Calliope needs to initialise, build, and solve the model.
-This includes for example the choice of solver with which to actually solve the mathematical optimisation problem. A simple example looks like this:
-
-```yaml
-config:
-  init:
-    name: 'My energy model'
-    subset.timesteps: ['2005-01-01', '2005-01-05']
-  build:
-    mode: base
-  solve:
-    solver: cbc
-```
-
 The configuration is grouped into three top-level items:
 
 * The `init` configuration items are used when you initialise your model (`calliope.Model(...)`).

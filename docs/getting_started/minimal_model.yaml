@@ -1,0 +1,33 @@
+# Model configuration
+config:
+  solve:
+    solver: glpk
+
+# Definition of two techs and the carrier they use (power)
+techs:
+  power_supply:
+    base_tech: supply
+    carrier_out: power
+    name: "Power plant"
+    flow_cap_max: 100  # Maximum generation capacity (`flow_cap`); Unit: MW
+    cost_flow_cap:  # Monetary cost of installing a unit of `flow_cap`
+      data: 10  # Unit: EUR/MW
+      index: monetary
+      dims: costs
+  power_demand:
+    name: "Power demand"
+    base_tech: demand
+    carrier_in: power
+
+# Definition of a single node
+# Here we also define a single timestep with a single value for power demand
+nodes:
+  single_region:
+    techs:
+      power_supply:
+      power_demand:
+        # `sink_use_equals` forces this technology to act as a sink with exactly the amount specified here
+        sink_use_equals:
+          data: [50]  # Unit: MWh
+          index: ["2025-01-01 12:00:00"]
+          dims: timesteps
