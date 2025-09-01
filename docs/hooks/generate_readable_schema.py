@@ -15,7 +15,7 @@ import jsonschema2md
 from mkdocs.structure.files import File
 
 from calliope import schemas
-from calliope.schemas.data_table_schema import CalliopeDataTable
+from calliope.schemas import data_table_schema, math_schema
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
@@ -23,8 +23,8 @@ TEMPDIR = tempfile.TemporaryDirectory()
 SCHEMAS = {
     "config_schema": schemas.CalliopeConfig.model_no_ref_schema(),
     "model_schema": schemas.CalliopeModelDef.model_no_ref_schema(),
-    "math_schema": schemas.CalliopeBuildMath.model_no_ref_schema(),
-    "data_table_schema": CalliopeDataTable.model_no_ref_schema(),
+    "math_schema": math_schema.CalliopeBuildMath.model_no_ref_schema(),
+    "data_table_schema": data_table_schema.CalliopeDataTable.model_no_ref_schema(),
 }
 
 
