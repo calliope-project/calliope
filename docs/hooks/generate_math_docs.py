@@ -104,6 +104,7 @@ def write_file(
         math_documentation (MathDocumentation): calliope math documentation.
         files (list[File]): math files to parse.
         config (dict): documentation configuration.
+        base_math (bool, optional): whether the math is the base math or an override. Defaults to False.
     """
     output_file = (Path("math") / filename).with_suffix(".md")
     output_full_filepath = Path(TEMPDIR.name) / output_file
