@@ -17,8 +17,7 @@ from typing_extensions import NotRequired, TypedDict
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.preprocess import data_tables, model_math, time
-from calliope.schemas import dimension_data_schema, math_schema
-from calliope.schemas.config_schema import Init
+from calliope.schemas import config_schema, dimension_data_schema, math_schema
 from calliope.util import DATETIME_DTYPE, DTYPE_OPTIONS
 from calliope.util.tools import listify
 
@@ -27,21 +26,25 @@ LOGGER = logging.getLogger(__name__)
 DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
 
 
-class Param(TypedDict):
-    """Uniform dictionairy for parameters."""
+class BlessedInput(TypedDict):
+    """Uniform dictionairy for 'blessed' input data."""
 
     data: DATA_T
+    """Numeric / boolean / string data or list of them."""
     index: list[list[str]]
+    """List of lists containing dimension index items,
+    where the length of the sub-lists == length of `dims`)."""
     dims: list[str]
+    """List of dimension names."""
 
 
+# TODO: remove in favor of using the model def schema.
 class ModelDefinition(TypedDict):
     """Uniform dictionarity for model definition."""
 
     techs: AttrDict
     nodes: AttrDict
-    templates: NotRequired[AttrDict]
-    parameters: NotRequired[AttrDict]
+    data_definitions: NotRequired[AttrDict]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -66,7 +69,7 @@ class ModelDataFactory:
 
     def __init__(
         self,
-        init_config: Init,
+        init_config: config_schema.Init,
         model_definition: AttrDict | xr.Dataset,
         math: math_schema.CalliopeInputMath,
         definition_path: str | Path | None = None,
@@ -77,32 +80,30 @@ class ModelDataFactory:
         This includes resampling/clustering timeseries data as necessary.
 
         Args:
-            init_config (Init): Model initialisation configuration (i.e., `config`).
-            model_definition (ModelDefinition): Definition of model nodes and technologies, and their potential `templates`.
+            init_config (config_schema.Init): Model initialisation configuration (i.e., `config`).
+            model_definition (ModelDefinition): Definition of model input data.
             math (math_schema.CalliopeInputMath): Math schema to apply to the model.
             definition_path (Path, None): Path to the main model definition file. Defaults to None.
             data_table_dfs: (dict[str, pd.DataFrame], None): Dataframes with model data. Defaults to None.
             attributes (dict): Attributes to attach to the model Dataset.
         """
-        self.config: Init = init_config
+        self.config: config_schema.Init = init_config
         math_priority = model_math.get_math_priority(self.config)
         self.math = model_math.build_math(
             math_priority,
             math.model_dump(),
             validate=init_config.pre_validate_math_strings,
         )
-        self.definition_path: str | Path | None = definition_path
         self.tech_data_from_tables = AttrDict()
-
-        tables = []
 
         if isinstance(model_definition, dict):
             self.model_definition: ModelDefinition = model_definition.copy()
             self.dataset = xr.Dataset()
+            tables = []
             for table, table_dict in model_definition.get("data_tables", {}).items():
                 tables.append(
                     data_tables.DataTable(
-                        table, table_dict, data_table_dfs, self.definition_path
+                        table, table_dict, data_table_dfs, definition_path
                     )
                 )
             self.init_from_data_tables(tables)
@@ -114,7 +115,7 @@ class ModelDataFactory:
     def build(self):
         """Build dataset from model definition."""
         self.add_node_tech_data()
-        self.add_top_level_params()
+        self.add_top_level_data_definitions()
 
     def clean(self):
         """Clean built dataset."""
@@ -124,7 +125,7 @@ class ModelDataFactory:
         self.clean_data_from_undefined_members()
         self.add_colors()
         self.add_link_distances()
-        self.update_time_dimension_and_params()
+        self.update_and_resample_dimensions()
         self.assign_input_attr()
         self.dataset = self.dataset.assign_coords(
             self._update_dtypes(self.dataset.coords)
@@ -168,7 +169,7 @@ class ModelDataFactory:
             )
 
     def add_node_tech_data(self):
-        """For each node, extract technology definitions and node-level parameters and convert them to arrays.
+        """For each node, extract technology definitions and other input data and convert them to arrays.
 
         The node definition will be updated with each defined tech (which will also be updated according to its inheritance tree).
 
@@ -187,6 +188,7 @@ class ModelDataFactory:
             techs_this_node_incl_inheritance = self._inherit_defs(
                 "techs", techs_this_node, nodes=node_name
             )
+            # FIXME: schema defaults should be used?
             dimension_data_schema.CalliopeNode.model_validate(
                 node_data | {"techs": None}
             )
@@ -227,43 +229,43 @@ class ModelDataFactory:
         ds = xr.merge([node_tech_ds, node_ds])
         self._add_to_dataset(ds, "YAML definition")
 
-    def add_top_level_params(self):
-        """Process any parameters defined in the indexed `parameters` key.
+    def add_top_level_data_definitions(self):
+        """Process any input data defined in the `data_definitions` key.
 
         Raises:
-            KeyError: Cannot provide the same name for an indexed parameter as those defined already at the tech/node level.
+            KeyError: Cannot provide the same name for an indexed input as those defined already at the tech/node level.
 
         """
-        for name, data in self.model_definition.get("parameters", {}).items():
+        for name, data in self.model_definition.get("data_definitions", {}).items():
             if name in self.dataset.data_vars:
                 exceptions.warn(
-                    f"(parameters, {name}) | "
-                    "A parameter with this name has already been defined in a data table or at a node/tech level. "
-                    f"Non-NaN data defined here will override existing data for this parameter."
+                    f"(Model inputs, {name}) | "
+                    "Model input data with this name has already been defined in a data table or at a node/tech level. "
+                    f"Non-NaN data defined here will override existing data for it."
                 )
-            param_dict = self._prepare_param_dict(name, data)
-            param_da = self._param_dict_to_array(name, param_dict)
-            self._log_param_updates(name, param_da)
-            param_ds = param_da.to_dataset()
+            input_dict = self._prepare_input_data_dict(name, data)
+            input_da = self._input_data_dict_to_array(name, input_dict)
+            self._log_input_data_updates(name, input_da)
+            input_ds = input_da.to_dataset()
 
-            if "techs" in param_da.dims and "nodes" in param_da.dims:
+            if "techs" in input_da.dims and "nodes" in input_da.dims:
                 valid_node_techs = (
-                    param_da.to_series().dropna().groupby(["nodes", "techs"]).first()
+                    input_da.to_series().dropna().groupby(["nodes", "techs"]).first()
                 )
                 exceptions.warn(
-                    f"(parameters, {name}) | This parameter will only take effect if you have already defined"
+                    f"(Model inputs, {name}) | This input data will only take effect if you have already defined"
                     f" the following combinations of techs at nodes in your model definition: {valid_node_techs.index.values}"
                 )
 
-            self._add_to_dataset(param_ds, f"(parameters, {name})")
+            self._add_to_dataset(input_ds, f"(Model inputs, {name})")
 
-    def update_time_dimension_and_params(self):
+    def update_and_resample_dimensions(self):
         """If resampling/clustering is requested in the initialisation config, apply it here."""
         if not any(
             dim.dtype.kind == DATETIME_DTYPE for dim in self.dataset.coords.values()
         ):
             raise exceptions.ModelError(
-                "Must define at least one timeseries parameter in a Calliope model."
+                "Must define at least one timeseries data input in a Calliope model."
             )
         self._subset_dims()
         self._resample_dims()
@@ -276,7 +278,12 @@ class ModelDataFactory:
             )
 
     def clean_data_from_undefined_members(self):
-        """Generate the `definition_matrix` array and use it to strip out any dimension items that are NaN in all arrays and any arrays that are NaN in all index positions."""
+        """Generate the `definition_matrix` array and remove undefined members.
+
+        Members stripped:
+        - Any dimension items that are NaN in all arrays.
+        - Any arrays that are NaN in all index positions.
+        """
         ds = self._update_dtypes(self.dataset)
         def_matrix = ds.carrier_in | ds.carrier_out
         # NaNing values where they are irrelevant requires definition_matrix to be boolean
@@ -307,14 +314,13 @@ class ModelDataFactory:
             var_name for var_name, var in ds.data_vars.items() if var.isnull().all()
         ]
         if vars_to_delete:
-            LOGGER.debug(f"Deleting empty parameters: {vars_to_delete}")
+            LOGGER.debug(f"Deleting empty input data: {vars_to_delete}")
         self.dataset = ds.drop_vars(vars_to_delete)
 
     def add_link_distances(self):
         """If latitude/longitude are provided but distances between nodes have not been computed, compute them now.
 
         The schema will have already handled the fact that if one of lat/lon is provided, the other must also be provided.
-
         """
         # If no distance was given, we calculate it from coordinates
         if (
@@ -379,7 +385,7 @@ class ModelDataFactory:
             self.dataset["color"] = self.dataset["color"].fillna(new_color_array)
 
     def assign_input_attr(self):
-        """Assign the the available parameter metadata as attributes to each input parameter array."""
+        """Assign metadata as attributes to each input array."""
         all_attrs = {
             **self.math.parameters.model_dump(),
             **self.math.lookups.model_dump(),
@@ -390,7 +396,7 @@ class ModelDataFactory:
             self.dataset[var_name].attrs.pop("active", None)
 
     def _get_relevant_node_refs(self, techs_dict: AttrDict, node: str) -> list[str]:
-        """Get all references to parameters made in technologies at nodes.
+        """Get all references to input data made in technologies at nodes.
 
         This defines those arrays in the dataset that *must* be indexed over `nodes` as well as `techs`.
 
@@ -402,7 +408,7 @@ class ModelDataFactory:
             node (str): Name of the node.
 
         Returns:
-            list[str]: List of parameters at this node that must be indexed over the node dimension.
+            list[str]: List of input data at this node that must be indexed over the node dimension.
         """
         refs = set()
 
@@ -415,118 +421,118 @@ class ModelDataFactory:
                 if "base_tech" in tech_dict.keys():
                     raise exceptions.ModelError(
                         f"(nodes, {node}), (techs, {tech_name}) | Defining a technology `base_tech` at a node is not supported; "
-                        "limit yourself to defining this parameter within `techs` or `templates`"
+                        "limit yourself to defining this lookup within `techs` or `templates`"
                     )
                 refs.update(tech_dict.keys())
 
         return list(refs)
 
-    def _param_dict_to_array(self, param_name: str, param_data: Param) -> xr.DataArray:
-        """Take a blessed parameter dictionary and convert it to an xarray DataArray.
+    def _input_data_dict_to_array(
+        self, name: str, input_data: BlessedInput
+    ) -> xr.DataArray:
+        """Take a blessed input data dictionary and convert it to an xarray DataArray.
 
         Args:
-            param_name (str): Name of the parameter being converted.
-            param_data (Param): Blessed dictionary. I.e., keys/values follow an expected structure.
+            name (str): Name of the parameter being converted.
+            input_data (BlessedInput): Blessed dictionary. I.e., keys/values follow an expected structure.
 
         Returns:
             xr.DataArray: Array representation of the parameter.
         """
-        if param_data["dims"]:
-            param_series = pd.Series(
-                data=param_data["data"],
-                index=[tuple(idx) for idx in param_data["index"]],
+        if input_data["dims"]:
+            input_data_series = pd.Series(
+                data=input_data["data"],
+                index=[tuple(idx) for idx in input_data["index"]],
             )
-            param_series.index = pd.MultiIndex.from_tuples(
-                param_series.index, names=param_data["dims"]
+            input_data_series.index = pd.MultiIndex.from_tuples(
+                input_data_series.index, names=input_data["dims"]
             )
-            param_da = param_series.to_xarray()
+            input_data_da = input_data_series.to_xarray()
         else:
-            param_da = xr.DataArray(param_data["data"])
-        param_da = param_da.rename(param_name)
-        return param_da
+            input_data_da = xr.DataArray(input_data["data"])
+        input_data_da = input_data_da.rename(name)
+        return input_data_da
 
     def _definition_dict_to_ds(
         self,
         def_dict: dict[str, dict[str, dict | list[str] | DATA_T]],
         dim_name: Literal["nodes", "techs"],
     ) -> xr.Dataset:
-        """Convert a dictionary of nodes/techs with their parameter definitions into an xarray dataset.
+        """Convert a dictionary of nodes/techs with their input data definitions into an xarray dataset.
 
-        Node/tech name will be injected into each parameter's `index` and `dims` lists so that the resulting arrays include those dimensions.
+        Node/tech name will be injected into each input's `index` and `dims` lists so that the resulting arrays include those dimensions.
 
         Args:
             def_dict (dict[str, dict[str, dict | list[str] | DATA_T]]):
                 `node`/`tech` definitions.
-                The first set of keys are dimension index items, the second set of keys are parameter names.
-                Parameters need not be blessed.
+                The first set of keys are dimension index items, the second set of keys are input data names.
             dim_name (Literal[nodes, techs]): Dimension name of the dictionary items.
 
         Returns:
             xr.Dataset: Dataset with arrays indexed over (at least) the input `dim_name`.
         """
-        param_ds = xr.Dataset()
-        for idx_name, idx_params in def_dict.items():
-            param_das: list[xr.DataArray] = []
-            for param_name, param_data in idx_params.items():
-                param_dict = self._prepare_param_dict(param_name, param_data)
-                param_dict["index"] = [[idx_name] + idx for idx in param_dict["index"]]
-                param_dict["dims"].insert(0, dim_name)
-                param_das.append(self._param_dict_to_array(param_name, param_dict))
-            param_ds = xr.merge([param_ds, xr.combine_by_coords(param_das)])
+        input_data_ds = xr.Dataset()
+        for idx_name, idx_inputs in def_dict.items():
+            input_data_das: list[xr.DataArray] = []
+            for name, input_data in idx_inputs.items():
+                blessed_dict = self._prepare_input_data_dict(name, input_data)
+                blessed_dict["index"] = [
+                    [idx_name] + idx for idx in blessed_dict["index"]
+                ]
+                blessed_dict["dims"].insert(0, dim_name)
+                input_data_das.append(
+                    self._input_data_dict_to_array(name, blessed_dict)
+                )
+            input_data_ds = xr.merge(
+                [input_data_ds, xr.combine_by_coords(input_data_das)]
+            )
 
-        return param_ds
+        return input_data_ds
 
-    def _prepare_param_dict(
-        self, param_name: str, param_data: dict | list[str] | DATA_T
-    ) -> Param:
-        """Convert a range of parameter definitions into the `Param` format.
-
-        Format is:
-        ```
-        data: numeric/boolean/string data or list of them.
-        index: list of lists containing dimension index items (number of items in the sub-lists == length of `dims`).
-        dims: list of dimension names.
-        ```
+    def _prepare_input_data_dict(
+        self, name: str, raw_input_data: dict | list[str] | DATA_T
+    ) -> BlessedInput:
+        """Convert a range of input data definitions into the `BlessedInput` format.
 
         Args:
-            param_name (str): Parameter name (used only in error messages).
-            param_data (dict | list[str] | DATA_T): Input unformatted parameter data.
+            name (str): input data name (used only in error messages).
+            raw_input_data (dict | list[str] | DATA_T): unformatted input data.
 
         Raises:
-            ValueError: If the parameter is unindexed (i.e., no `dims`/`index`) and is
+            ValueError: If the input data is unindexed (i.e., no `dims`/`index`) and is
                 not a lookup array (see LOOKUP_PARAMS), it cannot define a list of data.
 
         Returns:
-            Param: Blessed parameter dictionary.
+            BlessedInput: Blessed input data dictionary.
         """
-        if isinstance(param_data, dict):
-            data = param_data["data"]
-            index_items = [listify(idx) for idx in listify(param_data["index"])]
-            dims = listify(param_data["dims"])
-            broadcast_param_data = self.config.broadcast_param_data
-            if not broadcast_param_data and len(listify(data)) != len(index_items):
+        if isinstance(raw_input_data, dict):
+            data = raw_input_data["data"]
+            index_items = [listify(idx) for idx in listify(raw_input_data["index"])]
+            broadcast_input_data = self.config.broadcast_input_data
+            if not broadcast_input_data and len(listify(data)) != len(index_items):
                 raise exceptions.ModelError(
-                    f"{param_name} | Length mismatch between data ({data}) and index ({index_items}) for parameter definition. "
-                    "Check lengths of arrays or set `config.broadcast_param_data` to True "
+                    f"{name} | Length mismatch between data ({data}) and index ({index_items}) in input definition. "
+                    "Check lengths of arrays or set `config.broadcast_input_data` to True "
                     "to allow single data entries to be broadcast across all parameter index items."
                 )
+            dims = listify(raw_input_data["dims"])
         elif (
-            param_name in self.math.lookups.root
-            and self.math.lookups[param_name].pivot_values_to_dim is not None
-            and param_data is not None
+            name in self.math.lookups.root
+            and self.math.lookups[name].pivot_values_to_dim is not None
+            and raw_input_data is not None
         ):
             data = True
-            index_items = [[i] for i in listify(param_data)]
-            dims = [self.math.lookups[param_name].pivot_values_to_dim]
+            index_items = [[i] for i in listify(raw_input_data)]
+            dims = [self.math.lookups[name].pivot_values_to_dim]
         else:
-            if isinstance(param_data, list):
+            if isinstance(raw_input_data, list):
                 raise ValueError(
-                    f"{param_name} | Cannot pass un-indexed parameter data. Received: {param_data}."
+                    f"{name} | Cannot pass un-indexed input data. Received: {raw_input_data}."
                 )
-            data = param_data
+            data = raw_input_data
             index_items = [[]]
             dims = []
-        data_dict: Param = {"data": data, "index": index_items, "dims": dims}
+        data_dict: BlessedInput = {"data": data, "index": index_items, "dims": dims}
         return data_dict
 
     def _inherit_defs(
@@ -683,21 +689,21 @@ class ModelDataFactory:
             compat="override",
         ).fillna(self.dataset)
 
-    def _log_param_updates(self, param_name: str, param_da: xr.DataArray):
-        """Logger for model parameter updates.
+    def _log_input_data_updates(self, name: str, input_data_da: xr.DataArray):
+        """Logger for model input data updates.
 
         Checks array coordinates to see if:
             1. any are new compared to the base model dimensions.
             2. any are adding new elements to an existing base model dimension.
 
         Args:
-            param_name (str): name of parameter being added to the model.
-            param_da (xr.DataArray): array of parameter data.
+            name (str): name of input being added to the model.
+            input_data_da (xr.DataArray): array of input data.
         """
-        for coord_name, coord_data in param_da.coords.items():
+        for coord_name, coord_data in input_data_da.coords.items():
             if coord_name not in self.dataset.coords:
                 LOGGER.debug(
-                    f"(parameters, {param_name}) | Adding a new dimension to the model: {coord_name}"
+                    f"(Model inputs, {name}) | Adding a new dimension to the model: {coord_name}"
                 )
             else:
                 new_coord_data = coord_data[
@@ -705,7 +711,7 @@ class ModelDataFactory:
                 ]
                 if new_coord_data.size > 0:
                     LOGGER.debug(
-                        f"(parameters, {param_name}) | Adding a new value to the "
+                        f"(Model inputs, {name}) | Adding a new value to the "
                         f"`{coord_name}` model coordinate: {new_coord_data.values}"
                     )
 
@@ -850,5 +856,5 @@ class ModelDataFactory:
         if transmission_techs:
             raise exceptions.ModelError(
                 f"(nodes, {node_name}) | Transmission techs cannot be directly defined at nodes; "
-                f"they will be automatically assigned to nodes based on `link_to` and `link_from` parameters: {transmission_techs}"
+                f"they will be automatically assigned to nodes based on `link_to` and `link_from` for: {transmission_techs}."
             )

@@ -41,14 +41,14 @@ overrides:
 
   spores:
     config.init:
-      broadcast_param_data: false
+      broadcast_input_data: false
       mode: spores
     config.build:
       ensure_feasibility: true
     config.solve.spores:
       tracking_parameter: spores_tracker
       number: 3
-    parameters:
+    data_definitions:
       spores_slack: 0.5
       spores_tracker: # defines which techs are going to be subject to the SPORES weighting process
         data: [true, true, true]
@@ -95,7 +95,7 @@ overrides:
       init.subset.timesteps: ["2005-01-04", "2005-01-04"]
 
   reserve_margin:
-    parameters:
+    data_definitions:
       # Model-wide settings for the system-wide reserve margin
       # Even setting a reserve margin of zero activates the constraint,
       # forcing enough installed capacity to cover demand in
@@ -162,7 +162,7 @@ overrides:
   #                         flow_cap_max: 100000  # Increased to keep model feasible
 
   minimize_emissions_costs:
-    parameters:
+    data_definitions:
       objective_cost_weights.data: { "emissions": 1, "monetary": 0 }
     techs:
       ccgt:
@@ -179,7 +179,7 @@ overrides:
           dims: costs
 
   maximize_utility_costs:
-    parameters:
+    data_definitions:
       objective_cost_weights.data: { "utility": -1, "monetary": 0 }
     techs:
       ccgt:

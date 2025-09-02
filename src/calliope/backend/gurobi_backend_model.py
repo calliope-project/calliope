@@ -25,14 +25,6 @@ if importlib.util.find_spec("gurobipy") is not None:
 
 LOGGER = logging.getLogger(__name__)
 
-COMPONENT_TRANSLATOR = {
-    "parameter": "parameter",
-    "variable": "variable",
-    "global_expression": "expression",
-    "constraint": "constraint",
-    "objective": "objective",
-}
-
 
 class GurobiBackendModel(backend_model.BackendModel):
     """gurobipy-specific backend functionality."""

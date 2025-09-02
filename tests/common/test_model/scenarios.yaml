@@ -402,14 +402,14 @@ overrides:
       init.mode: spores
       solve.spores:
         number: 2
-    parameters:
+    data_definitions:
       spores_slack: 0.3
 
   spores_tech_tracking:
     config.solve:
       spores:
         tracking_parameter: spores_tracker
-    parameters:
+    data_definitions:
       spores_tracker: # defines which techs are going to be subject to the SPORES weighting process
         data: [true]
         index: [test_supply_elec]

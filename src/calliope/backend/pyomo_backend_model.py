@@ -61,7 +61,6 @@ class PyomoBackendModel(backend_model.BackendModel):
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
             build_config (config_schema.Build): Build configuration options.
-            defaults (dict): Parameter defaults.
         """
         super().__init__(inputs, math, build_config, pmo.block())
 

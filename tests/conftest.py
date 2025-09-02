@@ -279,7 +279,7 @@ def dummy_model_data():
     for k in ["lookup_multi_dim_nodes", "lookup_multi_dim_techs", "lookup_techs"]:
         model_data[k] = model_data[k].where(model_data[k] != "nan")
 
-    # This value is set on the parameter directly to ensure it finds its way through to the LaTex math.
+    # This value is set directly to ensure it finds its way through to the LaTex math.
     model_data.no_dims.attrs["default"] = 0
 
     return model_data

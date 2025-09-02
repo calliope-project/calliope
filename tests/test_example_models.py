@@ -137,7 +137,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
         assert check_error_or_warning(
             excinfo,
-            "Must define at least one timeseries parameter in a Calliope model.",
+            "Must define at least one timeseries data input in a Calliope model.",
         )
 
 

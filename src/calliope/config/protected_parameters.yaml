@@ -4,7 +4,7 @@ active: >-
   YAML model definition.
 definition_matrix: >-
   `definition_matrix` is a protected array.
-  It will be generated internally based on the values you assign to the `carrier_in` and `carrier_out` parameters.
+  It will be generated internally based on the values you assign to the `carrier_in` and `carrier_out` lookups.
 template: >-
   Template calls (`template`) can only be used in the YAML model definition.
 templates: >-

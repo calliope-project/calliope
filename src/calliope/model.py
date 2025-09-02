@@ -633,7 +633,7 @@ class Model(ModelStructure):
             "spores_baseline_cost_tracked", self.inputs.get("spores_baseline_cost")
         )
         if not constraining_cost or constraining_cost == base_cost_default:
-            # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
+            # Update the slack-cost backend value based on the calculated minimum feasible system design cost
             constraining_cost = baseline_results[self.config.build.objective]
         self.backend.update_input("spores_baseline_cost", constraining_cost)
 
