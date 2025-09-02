@@ -731,7 +731,7 @@ class Where(ParsingHelperFunction):
 
             input:
             ```yaml
-            parameters:
+            data_definitions:
               node_grouping:
                 data: True
                 index: [[group_1, region1], [group_1, region1_1], [group_2, region1_2], [group_2, region1_3], [group_3, region2]]
@@ -799,7 +799,7 @@ class GroupSum(ParsingHelperFunction):
 
             1. Define an array linking node-tech combinations with a group:
             ```yaml
-            parameters:
+            data_definitions:
               # You may prefer to define this in a CSV file or when referring to the techs within the `nodes` model definition.
               power_plant_groups:
                 data: [low_emission_plant, low_emission_plant, high_emission_plant, high_emission_plant]
@@ -813,7 +813,7 @@ class GroupSum(ParsingHelperFunction):
             ```
             2. Define a set of outflow limits:
             ```yaml
-            parameters:
+            data_definitions:
               emission_limits:
                 data: [20, 10]
                 index: [low_emission_plant, high_emission_plant]

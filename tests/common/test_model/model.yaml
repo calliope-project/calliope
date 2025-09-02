@@ -20,7 +20,7 @@ config:
   solve:
     solver: cbc
 
-parameters:
+data_definitions:
   bigM: 1e3
 
 data_tables:

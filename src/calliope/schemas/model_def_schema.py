@@ -16,7 +16,11 @@ class CalliopeModelDef(CalliopeBaseModel):
 
     model_config = {"title": "Calliope Model Definition"}
 
-    parameters: CalliopeDataDef = CalliopeDataDef()
+    data_definitions: CalliopeDataDef = CalliopeDataDef()
+    """All YAML-based model input data definitions."""
     data_tables: CalliopeDataTables = CalliopeDataTables()
+    """All tabular-based model input data definitions."""
     nodes: CalliopeNodes = CalliopeNodes()
+    """Node-specific model input data definitions."""
     techs: CalliopeTechs = CalliopeTechs()
+    """Tech-specific model input data definitions."""

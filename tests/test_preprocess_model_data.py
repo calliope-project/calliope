@@ -121,7 +121,7 @@ class TestModelData:
         self, model_data_factory_w_params: ModelDataFactory, timeseries_da
     ):
         model_data_factory_w_params.dataset["timeseries_da"] = timeseries_da
-        model_data_factory_w_params.update_time_dimension_and_params()
+        model_data_factory_w_params.update_and_resample_dimensions()
         assert "timestep_resolution" in model_data_factory_w_params.dataset.data_vars
         assert "timestep_weights" in model_data_factory_w_params.dataset.data_vars
 
@@ -174,7 +174,7 @@ class TestModelData:
             in my_caplog.text
         )
         assert (
-            "Deleting empty parameters: ['will_delete', 'will_delete_2']"
+            "Deleting empty input data: ['will_delete', 'will_delete_2']"
             in my_caplog.text
         )
 
@@ -366,7 +366,7 @@ class TestModelData:
     def test_param_dict_to_array(
         self, model_data_factory: ModelDataFactory, param_data, expected_da
     ):
-        da = model_data_factory._param_dict_to_array("foo", param_data)
+        da = model_data_factory._input_data_dict_to_array("foo", param_data)
         assert da.equals(expected_da)
 
     def test_definition_dict_to_ds(self, model_data_factory: ModelDataFactory):
@@ -402,7 +402,7 @@ class TestModelData:
         self, model_data_factory: ModelDataFactory, input_idx, expected_idx
     ):
         dict_skeleton = {"data": 1, "dims": ["foo"]}
-        output = model_data_factory._prepare_param_dict(
+        output = model_data_factory._prepare_input_data_dict(
             "foo", {"index": input_idx, **dict_skeleton}
         )
         assert output == {"index": expected_idx, **dict_skeleton}
@@ -415,13 +415,13 @@ class TestModelData:
         self, model_data_factory: ModelDataFactory, input_dim, expected_dim
     ):
         dict_skeleton = {"data": 1, "index": [["foo"]]}
-        output = model_data_factory._prepare_param_dict(
+        output = model_data_factory._prepare_input_data_dict(
             "foo", {"dims": input_dim, **dict_skeleton}
         )
         assert output == {"dims": expected_dim, **dict_skeleton}
 
     def test_prepare_param_dict_unindexed(self, model_data_factory: ModelDataFactory):
-        output = model_data_factory._prepare_param_dict("foo", 1)
+        output = model_data_factory._prepare_input_data_dict("foo", 1)
         assert output == {"data": 1, "index": [[]], "dims": []}
 
     def test_prepare_param_dict_lookup(
@@ -435,14 +435,16 @@ class TestModelData:
             }
         )
         model_data_factory.dataset["orig"] = simple_da
-        output = model_data_factory._prepare_param_dict("lookup_arr", ["foo", "bar"])
+        output = model_data_factory._prepare_input_data_dict(
+            "lookup_arr", ["foo", "bar"]
+        )
         assert output == {"data": True, "index": [["foo"], ["bar"]], "dims": ["foobar"]}
 
     def test_prepare_param_dict_not_lookup(self, model_data_factory: ModelDataFactory):
         with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
-            model_data_factory._prepare_param_dict("foo", ["foo", "bar"])
+            model_data_factory._prepare_input_data_dict("foo", ["foo", "bar"])
         assert check_error_or_warning(
-            excinfo, "foo | Cannot pass un-indexed parameter data"
+            excinfo, "foo | Cannot pass un-indexed input data"
         )
 
     @pytest.mark.parametrize("param_data", [1, [1], [1, 2, 3]])
@@ -453,10 +455,10 @@ class TestModelData:
         model_data_factory.config = new_config
         param_dict = {"data": param_data, "index": [["foo"], ["bar"]], "dims": "foobar"}
         with pytest.raises(exceptions.ModelError) as excinfo:  # noqa: PT011, false positive
-            model_data_factory._prepare_param_dict("foo", param_dict)
+            model_data_factory._prepare_input_data_dict("foo", param_dict)
         assert check_error_or_warning(
             excinfo,
-            f"foo | Length mismatch between data ({param_data}) and index ([['foo'], ['bar']]) for parameter definition",
+            f"foo | Length mismatch between data ({param_data}) and index ([['foo'], ['bar']]) in input definition",
         )
 
     def test_inherit_defs_inactive(
@@ -731,10 +733,10 @@ class TestModelData:
         model_data_factory.math = model_data_factory.math.update(
             {"dimensions": {dim: {"dtype": "float", "iterator": "i"}} for dim in coords}
         )
-        model_data_factory._log_param_updates("foo", new_param)
+        model_data_factory._log_input_data_updates("foo", new_param)
         for coord in new_coords:
             assert (
-                f"(parameters, foo) | Adding a new dimension to the model: {coord}"
+                f"(data_definitions, foo) | Adding a new dimension to the model: {coord}"
                 in my_caplog.text
             )
 
@@ -759,12 +761,12 @@ class TestModelData:
             .rename_axis(index=simple_da.dims)
             .to_xarray()
         )
-        model_data_factory._log_param_updates("foo", new_param)
+        model_data_factory._log_input_data_updates("foo", new_param)
         for item in new_items:
             coord_name, val = item
             val = f"'{val}'" if isinstance(val, str) else val
             assert (
-                f"(parameters, foo) | Adding a new value to the `{coord_name}` model coordinate: [{val}]"
+                f"(data_definitions, foo) | Adding a new value to the `{coord_name}` model coordinate: [{val}]"
                 in my_caplog.text
             )
 
@@ -773,9 +775,9 @@ class TestModelData:
     ):
         model_data_factory.dataset["orig"] = simple_da
         new_param = simple_da.copy()
-        model_data_factory._log_param_updates("foo", new_param)
+        model_data_factory._log_input_data_updates("foo", new_param)
 
-        assert "(parameters, foo) | Adding" not in my_caplog.text
+        assert "(data_definitions, foo) | Adding" not in my_caplog.text
 
     def test_raise_error_on_transmission_tech_in_node(
         self, model_data_factory: ModelDataFactory
@@ -793,7 +795,7 @@ class TestModelData:
             )
         assert check_error_or_warning(
             excinfo,
-            "(nodes, foo) | Transmission techs cannot be directly defined at nodes; they will be automatically assigned to nodes based on `link_to` and `link_from` parameters: ['tech2', 'tech3']",
+            "(nodes, foo) | Transmission techs cannot be directly defined at nodes; they will be automatically assigned to nodes based on `link_to` and `link_from` for: ['tech2', 'tech3']",
         )
 
 
@@ -801,10 +803,10 @@ class TestTopLevelParams:
     @pytest.fixture
     def run_and_test(self, model_data_factory_w_params):
         def _run_and_test(in_dict, out_dict, dims):
-            model_data_factory_w_params.model_definition["parameters"] = {
+            model_data_factory_w_params.model_definition["data_definitions"] = {
                 "my_val": in_dict
             }
-            model_data_factory_w_params.add_top_level_params()
+            model_data_factory_w_params.add_top_level_data_definitions()
 
             _data = pd.Series(out_dict).rename_axis(index=dims)
             pd.testing.assert_series_equal(
@@ -821,20 +823,20 @@ class TestTopLevelParams:
 
     def test_parameter_already_exists(self):
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model({"parameters.flow_out_eff": 1}, "simple_supply,two_hours")
+            build_model({"data_definitions.flow_out_eff": 1}, "simple_supply,two_hours")
         assert check_error_or_warning(
             excinfo,
-            "A parameter with this name has already been defined in a data table or at a node/tech level.",
+            "Model input data with this name has already been defined in a data table or at a node/tech level.",
         )
 
     @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])
     def test_top_level_param_single_val(self, val):
-        model = build_model({"parameters.my_val": val}, "simple_supply,two_hours")
+        model = build_model({"data_definitions.my_val": val}, "simple_supply,two_hours")
         assert model.inputs.my_val == xr.DataArray(val)
 
     @pytest.mark.parametrize("val", [None, np.nan])
     def test_top_level_param_single_val_cleaned_out_in_preprocessing(self, val):
-        model = build_model({"parameters.my_val": val}, "simple_supply,two_hours")
+        model = build_model({"data_definitions.my_val": val}, "simple_supply,two_hours")
         assert "my_val" not in model.inputs
 
     @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])
@@ -886,13 +888,13 @@ class TestTopLevelParams:
             )
         assert check_error_or_warning(
             warninfo,
-            "This parameter will only take effect if you have already defined the following combinations of techs at nodes in your model definition: [('a', 'test_supply_elec') ('b', 'test_demand_elec')]",
+            "This input data will only take effect if you have already defined the following combinations of techs at nodes in your model definition: [('a', 'test_supply_elec') ('b', 'test_demand_elec')]",
         )
 
     def test_top_level_param_unknown_dim_only(self, my_caplog, run_and_test):
         run_and_test({"data": 10, "index": ["foo"], "dims": "bar"}, {"foo": 10}, "bar")
         assert (
-            "(parameters, my_val) | Adding a new dimension to the model: bar"
+            "(data_definitions, my_val) | Adding a new dimension to the model: bar"
             in my_caplog.text
         )
 
@@ -903,11 +905,11 @@ class TestTopLevelParams:
             ["bar", "baz"],
         )
         assert (
-            "(parameters, my_val) | Adding a new dimension to the model: bar"
+            "(data_definitions, my_val) | Adding a new dimension to the model: bar"
             in my_caplog.text
         )
         assert (
-            "(parameters, my_val) | Adding a new dimension to the model: baz"
+            "(data_definitions, my_val) | Adding a new dimension to the model: baz"
             in my_caplog.text
         )
 
@@ -922,7 +924,7 @@ class TestTopLevelParams:
             ["techs", "baz"],
         )
         assert (
-            "(parameters, my_val) | Adding a new dimension to the model: baz"
+            "(data_definitions, my_val) | Adding a new dimension to the model: baz"
             in my_caplog.text
         )
 
@@ -933,7 +935,7 @@ class TestTopLevelParams:
             "timesteps",
         )
         assert (
-            "(parameters, my_val) | dimensions | Updating values of `timesteps` to datetime type"
+            "(data_definitions, my_val) | dimensions | Updating values of `timesteps` to datetime type"
             in my_caplog.text
         )
 
@@ -948,7 +950,7 @@ class TestTopLevelParams:
             {"data": 10, "index": ["d"], "dims": ["nodes"]}, {"d": 10}, "nodes"
         )
         assert (
-            "(parameters, my_val) | Adding a new value to the `nodes` model coordinate: ['d']"
+            "(data_definitions, my_val) | Adding a new value to the `nodes` model coordinate: ['d']"
             in my_caplog.text
         )
 
