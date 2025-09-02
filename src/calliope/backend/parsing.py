@@ -569,9 +569,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         return parsed
 
-    def parse_where_string(
-        self, where_string: str = "True"
-    ) -> pp.ParseResults:  # TODO-Ivan: no default (set by schema)?
+    def parse_where_string(self, where_string: str = "True") -> pp.ParseResults:
         """Parse a "where" string of the form "CONDITION OPERATOR CONDITION".
 
         The operator can be "and"/"or"/"not and"/"not or".

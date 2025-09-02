@@ -736,7 +736,7 @@ class TestModelData:
         model_data_factory._log_input_data_updates("foo", new_param)
         for coord in new_coords:
             assert (
-                f"(data_definitions, foo) | Adding a new dimension to the model: {coord}"
+                f"(Model inputs, foo) | Adding a new dimension to the model: {coord}"
                 in my_caplog.text
             )
 
@@ -766,7 +766,7 @@ class TestModelData:
             coord_name, val = item
             val = f"'{val}'" if isinstance(val, str) else val
             assert (
-                f"(data_definitions, foo) | Adding a new value to the `{coord_name}` model coordinate: [{val}]"
+                f"(Model inputs, foo) | Adding a new value to the `{coord_name}` model coordinate: [{val}]"
                 in my_caplog.text
             )
 
@@ -777,7 +777,7 @@ class TestModelData:
         new_param = simple_da.copy()
         model_data_factory._log_input_data_updates("foo", new_param)
 
-        assert "(data_definitions, foo) | Adding" not in my_caplog.text
+        assert "(Model inputs, foo) | Adding" not in my_caplog.text
 
     def test_raise_error_on_transmission_tech_in_node(
         self, model_data_factory: ModelDataFactory
@@ -894,7 +894,7 @@ class TestTopLevelParams:
     def test_top_level_param_unknown_dim_only(self, my_caplog, run_and_test):
         run_and_test({"data": 10, "index": ["foo"], "dims": "bar"}, {"foo": 10}, "bar")
         assert (
-            "(data_definitions, my_val) | Adding a new dimension to the model: bar"
+            "(Model inputs, my_val) | Adding a new dimension to the model: bar"
             in my_caplog.text
         )
 
@@ -905,11 +905,11 @@ class TestTopLevelParams:
             ["bar", "baz"],
         )
         assert (
-            "(data_definitions, my_val) | Adding a new dimension to the model: bar"
+            "(Model inputs, my_val) | Adding a new dimension to the model: bar"
             in my_caplog.text
         )
         assert (
-            "(data_definitions, my_val) | Adding a new dimension to the model: baz"
+            "(Model inputs, my_val) | Adding a new dimension to the model: baz"
             in my_caplog.text
         )
 
@@ -924,7 +924,7 @@ class TestTopLevelParams:
             ["techs", "baz"],
         )
         assert (
-            "(data_definitions, my_val) | Adding a new dimension to the model: baz"
+            "(Model inputs, my_val) | Adding a new dimension to the model: baz"
             in my_caplog.text
         )
 
@@ -935,7 +935,7 @@ class TestTopLevelParams:
             "timesteps",
         )
         assert (
-            "(data_definitions, my_val) | dimensions | Updating values of `timesteps` to datetime type"
+            "(Model inputs, my_val) | dimensions | Updating values of `timesteps` to datetime type"
             in my_caplog.text
         )
 
@@ -950,7 +950,7 @@ class TestTopLevelParams:
             {"data": 10, "index": ["d"], "dims": ["nodes"]}, {"d": 10}, "nodes"
         )
         assert (
-            "(data_definitions, my_val) | Adding a new value to the `nodes` model coordinate: ['d']"
+            "(Model inputs, my_val) | Adding a new value to the `nodes` model coordinate: ['d']"
             in my_caplog.text
         )
 

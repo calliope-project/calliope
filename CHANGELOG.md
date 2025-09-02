@@ -2,7 +2,9 @@
 
 ### User-facing changes
 
-|changed| `config.init.broadcast_param_data` -> `config.init.broadcast_input_data` to fit with the new params / lookups approach.
+|changed| in model.yaml, `parameters` has been renamed to `data_definitions` to fit with the new params / lookups approach.
+
+|changed| `config.init.broadcast_param_data` has been renamed to `config.init.broadcast_input_data` to fit with the new params / lookups approach.
 
 |new| `config.solve.postprocess_active` can be used to skip postprocessing to save computation time, or avoid crashes if `base` math is made incompatible with them.
 

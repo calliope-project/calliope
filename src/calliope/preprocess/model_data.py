@@ -26,8 +26,7 @@ LOGGER = logging.getLogger(__name__)
 DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
 
 
-# TODO-Ivan: find a less confusing name (InputComponent)?
-class InputData(TypedDict):
+class BlessedInput(TypedDict):
     """Uniform dictionairy for 'blessed' input data."""
 
     data: DATA_T
@@ -240,7 +239,7 @@ class ModelDataFactory:
         for name, data in self.model_definition.get("data_definitions", {}).items():
             if name in self.dataset.data_vars:
                 exceptions.warn(
-                    f"(data_definitions, {name}) | "
+                    f"(Model inputs, {name}) | "
                     "Model input data with this name has already been defined in a data table or at a node/tech level. "
                     f"Non-NaN data defined here will override existing data for it."
                 )
@@ -254,11 +253,11 @@ class ModelDataFactory:
                     input_da.to_series().dropna().groupby(["nodes", "techs"]).first()
                 )
                 exceptions.warn(
-                    f"(data_definitions, {name}) | This input data will only take effect if you have already defined"
+                    f"(Model inputs, {name}) | This input data will only take effect if you have already defined"
                     f" the following combinations of techs at nodes in your model definition: {valid_node_techs.index.values}"
                 )
 
-            self._add_to_dataset(input_ds, f"(data_definitions, {name})")
+            self._add_to_dataset(input_ds, f"(Model inputs, {name})")
 
     def update_and_resample_dimensions(self):
         """If resampling/clustering is requested in the initialisation config, apply it here."""
@@ -429,13 +428,13 @@ class ModelDataFactory:
         return list(refs)
 
     def _input_data_dict_to_array(
-        self, name: str, input_data: InputData
+        self, name: str, input_data: BlessedInput
     ) -> xr.DataArray:
         """Take a blessed input data dictionary and convert it to an xarray DataArray.
 
         Args:
             name (str): Name of the parameter being converted.
-            input_data (InputData): Blessed dictionary. I.e., keys/values follow an expected structure.
+            input_data (BlessedInput): Blessed dictionary. I.e., keys/values follow an expected structure.
 
         Returns:
             xr.DataArray: Array representation of the parameter.
@@ -492,8 +491,8 @@ class ModelDataFactory:
 
     def _prepare_input_data_dict(
         self, name: str, raw_input_data: dict | list[str] | DATA_T
-    ) -> InputData:
-        """Convert a range of input data definitions into the `InputData` format.
+    ) -> BlessedInput:
+        """Convert a range of input data definitions into the `BlessedInput` format.
 
         Args:
             name (str): input data name (used only in error messages).
@@ -504,7 +503,7 @@ class ModelDataFactory:
                 not a lookup array (see LOOKUP_PARAMS), it cannot define a list of data.
 
         Returns:
-            InputData: Blessed input data dictionary.
+            BlessedInput: Blessed input data dictionary.
         """
         if isinstance(raw_input_data, dict):
             data = raw_input_data["data"]
@@ -533,7 +532,7 @@ class ModelDataFactory:
             data = raw_input_data
             index_items = [[]]
             dims = []
-        data_dict: InputData = {"data": data, "index": index_items, "dims": dims}
+        data_dict: BlessedInput = {"data": data, "index": index_items, "dims": dims}
         return data_dict
 
     def _inherit_defs(
@@ -704,7 +703,7 @@ class ModelDataFactory:
         for coord_name, coord_data in input_data_da.coords.items():
             if coord_name not in self.dataset.coords:
                 LOGGER.debug(
-                    f"(data_definitions, {name}) | Adding a new dimension to the model: {coord_name}"
+                    f"(Model inputs, {name}) | Adding a new dimension to the model: {coord_name}"
                 )
             else:
                 new_coord_data = coord_data[
@@ -712,7 +711,7 @@ class ModelDataFactory:
                 ]
                 if new_coord_data.size > 0:
                     LOGGER.debug(
-                        f"(data_definitions, {name}) | Adding a new value to the "
+                        f"(Model inputs, {name}) | Adding a new value to the "
                         f"`{coord_name}` model coordinate: {new_coord_data.values}"
                     )
 

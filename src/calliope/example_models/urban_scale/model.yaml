@@ -26,7 +26,6 @@ config:
     solver: cbc
 # --8<-- [end:config]
 
-# TODO-Ivan: check if this can be changed
 # --8<-- [start:parameters]
 data_definitions:
   objective_cost_weights:
