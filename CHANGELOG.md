@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| `config.init.broadcast_param_data` -> `config.init.broadcast_input_data` to fit with the new params / lookups approach.
+
 |new| `config.solve.postprocess_active` can be used to skip postprocessing to save computation time, or avoid crashes if `base` math is made incompatible with them.
 
 |fixed| All math components units and default values (#662).

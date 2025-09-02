@@ -56,7 +56,7 @@ Which will add the new dimension `my_new_dim` to your model: `model.inputs.my_ne
 
 ## Broadcasting data along indexed dimensions
 
-If you want to set the same data for all index items, you can set the `init` [configuration option](config.md) `broadcast_param_data` to True and then use a single value in `data`:
+If you want to set the same data for all index items, you can set the `init` [configuration option](config.md) `broadcast_input_data` to `True` and then use a single value in `data`:
 
 === "Without broadcasting"
 

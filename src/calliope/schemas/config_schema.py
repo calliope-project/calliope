@@ -55,9 +55,9 @@ class Init(CalliopeBaseModel):
     calliope_version: str | None = None
     """Calliope framework version this model is intended for."""
 
-    broadcast_param_data: bool = Field(default=False)
+    broadcast_input_data: bool = Field(default=False)
     """
-    If True, single data entries in YAML indexed parameters will be broadcast across all index items.
+    If True, single data entries in YAML indexed data will be broadcast across all index items.
     Otherwise, the number of data entries needs to match the number of index items.
     Defaults to False to mitigate unexpected broadcasting when applying overrides.
     """

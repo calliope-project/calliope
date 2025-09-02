@@ -41,7 +41,7 @@ overrides:
 
   spores:
     config.init:
-      broadcast_param_data: false
+      broadcast_input_data: false
       mode: spores
     config.build:
       ensure_feasibility: true

@@ -15,7 +15,7 @@ config:
   init:
     name: Test model
     subset.timesteps: ["2005-01-01", "2005-01-02"]
-    broadcast_param_data: true
+    broadcast_input_data: true
     mode: base
   solve:
     solver: cbc

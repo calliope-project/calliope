@@ -502,14 +502,14 @@ class ModelDataFactory:
         if isinstance(param_data, dict):
             data = param_data["data"]
             index_items = [listify(idx) for idx in listify(param_data["index"])]
-            dims = listify(param_data["dims"])
-            broadcast_param_data = self.config.broadcast_param_data
-            if not broadcast_param_data and len(listify(data)) != len(index_items):
+            broadcast_input_data = self.config.broadcast_input_data
+            if not broadcast_input_data and len(listify(data)) != len(index_items):
                 raise exceptions.ModelError(
                     f"{param_name} | Length mismatch between data ({data}) and index ({index_items}) for parameter definition. "
-                    "Check lengths of arrays or set `config.broadcast_param_data` to True "
+                    "Check lengths of arrays or set `config.broadcast_input_data` to True "
                     "to allow single data entries to be broadcast across all parameter index items."
                 )
+            dims = listify(param_data["dims"])
         elif (
             param_name in self.math.lookups.root
             and self.math.lookups[param_name].pivot_values_to_dim is not None

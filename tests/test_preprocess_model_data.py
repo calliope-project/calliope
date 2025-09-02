@@ -449,7 +449,7 @@ class TestModelData:
     def test_prepare_param_dict_no_broadcast_allowed(
         self, model_data_factory, param_data
     ):
-        new_config = model_data_factory.config.update({"broadcast_param_data": False})
+        new_config = model_data_factory.config.update({"broadcast_input_data": False})
         model_data_factory.config = new_config
         param_dict = {"data": param_data, "index": [["foo"], ["bar"]], "dims": "foobar"}
         with pytest.raises(exceptions.ModelError) as excinfo:  # noqa: PT011, false positive
