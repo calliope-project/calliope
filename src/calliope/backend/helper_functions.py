@@ -223,36 +223,40 @@ class WhereAny(ParsingHelperFunction):
         # Using bigvee for "collective-or"
         return rf"\bigvee\limits_{{{overstring}}} ({array})"
 
-    def as_array(self, parameter: str, *, over: str | list[str]) -> xr.DataArray:
-        """Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
+    def as_array(self, input_component: str, *, over: str | list[str]) -> xr.DataArray:
+        """Reduce the boolean where array of a model input by applying `any` over some dimension(s).
+
+        If the component exists in the model, returns a boolean array with dimensions reduced
+        by applying a boolean OR operation along the dimensions given in `over`.
+        If the component does not exist, returns a dimensionless False array.
 
         Args:
-            parameter (str): Reference to a model input parameter
+            input_component (str): Reference to a model input.
             over (str | list[str]): dimension(s) over which to apply `any`.
 
         Returns:
-            xr.DataArray:
-                If the parameter exists in the model, returns a boolean array with dimensions reduced by applying a boolean OR operation along the dimensions given in `over`.
-                If the parameter does not exist, returns a dimensionless False array.
+            xr.DataArray: resulting array.
         """
-        if parameter in self._input_data.data_vars:
-            parameter_da = self._input_data[parameter]
-            bool_parameter_da = (
-                parameter_da.notnull()
-                & (parameter_da != np.inf)
-                & (parameter_da != -np.inf)
+        if input_component in self._input_data.data_vars:
+            component_da = self._input_data[input_component]
+            bool_component_da = (
+                component_da.notnull()
+                & (component_da != np.inf)
+                & (component_da != -np.inf)
             )
         elif (
             self._backend_interface is not None
-            and parameter in self._backend_interface._dataset
+            and input_component in self._backend_interface._dataset
         ):
-            bool_parameter_da = self._backend_interface._dataset[parameter].notnull()
+            bool_component_da = self._backend_interface._dataset[
+                input_component
+            ].notnull()
         else:
-            bool_parameter_da = xr.DataArray(False)
+            bool_component_da = xr.DataArray(False)
         over = self._listify(over)
-        available_dims = set(bool_parameter_da.dims).intersection(over)
+        available_dims = set(bool_component_da.dims).intersection(over)
 
-        return bool_parameter_da.any(dim=available_dims, keep_attrs=True)
+        return bool_component_da.any(dim=available_dims, keep_attrs=True)
 
 
 class Defined(ParsingHelperFunction):
