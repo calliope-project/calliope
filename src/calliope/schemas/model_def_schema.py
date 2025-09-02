@@ -4,8 +4,8 @@
 
 from calliope.schemas.data_table_schema import CalliopeDataTables
 from calliope.schemas.dimension_data_schema import (
+    CalliopeDataDef,
     CalliopeNodes,
-    CalliopeParams,
     CalliopeTechs,
 )
 from calliope.schemas.general import CalliopeBaseModel
@@ -16,7 +16,7 @@ class CalliopeModelDef(CalliopeBaseModel):
 
     model_config = {"title": "Calliope Model Definition"}
 
-    parameters: CalliopeParams = CalliopeParams()
+    parameters: CalliopeDataDef = CalliopeDataDef()
     data_tables: CalliopeDataTables = CalliopeDataTables()
     nodes: CalliopeNodes = CalliopeNodes()
     techs: CalliopeTechs = CalliopeTechs()
