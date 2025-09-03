@@ -77,13 +77,7 @@ def read_yaml(
     """
     raw_data = io.read_rich_yaml(file)
     return read_dict(
-        raw_data,
-        scenario,
-        override_dict,
-        math_dict,
-        data_table_dfs,
-        Path(file),
-        **kwargs,
+        raw_data, scenario, override_dict, math_dict, data_table_dfs, file, **kwargs
     )
 
 
@@ -93,7 +87,7 @@ def read_dict(
     override_dict: dict | None = None,
     math_dict: dict | None = None,
     data_table_dfs: dict[str, pd.DataFrame] | None = None,
-    definition_path: Path | None = None,
+    definition_path: str | Path | None = None,
     **kwargs,
 ):
     """Return a Model object reconstructed from a model definition dictionary loaded into memory.
