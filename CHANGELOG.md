@@ -2,6 +2,10 @@
 
 ### User-facing changes
 
+|fixed| `ModelDataFactory` is no longer run twice during startup, resulting in faster initialisation
+
+|changed| `Model.from_dict` has been removed in favor of `calliope.read_dict` (matching `read_netcdf` and `read_yaml`)
+
 |changed| in model.yaml, `parameters` has been renamed to `data_definitions` to fit with the new params / lookups approach.
 
 |changed| `config.init.broadcast_param_data` has been renamed to `config.init.broadcast_input_data` to fit with the new params / lookups approach.

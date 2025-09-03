@@ -20,7 +20,7 @@ def prepare_model_definition(
     scenario: str | None = None,
     override_dict: dict | None = None,
     math_dict: dict | None = None,
-    definition_path: Path | None = None,
+    definition_path: str | Path | None = None,
     **kwargs,
 ) -> CalliopeAttrs:
     """Arrange model definition data following our standardised order of priority.
