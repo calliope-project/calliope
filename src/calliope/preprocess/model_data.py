@@ -26,8 +26,8 @@ LOGGER = logging.getLogger(__name__)
 DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
 
 
-class BlessedInput(TypedDict):
-    """Uniform dictionairy for 'blessed' input data."""
+class ValidatedInput(TypedDict):
+    """Uniform dictionary for validated input data."""
 
     data: DATA_T
     """Numeric / boolean / string data or list of them."""
@@ -40,7 +40,7 @@ class BlessedInput(TypedDict):
 
 # TODO: remove in favor of using the model def schema.
 class ModelDefinition(TypedDict):
-    """Uniform dictionarity for model definition."""
+    """Uniform dictionary for model definition."""
 
     techs: AttrDict
     nodes: AttrDict
@@ -428,13 +428,13 @@ class ModelDataFactory:
         return list(refs)
 
     def _input_data_dict_to_array(
-        self, name: str, input_data: BlessedInput
+        self, name: str, input_data: ValidatedInput
     ) -> xr.DataArray:
-        """Take a blessed input data dictionary and convert it to an xarray DataArray.
+        """Take a validated input data dictionary and convert it to an xarray DataArray.
 
         Args:
             name (str): Name of the parameter being converted.
-            input_data (BlessedInput): Blessed dictionary. I.e., keys/values follow an expected structure.
+            input_data (ValidatedInput): validated dictionary. I.e., keys/values follow an expected structure.
 
         Returns:
             xr.DataArray: Array representation of the parameter.
@@ -475,13 +475,13 @@ class ModelDataFactory:
         for idx_name, idx_inputs in def_dict.items():
             input_data_das: list[xr.DataArray] = []
             for name, input_data in idx_inputs.items():
-                blessed_dict = self._prepare_input_data_dict(name, input_data)
-                blessed_dict["index"] = [
-                    [idx_name] + idx for idx in blessed_dict["index"]
+                validated_dict = self._prepare_input_data_dict(name, input_data)
+                validated_dict["index"] = [
+                    [idx_name] + idx for idx in validated_dict["index"]
                 ]
-                blessed_dict["dims"].insert(0, dim_name)
+                validated_dict["dims"].insert(0, dim_name)
                 input_data_das.append(
-                    self._input_data_dict_to_array(name, blessed_dict)
+                    self._input_data_dict_to_array(name, validated_dict)
                 )
             input_data_ds = xr.merge(
                 [input_data_ds, xr.combine_by_coords(input_data_das)]
@@ -491,8 +491,8 @@ class ModelDataFactory:
 
     def _prepare_input_data_dict(
         self, name: str, raw_input_data: dict | list[str] | DATA_T
-    ) -> BlessedInput:
-        """Convert a range of input data definitions into the `BlessedInput` format.
+    ) -> ValidatedInput:
+        """Convert a range of input data definitions into the `ValidatedInput` format.
 
         Args:
             name (str): input data name (used only in error messages).
@@ -503,7 +503,7 @@ class ModelDataFactory:
                 not a lookup array (see LOOKUP_PARAMS), it cannot define a list of data.
 
         Returns:
-            BlessedInput: Blessed input data dictionary.
+            ValidatedInput: validated input data dictionary.
         """
         if isinstance(raw_input_data, dict):
             data = raw_input_data["data"]
@@ -532,7 +532,7 @@ class ModelDataFactory:
             data = raw_input_data
             index_items = [[]]
             dims = []
-        data_dict: BlessedInput = {"data": data, "index": index_items, "dims": dims}
+        data_dict: ValidatedInput = {"data": data, "index": index_items, "dims": dims}
         return data_dict
 
     def _inherit_defs(
