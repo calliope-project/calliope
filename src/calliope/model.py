@@ -136,7 +136,7 @@ def read_dict(
     model_data_factory.build()
     model_data_factory.clean()
     model_def = model_def.update({"math.build": model_data_factory.math.model_dump()})
-    return Model(inputs=model_data_factory.dataset, attrs=model_def, _preprocessed=True)
+    return Model(inputs=model_data_factory.dataset, attrs=model_def, _reentry=False)
 
 
 class Model(ModelStructure):
@@ -149,7 +149,7 @@ class Model(ModelStructure):
         inputs: xr.Dataset,
         attrs: CalliopeAttrs,
         results: xr.Dataset | None = None,
-        _preprocessed: bool = False,
+        _reentry: bool = True,
         **kwargs,
     ) -> None:
         """Returns a instantiated Calliope Model.
@@ -160,15 +160,15 @@ class Model(ModelStructure):
             results (xr.Dataset | None, optional):
                 Results dataset from another Calliope Model with compatible math formulation.
                 Defaults to None.
-            _preprocessed (bool, optional):
-                Specifies if model data has already been prepared.
-                Should only be set to `True` when reading model definition from dict/yaml.
-                Defaults to False.
+            _reentry (bool, optional):
+                Specifies model math and configuration must be reinitialised.
+                Should only be set to `False` if this is the first time the model has been instantiated.
+                Defaults to True.
             **kwargs:
                 initialisation keyword arguments
         """
-        self.inputs = inputs if _preprocessed else xr.Dataset()
-        self.results = xr.Dataset() if results is None else results
+        self.inputs: xr.Dataset
+        self.results: xr.Dataset = xr.Dataset() if results is None else results
         self.backend: BackendModel
 
         self.definition = attrs.definition
@@ -180,7 +180,8 @@ class Model(ModelStructure):
         self._is_built: bool = False
         self._is_solved: bool = False if results is None else True
 
-        if not _preprocessed:
+        if _reentry:
+            # Data may come from a previous run. Update math and clean inputs.
             log_time(
                 LOGGER,
                 self.runtime.timings,
@@ -192,10 +193,14 @@ class Model(ModelStructure):
                 self.config.init, inputs, self.math.init
             )
             model_data_factory.clean()
+
             self.inputs = model_data_factory.dataset
             self.math = self.math.update(
                 {"build": model_data_factory.math.model_dump()}
             )
+        else:
+            # First time the model has been created. No need for cleanups.
+            self.inputs = inputs
 
         self._check_versions()
         log_time(
