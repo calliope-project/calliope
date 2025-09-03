@@ -99,7 +99,7 @@ class TestModelInit:
         """Check that the expected model creation timings are set."""
         model: Model = request.getfixturevalue(model_name)
         assert not set(model.runtime.timings.keys()).symmetric_difference(
-            ["model_creation", "model_data_creation", "model_preprocessing_complete"]
+            ["preprocess_start", "init_complete"]
         )
 
     @pytest.mark.parametrize("model_name", MODELS)

@@ -123,8 +123,8 @@ def read_dict(
     log_time(
         LOGGER,
         model_def.runtime.timings,
-        "model_data_creation",
-        comment="Model: preprocessing stage (data)",
+        "preprocess_start",
+        comment="Model: preprocessing data",
     )
     model_data_factory = ModelDataFactory(
         model_def.config.init,
@@ -134,15 +134,9 @@ def read_dict(
         data_table_dfs,
     )
     model_data_factory.build()
-    inputs = model_data_factory.dataset
-
-    log_time(
-        LOGGER,
-        model_def.runtime.timings,
-        "model_preprocessing_complete",
-        comment="Model: preprocessing complete",
-    )
-    return Model(inputs=inputs, attrs=model_def)
+    model_data_factory.clean()
+    model_def = model_def.update({"math.build": model_data_factory.math.model_dump()})
+    return Model(inputs=model_data_factory.dataset, attrs=model_def, _preprocessed=True)
 
 
 class Model(ModelStructure):
@@ -155,20 +149,25 @@ class Model(ModelStructure):
         inputs: xr.Dataset,
         attrs: CalliopeAttrs,
         results: xr.Dataset | None = None,
+        _preprocessed: bool = False,
         **kwargs,
     ) -> None:
         """Returns a instantiated Calliope Model.
 
         Args:
             inputs (xr.Dataset): Input dataset.
+            attrs (CalliopeAttrs): Model attributes & properties.
             results (xr.Dataset | None, optional):
-                If given, the results dataset. Defaults to None.
-            attrs (CalliopeAttrs):
-                Model attributes & properties.
-                Any of _SAVE_ATTRS_T that are not given here will be initialised with default values.
+                Results dataset from another Calliope Model with compatible math formulation.
+                Defaults to None.
+            _preprocessed (bool, optional):
+                Specifies if model data has already been prepared.
+                Should only be set to `True` when reading model definition from dict/yaml.
+                Defaults to False.
             **kwargs:
                 initialisation keyword arguments
         """
+        self.inputs = inputs if _preprocessed else xr.Dataset()
         self.results = xr.Dataset() if results is None else results
         self.backend: BackendModel
 
@@ -181,21 +180,29 @@ class Model(ModelStructure):
         self._is_built: bool = False
         self._is_solved: bool = False if results is None else True
 
-        self.config = self.config.update({"init": kwargs})
+        if not _preprocessed:
+            log_time(
+                LOGGER,
+                self.runtime.timings,
+                "preprocess_start",
+                comment="Model: preprocessing data (reentry)",
+            )
+            self.config = self.config.update({"init": kwargs})
+            model_data_factory = ModelDataFactory(
+                self.config.init, inputs, self.math.init
+            )
+            model_data_factory.clean()
+            self.inputs = model_data_factory.dataset
+            self.math = self.math.update(
+                {"build": model_data_factory.math.model_dump()}
+            )
+
         self._check_versions()
-
-        model_data_factory = ModelDataFactory(self.config.init, inputs, self.math.init)
-
-        model_data_factory.clean()
-        self.inputs = model_data_factory.dataset
-
-        self.math = self.math.update({"build": model_data_factory.math.model_dump()})
-
         log_time(
             LOGGER,
             self.runtime.timings,
-            "model_creation",
-            comment="Model: initialising",
+            "init_complete",
+            comment="Model: initialisation complete",
         )
 
     def _check_versions(self) -> None:
