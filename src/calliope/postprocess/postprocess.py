@@ -67,7 +67,9 @@ def capacity_factor(
             dim=["timesteps", "nodes"], min_count=1
         )
 
-        cap_sum = flow_cap.where(lambda x: x > 0).sum(dim="nodes", min_count=1)
+        cap_sum = flow_cap.where(lambda x: x > 0)
+        if "nodes" in cap_sum.dims:
+            cap_sum = cap_sum.sum(dim="nodes", min_count=1)
         time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
 
         capacity_factors = (prod_sum / (cap_sum * time_sum)).fillna(0)
