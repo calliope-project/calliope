@@ -32,7 +32,7 @@ def create_full_math(internal_math: list[str], custom_math: dict | None = None):
     }
     if custom_math:
         math_dataset["custom_math"] = AttrDict(custom_math)
-    build_math = model_math.build_applied_math(list(math_dataset.keys()), math_dataset)
+    build_math = model_math.build_math(list(math_dataset.keys()), math_dataset)
 
     return AttrDict(build_math.model_dump())
 
@@ -478,7 +478,7 @@ class TestAnnualEnergyBalance(CustomMathExamples):
 
     def test_annual_energy_balance_global_per_tech(self, build_and_compare):
         overrides = {
-            "parameters": {
+            "data_definitions": {
                 "annual_flow_max": {
                     "data": 10,
                     "index": ["test_supply_elec"],
@@ -498,7 +498,7 @@ class TestAnnualEnergyBalance(CustomMathExamples):
 
     def test_annual_energy_balance_global_multi_tech(self, build_and_compare):
         overrides = {
-            "parameters": {
+            "data_definitions": {
                 "annual_flow_max": 10,
                 "flow_max_group": {
                     "data": True,
@@ -548,7 +548,7 @@ class TestMaxTimeVarying(CustomMathExamples):
 
     def test_max_time_varying_flow_cap(self, build_and_compare, all_custom_components):
         overrides = {
-            "parameters": {
+            "data_definitions": {
                 "flow_cap_max_relative_per_ts": {
                     "data": [0.8, 0.5],
                     "index": [
@@ -640,7 +640,7 @@ class TestShareAllTimesteps(CustomMathExamples):
         overrides = {
             "nodes.a.techs.test_supply_elec.demand_share_equals": 0.5,
             "nodes.b.techs.test_supply_elec.demand_share_equals": 0.8,
-            "parameters": {"demand_share_tech": "test_demand_elec"},
+            "data_definitions": {"demand_share_tech": "test_demand_elec"},
         }
         build_and_compare(
             "demand_share_equals_per_tech",
@@ -657,7 +657,7 @@ class TestShareAllTimesteps(CustomMathExamples):
         overrides = {
             "nodes.a.techs.test_supply_elec.supply_share_equals": 0.5,
             "nodes.b.techs.test_supply_elec.supply_share_equals": 0.8,
-            "parameters": {"supply_share_carrier": "electricity"},
+            "data_definitions": {"supply_share_carrier": "electricity"},
         }
         build_and_compare(
             "supply_share_equals_per_tech",
@@ -678,7 +678,7 @@ class TestSharePerTimestep(CustomMathExamples):
         overrides = {
             "nodes.a.techs.test_supply_elec.demand_share_per_timestep_equals": 0.5,
             "nodes.b.techs.test_supply_elec.demand_share_per_timestep_equals": 0.8,
-            "parameters": {"demand_share_tech": "test_demand_elec"},
+            "data_definitions": {"demand_share_tech": "test_demand_elec"},
         }
         build_and_compare(
             "demand_share_per_timestep_equals_per_tech",
@@ -698,7 +698,7 @@ class TestSharePerTimestep(CustomMathExamples):
         overrides = {
             "nodes.a.techs.test_supply_elec.supply_share_per_timestep_equals": 0.5,
             "nodes.b.techs.test_supply_elec.supply_share_per_timestep_equals": 0.8,
-            "parameters": {"supply_share_carrier": "electricity"},
+            "data_definitions": {"supply_share_carrier": "electricity"},
         }
         build_and_compare(
             "supply_share_per_timestep_equals_per_tech",
@@ -721,7 +721,7 @@ class TestDemandSharePerTimestepDecision(CustomMathExamples):
                 "test_supply_elec": {"decide_demand_share": "test_demand_elec"},
                 "test_conversion_plus": {"decide_demand_share": "test_demand_elec"},
             },
-            "parameters": {
+            "data_definitions": {
                 "demand_share_carrier": "electricity",
                 "demand_share_relaxation": 0.01,
             },
@@ -747,7 +747,7 @@ class TestDemandSharePerTimestepDecision(CustomMathExamples):
                 "test_supply_elec": {"decide_demand_share": "test_demand_elec"},
                 "test_conversion_plus": {"decide_demand_share": "test_demand_elec"},
             },
-            "parameters": {
+            "data_definitions": {
                 "demand_share_carrier": "electricity",
                 "demand_share_limit": 0.5,
             },
@@ -778,7 +778,7 @@ class TestPiecewiseCosts(CustomMathExamples):
                 "index": "monetary",
                 "dims": "costs",
             },
-            "parameters": {
+            "data_definitions": {
                 "cost_flow_cap_piecewise_slopes": {
                     "data": [5, 7, 14],
                     "index": [0, 1, 2],
@@ -837,7 +837,7 @@ class TestPiecewiseEfficiency(CustomMathExamples):
 
     def test_piecewise(self, build_and_compare, all_custom_components):
         overrides = {
-            "parameters": {
+            "data_definitions": {
                 "flow_eff_piecewise_slopes": {
                     "data": [5, 7, 14],
                     "index": [0, 1, 2],
@@ -866,7 +866,7 @@ class TestFuelDist(CustomMathExamples):
 
     def test_fuel_distribution(self, build_and_compare):
         overrides = {
-            "parameters": {
+            "data_definitions": {
                 "allow_fuel_distribution": {
                     "data": True,
                     "index": ["coal"],
@@ -887,7 +887,7 @@ class TestFuelDist(CustomMathExamples):
 
     def test_fuel_distribution_nodal_limits(self, build_and_compare):
         overrides = {
-            "parameters": {
+            "data_definitions": {
                 "allow_fuel_distribution": {
                     "data": True,
                     "index": ["coal"],
@@ -921,7 +921,7 @@ class TestFuelDist(CustomMathExamples):
 
     def test_fuel_distribution_costs(self, build_and_compare):
         overrides = {
-            "parameters": {
+            "data_definitions": {
                 "allow_fuel_distribution": {
                     "data": True,
                     "index": ["coal"],
@@ -973,7 +973,7 @@ class TestUptimeDowntime(CustomMathExamples):
     )
     def test_downtime(self, build_and_compare):
         overrides = {
-            "parameters": {
+            "data_definitions": {
                 "downtime_periods": {
                     "data": True,
                     "index": [["test_supply_elec", "a", "2005-01-01 00:00"]],
@@ -1008,7 +1008,7 @@ class TestUptimeDowntime(CustomMathExamples):
 class TestNetImportShare(CustomMathExamples):
     YAML_FILEPATH = "net_import_share.yaml"
     shared_overrides = {
-        "parameters.net_import_share": 1.5,
+        "data_definitions.net_import_share": 1.5,
         "data_tables": {
             "demand_heat": {
                 "data": "data_tables/demand_heat.csv",

@@ -225,7 +225,7 @@ class TestGetters:
                 "Set as value between 1 (no loss) and 0 (all lost)."
             ),
             "default": 1.0,
-            "unit": "fraction.",
+            "unit": "unitless.",
         }
 
     def test_get_parameter_as_vals(self, solved_model_cls):
@@ -867,7 +867,7 @@ class TestMILP:
 class TestPiecewiseConstraints:
     def gen_params(self, data, index=[0, 1, 2], dim="breakpoints"):
         return {
-            "parameters": {
+            "data_definitions": {
                 "piecewise_x": {"data": data, "index": index, "dims": dim},
                 "piecewise_y": {
                     "data": [0, 1, 5],

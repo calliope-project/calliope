@@ -8,7 +8,7 @@ from pathlib import Path
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
-from calliope.preprocess.model_math import initialise_math_paths, load_math
+from calliope.preprocess.model_math import initialise_math
 from calliope.schemas import CalliopeAttrs
 from calliope.util.tools import listify
 
@@ -20,7 +20,7 @@ def prepare_model_definition(
     scenario: str | None = None,
     override_dict: dict | None = None,
     math_dict: dict | None = None,
-    definition_path: Path | None = None,
+    definition_path: str | Path | None = None,
     **kwargs,
 ) -> CalliopeAttrs:
     """Arrange model definition data following our standardised order of priority.
@@ -54,10 +54,7 @@ def prepare_model_definition(
 
     config = model_def_dict.pop("config")
     definition = model_def_dict
-    config.init["math_paths"] = initialise_math_paths(
-        config.init.get("math_paths"), definition_path
-    )
-    math = load_math(config.init["math_paths"])
+    math = initialise_math(config.init.get("math_paths"), definition_path)
     if math_dict:
         math.union(math_dict, allow_override=True)
 

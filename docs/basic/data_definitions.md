@@ -62,7 +62,7 @@ Whether your data definition becomes a parameter or a lookup depends on the defi
 
 ## Broadcasting data along indexed dimensions
 
-If you want to set the same data for all index items, you can set the `init` [configuration option](config.md) `broadcast_param_data` to True and then use a single value in `data`:
+If you want to set the same data for all index items, you can set the `init` [configuration option](config.md) `broadcast_input_data` to `True` and then use a single value in `data`:
 
 === "Without broadcasting"
 

@@ -1528,7 +1528,7 @@ class TestClusteringConstraints:
             "config.init.extra_math": (
                 ["storage_inter_cluster"] if storage_inter_cluster else []
             ),
-            "parameters.cyclic_storage": cyclic,
+            "data_definitions.cyclic_storage": cyclic,
             "data_tables.cluster_days": {
                 "data": "data_tables/cluster_days.csv",
                 "rows": "datesteps",
@@ -2111,7 +2111,7 @@ class TestVerboseStrings:
 class TestPiecewiseConstraints:
     def gen_params(self, data, index=[0, 1, 2], dim="breakpoints"):
         return {
-            "parameters": {
+            "data_definitions": {
                 "piecewise_x": {"data": data, "index": index, "dims": dim},
                 "piecewise_y": {
                     "data": [0, 1, 5],

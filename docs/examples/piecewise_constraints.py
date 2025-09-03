@@ -69,8 +69,8 @@ fig.show()
 #
 
 # %%
-new_params = f"""
-  parameters:
+new_input_data = f"""
+  data_definitions:
     capacity_steps:
       data: {capacity_steps}
       index: [0, 1, 2, 3, 4]
@@ -80,7 +80,7 @@ new_params = f"""
       index: [0, 1, 2, 3, 4]
       dims: "breakpoints"
 """
-print(new_params)
+print(new_input_data)
 
 # %% [markdown]
 # ## Creating our piecewise constraint
@@ -104,8 +104,10 @@ new_math = """
   parameters:
     capacity_steps:
       description: Capacity at each piecewise curve breakpoint
+      unit: power
     cost_steps:
       description: Investment cost at each piecewise curve breakpoint
+      unit: cost
   variables:
     piecewise_cost_investment:
       description: "Investment cost that increases monotonically"
@@ -115,6 +117,7 @@ new_math = """
         min: 0
         max: .inf
       default: 0
+      unit: cost
   global_expressions:
     cost_investment_flow_cap:
       where: (flow_cap AND (cost_flow_cap OR cost_flow_cap_per_distance)) OR piecewise_cost_investment
@@ -140,11 +143,11 @@ new_math = """
 # With our inputs and piecewise constraint defined, we can build our optimisation problem and inject this new math.
 
 # %%
-new_params_as_dict = read_rich_yaml(new_params)
+new_input_data_as_dict = read_rich_yaml(new_input_data)
 new_math_as_dict = read_rich_yaml(new_math)
 
 m = calliope.examples.national_scale(
-    override_dict=new_params_as_dict,
+    override_dict=new_input_data_as_dict,
     math_dict={"piecewise_math": new_math_as_dict},
     extra_math=["piecewise_math"],
 )

@@ -17,11 +17,11 @@ import pandas as pd
 import xarray as xr
 
 from calliope.exceptions import BackendError
+from calliope.schemas.math_schema import CalliopeBuildMath
 from calliope.util import DTYPE_OPTIONS
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
-    from calliope.schemas.math_schema import CalliopeBuildMath
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
 ] = {"where": {}, "expression": {}}
@@ -223,36 +223,40 @@ class WhereAny(ParsingHelperFunction):
         # Using bigvee for "collective-or"
         return rf"\bigvee\limits_{{{overstring}}} ({array})"
 
-    def as_array(self, parameter: str, *, over: str | list[str]) -> xr.DataArray:
-        """Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
+    def as_array(self, input_component: str, *, over: str | list[str]) -> xr.DataArray:
+        """Reduce the boolean where array of a model input by applying `any` over some dimension(s).
+
+        If the component exists in the model, returns a boolean array with dimensions reduced
+        by applying a boolean OR operation along the dimensions given in `over`.
+        If the component does not exist, returns a dimensionless False array.
 
         Args:
-            parameter (str): Reference to a model input parameter
+            input_component (str): Reference to a model input.
             over (str | list[str]): dimension(s) over which to apply `any`.
 
         Returns:
-            xr.DataArray:
-                If the parameter exists in the model, returns a boolean array with dimensions reduced by applying a boolean OR operation along the dimensions given in `over`.
-                If the parameter does not exist, returns a dimensionless False array.
+            xr.DataArray: resulting array.
         """
-        if parameter in self._input_data.data_vars:
-            parameter_da = self._input_data[parameter]
-            bool_parameter_da = (
-                parameter_da.notnull()
-                & (parameter_da != np.inf)
-                & (parameter_da != -np.inf)
+        if input_component in self._input_data.data_vars:
+            component_da = self._input_data[input_component]
+            bool_component_da = (
+                component_da.notnull()
+                & (component_da != np.inf)
+                & (component_da != -np.inf)
             )
         elif (
             self._backend_interface is not None
-            and parameter in self._backend_interface._dataset
+            and input_component in self._backend_interface._dataset
         ):
-            bool_parameter_da = self._backend_interface._dataset[parameter].notnull()
+            bool_component_da = self._backend_interface._dataset[
+                input_component
+            ].notnull()
         else:
-            bool_parameter_da = xr.DataArray(False)
+            bool_component_da = xr.DataArray(False)
         over = self._listify(over)
-        available_dims = set(bool_parameter_da.dims).intersection(over)
+        available_dims = set(bool_component_da.dims).intersection(over)
 
-        return bool_parameter_da.any(dim=available_dims, keep_attrs=True)
+        return bool_component_da.any(dim=available_dims, keep_attrs=True)
 
 
 class Defined(ParsingHelperFunction):
@@ -727,7 +731,7 @@ class Where(ParsingHelperFunction):
 
             input:
             ```yaml
-            parameters:
+            data_definitions:
               node_grouping:
                 data: True
                 index: [[group_1, region1], [group_1, region1_1], [group_2, region1_2], [group_2, region1_3], [group_3, region2]]
@@ -795,7 +799,7 @@ class GroupSum(ParsingHelperFunction):
 
             1. Define an array linking node-tech combinations with a group:
             ```yaml
-            parameters:
+            data_definitions:
               # You may prefer to define this in a CSV file or when referring to the techs within the `nodes` model definition.
               power_plant_groups:
                 data: [low_emission_plant, low_emission_plant, high_emission_plant, high_emission_plant]
@@ -809,7 +813,7 @@ class GroupSum(ParsingHelperFunction):
             ```
             2. Define a set of outflow limits:
             ```yaml
-            parameters:
+            data_definitions:
               emission_limits:
                 data: [20, 10]
                 index: [low_emission_plant, high_emission_plant]

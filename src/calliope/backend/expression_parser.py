@@ -44,10 +44,10 @@ from typing_extensions import NotRequired, TypedDict, Unpack
 
 from calliope.backend.helper_functions import ParsingHelperFunction
 from calliope.exceptions import BackendError
+from calliope.schemas.math_schema import CalliopeBuildMath
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
-    from calliope.schemas.math_schema import CalliopeBuildMath
 
 pp.ParserElement.enablePackrat()
 
@@ -130,7 +130,7 @@ class EvalToArrayStr(EvalString):
             slice_dict (dict): Dictionary mapping the index slice name to a parsed equation expression.
             sub_expression_dict (dict): Dictionary mapping the sub-expression name to a parsed equation expression.
             backend_interface (backend_model.BackendModel): Interface to optimisation backend.
-            input_data (xr.Dataset): Input parameter arrays.
+            input_data (xr.Dataset): Input data arrays.
             where_array (xr.DataArray): boolean array with which to mask evaluated expressions.
             references (set): any references in the math string to other model components.
             helper_functions (dict[str, type[ParsingHelperFunction]]): Dictionary of allowed helper functions.
@@ -173,7 +173,7 @@ class EvalToCallable(EvalString):
             slice_dict (dict): Dictionary mapping the index slice name to a parsed equation expression.
             sub_expression_dict (dict): Dictionary mapping the sub-expression name to a parsed equation expression.
             backend_interface (backend_model.BackendModel): Interface to optimisation backend.
-            input_data (xr.Dataset): Input parameter arrays.
+            input_data (xr.Dataset): Input data arrays.
             where_array (xr.DataArray): boolean array with which to mask evaluated expressions.
             references (set): any references in the math string to other model components.
             helper_functions (dict[str, type[ParsingHelperFunction]]): Dictionary of allowed helper functions.

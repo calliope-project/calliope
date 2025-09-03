@@ -466,10 +466,10 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         """
 
     def _load_inputs(self) -> None:
-        """Add all parameters to backend dataset in-place.
+        """Add all parameters / lookups to backend dataset in-place.
 
-        If model data does not include a parameter, their default values will be added here
-        as unindexed backend dataset parameters.
+        If model data does not include an entry, their default values will be added here
+        in an unindexed form.
 
         Args:
             model_data (xr.Dataset): Input model data.

@@ -89,14 +89,17 @@ parameters:
   power_loss_factor:
     description: Extraction turbine power loss factor (a.k.a., `cv`)
     default: 1
+    unit: unitless
 
   power_to_heat_ratio:
     description: Extraction turbine backpressure ratio (a.k.a., `cb`)
     default: 1
+    unit: unitless
 
   boiler_eff:
     description: Conventional boiler (fuel-to-heat) efficiency
     default: 1
+    unit: unitless
 
 lookups:
   turbine_type:

@@ -5,13 +5,13 @@ from calliope.io import read_rich_yaml
 from calliope.schemas.dimension_data_schema import (
     CalliopeNode,
     CalliopeTech,
-    IndexedParam,
+    IndexedData,
 )
 
 from ..common.util import check_error_or_warning
 
 
-class TestIndexedParam:
+class TestIndexedData:
     @pytest.mark.parametrize(
         ("data", "dims", "index"),
         [
@@ -25,11 +25,11 @@ class TestIndexedParam:
     )
     def test_regular_definition(self, data, dims, index):
         """One dimensional and multi-dimensional definitions should pass."""
-        IndexedParam(data=data, dims=dims, index=index)
+        IndexedData(data=data, dims=dims, index=index)
 
     def test_broadcasted_definition(self):
         """Broadcasted definitons should be possible."""
-        IndexedParam(data=1, dims="my_dim", index=["i1", "i2", "i3", "i4"])
+        IndexedData(data=1, dims="my_dim", index=["i1", "i2", "i3", "i4"])
 
     @pytest.mark.parametrize(
         ("data", "dims", "index"),
@@ -46,9 +46,9 @@ class TestIndexedParam:
     def test_invalid_definition(self, data, dims, index):
         """Catch common user mistakes."""
         with pytest.raises(
-            pydantic.ValidationError, match="errors for Indexed parameter definition"
+            pydantic.ValidationError, match="errors for Indexed data definition"
         ):
-            IndexedParam(data=data, dims=dims, index=index)
+            IndexedData(data=data, dims=dims, index=index)
 
 
 class TestCalliopeTech:

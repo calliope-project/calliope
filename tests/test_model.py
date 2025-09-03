@@ -10,7 +10,7 @@ import xarray as xr
 import calliope
 import calliope.backend
 import calliope.preprocess
-from calliope.model import Model, read_netcdf, read_yaml
+from calliope.model import Model, read_dict, read_netcdf, read_yaml
 from calliope.schemas import CalliopeAttrs
 from calliope.schemas.general import CalliopeBaseModel
 
@@ -38,7 +38,7 @@ def model_from_dict(model_from_yaml, minimal_test_model_path):
         "config": model_from_yaml.config.model_dump(),
         **model_from_yaml.definition.model_dump(),
     }
-    return Model.from_dict(dict_def, definition_path=minimal_test_model_path)
+    return read_dict(dict_def, definition_path=minimal_test_model_path)
 
 
 @pytest.fixture(scope="class")
@@ -99,7 +99,7 @@ class TestModelInit:
         """Check that the expected model creation timings are set."""
         model: Model = request.getfixturevalue(model_name)
         assert not set(model.runtime.timings.keys()).symmetric_difference(
-            ["model_creation", "model_data_creation", "model_preprocessing_complete"]
+            ["preprocess_start", "init_complete"]
         )
 
     @pytest.mark.parametrize("model_name", MODELS)
@@ -143,6 +143,21 @@ class TestModelSolve:
             match="This model object already has results.",
         ):
             simple_supply.solve()
+
+    @pytest.mark.parametrize("setting", [True, False])
+    def test_solve_postprocess(self, setting, simple_supply_build_func):
+        """No postprocess data should be added when the toggle is off."""
+        model = simple_supply_build_func
+        model.config = model.config.update({"solve.postprocessing_active": setting})
+        model.solve()
+        for postprocess in [
+            "capacity_factor",
+            "systemwide_capacity_factor",
+            "systemwide_levelised_cost",
+            "total_levelised_cost",
+            "unmet_sum",
+        ]:
+            assert setting == (postprocess in model.results)
 
 
 class TestOperateMode:

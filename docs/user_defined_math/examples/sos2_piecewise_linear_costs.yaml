@@ -30,6 +30,8 @@ variables:
     description: Investment cost that increases monotonically
     foreach: [nodes, techs, carriers, costs]
     where: any(piecewise_cost_investment_x, over=breakpoints) AND any(piecewise_cost_investment_y, over=breakpoints)
+    unit: cost
+    default: 0
     bounds:
       min: 0
       max: .inf

@@ -13,7 +13,7 @@ from .common.util import check_error_or_warning
 
 
 class TestModelRun:
-    def test_model_from_dict(self, data_source_dir):
+    def test_read_dict(self, data_source_dir):
         """Test creating a model from dict/AttrDict instead of from YAML"""
         model_dir = data_source_dir.parent
         model_location = model_dir / "model.yaml"
@@ -30,10 +30,10 @@ class TestModelRun:
         for src in model_dict["data_tables"].values():
             src["data"] = (model_dir / src["data"]).as_posix()
         # test as AttrDict
-        calliope.Model.from_dict(model_dict)
+        calliope.read_dict(model_dict)
 
         # test as dict
-        calliope.Model.from_dict(model_dict.as_dict())
+        calliope.read_dict(model_dict.as_dict())
 
     @pytest.fixture
     def subset_time_model(self):

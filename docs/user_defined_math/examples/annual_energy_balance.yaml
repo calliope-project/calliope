@@ -11,6 +11,9 @@
 #   New indexed parameters:
 #
 #   - `annual_flow_max` (if summing over technologies and/or nodes)
+#
+#   New indexed lookups:
+#
 #   - `flow_max_group` (if summing over technologies and/or nodes)
 #
 #   Helper functions used:
@@ -23,14 +26,17 @@ parameters:
   annual_flow_max:
     description: Annual maximum outflow
     default: .inf
+    unit: energy
 
   annual_source_max:
     description: Annual maximum source use
     default: .inf
+    unit: energy
 
   annual_sink_max:
     description: Annual maximum sink use
     default: .inf
+    unit: energy
 
 lookups:
   flow_max_group:

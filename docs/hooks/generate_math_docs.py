@@ -12,7 +12,7 @@ from mkdocs.structure.files import File
 
 import calliope
 from calliope.io import read_rich_yaml
-from calliope.postprocess.math_documentation import MathDocumentation
+from calliope.postprocess import MathDocumentation
 
 logger = logging.getLogger("mkdocs")
 

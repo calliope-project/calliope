@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal, overload
 
 from calliope.backend import ALLOWED_MATH_FILE_FORMATS, LatexBackendModel
-from calliope.model import Model
+from calliope.schemas import ModelStructure
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class MathDocumentation:
     """For math documentation."""
 
     def __init__(
-        self, model: Model, include: Literal["all", "valid"] = "all", **kwargs
+        self, model: ModelStructure, include: Literal["all", "valid"] = "all", **kwargs
     ) -> None:
         """Math documentation builder/writer.
 
@@ -28,7 +28,8 @@ class MathDocumentation:
                 which at least one "where" case is valid ("valid"). Defaults to "all".
             **kwargs: kwargs for the LaTeX backend.
         """
-        self.name: str = "math" if model.name is None else model.name + " math"
+        model_name = model.config.init.name
+        self.name: str = "math" if model_name is None else model_name + " math"
         self.backend: LatexBackendModel = LatexBackendModel(
             model.inputs, model.math.build, model.config.build, include
         )

@@ -97,7 +97,7 @@ m.backend.get_constraint(
 # %% [markdown]
 # ## Updating the optimisation problem in-place
 #
-# If we want to update a parameter value or fix a decision variable, we can do so now that we have built the optimisation problem
+# If we want to update a model input or fix a decision variable, we can do so now that we have built the optimisation problem
 
 # %%
 m.backend.update_input("flow_cap_max", m.inputs.flow_cap_max * 2)

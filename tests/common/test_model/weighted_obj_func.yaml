@@ -86,24 +86,24 @@ nodes:
 
 overrides:
   illegal_string_cost_class:
-    parameters.objective_cost_weights.data: "monetary"
+    data_definitions.objective_cost_weights.data: "monetary"
   emissions_objective_without_removing_monetary_default:
-    parameters.objective_cost_weights:
+    data_definitions.objective_cost_weights:
       data: 0.1
       index: ["emissions"]
   monetary_objective:
-    parameters.objective_cost_weights:
+    data_definitions.objective_cost_weights:
       data: 1
       index: ["monetary"]
   emissions_objective:
-    parameters.objective_cost_weights:
+    data_definitions.objective_cost_weights:
       data: [0, 1]
       index: [monetary, emissions]
   weighted_objective:
-    parameters.objective_cost_weights:
+    data_definitions.objective_cost_weights:
       data: [0.9, 0.1]
       index: [monetary, emissions]
   undefined_class_objective:
-    parameters.objective_cost_weights:
+    data_definitions.objective_cost_weights:
       data: [0.8, 0.1, 0.2]
       index: ["monetary", "emissions", "random_class"]

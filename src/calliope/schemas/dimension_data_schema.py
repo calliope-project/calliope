@@ -22,34 +22,34 @@ IndexValue = str | NumericVal
 BaseTech = Literal["conversion", "demand", "storage", "supply", "transmission"]
 
 
-class IndexedParam(CalliopeBaseModel):
-    """Indexed parameter schema."""
+class IndexedData(CalliopeBaseModel):
+    """Indexed data schema."""
 
-    model_config = {"title": "Indexed parameter definition"}
+    model_config = {"title": "Indexed data definition"}
 
     data: DataValue | NonEmptyList[DataValue]
     """
-    Parameter value(s).
+    Parameter / lookup value(s).
     If data is one value, will be applied to all dimension members.
     If a list, must be same length as the index array.
     """
     dims: AttrStr | NonEmptyUniqueList[AttrStr]
     """
-    Model dimension(s) over which the parameter is indexed.
+    Model dimension(s) over which the data is indexed.
     Must be same length as the sub-arrays of `index`.
     I.e., if `index` does not have any sub-arrays or is simply a single value, `dims` must be of length 1.
     """
     index: IndexValue | NonEmptyUniqueList[IndexValue | NonEmptyUniqueList[IndexValue]]
     """
-    Model dimension members to apply the parameter value(s) to.
+    Model dimension members to apply the data value(s) to.
     If an array of arrays, sub-arrays must have same length as number of `dims`.
     """
 
 
-class IndexedTechNodeParam(IndexedParam):
-    """Tech-specific parameter schema."""
+class IndexedTechNodeParam(IndexedData):
+    """Tech-specific data schema."""
 
-    model_config = {"title": "Indexed `techs` parameter definition"}
+    model_config = {"title": "Indexed `techs` data definition"}
 
     @field_validator("dims", mode="before")
     @classmethod
@@ -81,7 +81,7 @@ class CalliopeTech(DimensionData):
 
     base_tech: BaseTech | None = None
     """
-    One of the abstract base classes, used to derive specific parameter defaults and
+    One of the abstract base classes, used to derive specific defaults and
     to activate technology-specific constraints.
     """
 
@@ -97,7 +97,7 @@ class CalliopeNode(DimensionData):
     """Longitude (WGS84 / EPSG4326)."""
     techs: None | dict[AttrStr, None | dict[AttrStr, DataValue | dict]]
     """
-    Technologies present at this node. Also allows to override technology parameters.
+    Technologies present at this node. Also allows to override technology data.
     """
 
     @model_validator(mode="after")
@@ -110,10 +110,10 @@ class CalliopeNode(DimensionData):
         return self
 
 
-class CalliopeParams(CalliopeDictModel):
-    """Calliope Parameters dictionary."""
+class CalliopeDataDef(CalliopeDictModel):
+    """Calliope data definition dictionary."""
 
-    root: dict[AttrStr, DataValue | IndexedParam] = Field(default_factory=dict)
+    root: dict[AttrStr, DataValue | IndexedData] = Field(default_factory=dict)
 
 
 class CalliopeTechs(CalliopeDictModel):
