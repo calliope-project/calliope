@@ -19,9 +19,6 @@ class CalliopeRuntime(CalliopeBaseModel):
     calliope_version_initialised: str = _version.__version__
     """The calliope version this model was initialised with."""
 
-    defaults: dict = Field(default_factory=dict)
-    """Dictionary of parameter defaults from the calliope model definition schema."""
-
     scenario: str | None = None
     """Scenario applied on initialising the model."""
 

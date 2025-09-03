@@ -135,10 +135,6 @@ def read_dict(
     )
     model_data_factory.build()
     inputs = model_data_factory.dataset
-    inputs_attrs = list(model_data_factory.dataset.attrs.keys())
-    to_update = {k: model_data_factory.dataset.attrs.pop(k) for k in inputs_attrs}
-
-    model_def = model_def.update({"runtime": to_update})
 
     log_time(
         LOGGER,
