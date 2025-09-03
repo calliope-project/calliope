@@ -4,7 +4,8 @@ This page explains the basic concepts and ideas behind Calliope.
 We then move on to describing how to [create](creating.md), [run](running.md), and [analyse](analysing.md) a Calliope model.
 
 !!! note
-    The [examples and tutorials section](../examples/overview.md) contains more hands-on examples of how to build and work with Calliope models. We still recommend that you first read the section you are currently looking at - "Getting started" - before going to the examples and tutorials.
+    The [examples and tutorials section](../examples/overview.md) contains more hands-on examples of how to build and work with Calliope models.
+    We still recommend that you first read the section you are currently looking at - "Getting started" - before going to the examples and tutorials.
 
 ## What Calliope does
 
@@ -66,47 +67,42 @@ Calliope's syntax ensures these models are intuitive, and easy to understand and
 Models in Calliope are defined in a text file format called YAML, referring to tabular data files (in the CSV format) where necessary.
 These files are essentially a collection of `key: value` entries, where `key` is a given setting - for example the nameplate capacity of a power plant - and `value` might be a number, a text string, or a list (e.g. a list of further settings).
 We will often refer to "keys" and "values" in the documentation.
-The keys and values can be nested, for example:
+The keys and values can be nested, for example, to define which solver will be called to solve the problem:
 
 ```yaml
-top_level_option:
-  second_level_option:
-    third_level_option_1: 10
-    third_level_option_2: 20
+config:
+  solve:
+    solver: glpk
 ```
 
-You will see the term "top-level key" in the documentation: that means a key at the very top of the "hierarchy" defined by this nesting of configuration.
+You will see the term "top-level key" in the documentation: that means a key at the very top of the "hierarchy" defined by this nested configuration.
+In the above example, that is `config`.
 
-One important Calliope-specific feature is the ability to spread your model across as many YAML files as you want, and use `import` top-level keys to "glue" them together.
+Two Calliope-specific YAML extensions are important to be aware of:
+
+* Nesting: The above example can also be written as `config.solve.solver: glpk`, where "`.`" is used to separate levels of the hierarchy of keys.
+This can be used to make the YAML files more readable.
+* Importing: The `import` top-level key allows you to spread your model across as many YAML files as you want.
 Typically, you will have a main model file (e.g., `model.yaml`), from which you import other files.
 
 You will see many examples of YAML as you proceed through the documentation, and most of what is happening should be intuitively understandable.
 However, if you want a more detailed and systematic description of how YAML is used in Calliope, you can refer to our [YAML reference](../reference/yaml.md).
 
-### Model configuration (including math) and model definition (data)
-
-Within the YAML file(s) that define your model, we distinguish between model configuration and model definition:
-
-* The model **configuration** are the options provided to Calliope to do its work, and this includes specifying what maths to use. Specifying what maths to use means specifying what kinds of model components will exist and how they will behave. The configuration is listed under the top-level key [`config`](../basic/config.md).
-
-* The model **definition** is your representation of the physical system you are modelling and includes the data with which the components specified in the math will be "populated". It spans across the four top-level keys [`techs`](../basic/techs.md), [`nodes`](../basic/nodes.md), [`data_definitions`](../basic/data_definitions.md), and [`data_tables`](../basic/data_tables.md).
-
-!!! note
-    Later, once you start looking at Calliope model data from a successful model run, you will see three main types of numerical data, which are a mix of model inputs and outputs:
-
-    * **`inputs`**: these correspond to parameters, i.e. your input data.
-    * **`results`**: these correspond to variables, i.e. the solution found by Calliope when solving your model.
-    * Some of the results are **post-processed results** data that Calliope calculates after the mathematical model is solved.
-    For example, capacity factors are calculated in post-processing based on the operation of all technologies, but in a mathematical modelling sense, they are not variables in the model.
-
 ### Math: Base math, mode math, and extra math
 
-The maths underlying a Calliope model is also defined in YAML files.
+The maths underlying a Calliope model are also defined in YAML files.
 Calliope supplies built-in math and allows users to partially or fully modify and replace this math.
 
-There is what we call the built-in **base math**.
+For example, the built-in `flow_out_max` constraint that sets the upper bound of a technology's outflow is defined like this:
+
+```yaml
+--8<-- "src/calliope/math/base.yaml:flow_out_max"
+```
+
+The default built-in math is called the **base math**.
 It is called base because it is active by default.
-By default, it defines a [capacity planning problem][base-math] with perfect foresight.
+
+The base math defines a [capacity planning problem][base-math] with perfect foresight.
 It includes, for example, the basic concepts of carriers, nodes, and techs described above.
 
 On top of the base math, it is possible to activate **mode math**.
@@ -116,10 +112,30 @@ Finally, it is possible to supply **extra math** which are applied on top of the
 For instance, the [inter-cluster storage][inter-cluster-storage-math] extra math supplied with Calliope allows you to track storage levels in technologies more accurately when you are using timeseries clustering in your model.
 
 Calliope follows a strict order of priority when applying math: **base math -> mode math -> extra math**.
+Math that comes later in this order can modify and overwrite the earlier math.
+
+### Model definition (data)
+
+The model definition is your representation of the physical system you are modelling and includes the data with which the components specified in the math will be "populated".
+It spans across the four top-level keys [`techs`](../basic/techs.md), [`nodes`](../basic/nodes.md), [`data_definitions`](../basic/data_definitions.md), and [`data_tables`](../basic/data_tables.md).
+
+More on this will follow in the next "getting started" section, [Creating a model](creating.md).
+
+### Model configuration
+
+The model configuration are the options provided to Calliope to do its work, and this includes specifying what maths to use.
+Specifying what maths to use means specifying what kinds of model components will exist and how they will behave.
+The configuration is listed under the top-level key [`config`](../basic/config.md).
+
+Any customisation to the math used in your model is specified in the model configuration (that is, it is specified under the `config` top-level key).
+This is explained in more detail in the documentation on [modes](../basic/modes.md) and [user-defined math](../user_defined_math/index.md).
+
+Again, more on this will follow in the next "getting started" section, [Creating a model](creating.md).
 
 ### Overrides and scenarios
 
-The final two basic concepts to know about are **overrides** and **scenarios**. They are defined in the top-level YAML keys [`overrides` and `scenarios`](../basic/scenarios.md).
+The final two basic building blocks to know about are **overrides** and **scenarios**.
+They are defined in the top-level YAML keys [`overrides` and `scenarios`](../basic/scenarios.md).
 
 Their purpose is define alternatives to the model configuration/definition that you can refer to when you initialise your model.
 For example, you might want to explore several pre-defined capacity expansion plans in a model of the European power grid.
@@ -129,5 +145,24 @@ The `scenarios` can combine several `overrides`.
 For example, you might also want to explore different future cost developments, and define `overrides` for those.
 In your scenarios, you can then combine overrides for a specific realisation of future costs and a specific grid configuration.
 
-
 Overrides (and the scenarios that reference overrides) can overwrite anything that is defined in the Calliope YAML files: both model configuration and model definition.
+
+## Model data structure
+
+Once you start looking at Calliope model data from a successful model run, you will see `inputs` and `results`.
+
+The `inputs` correspond your input data and can either be **parameters** or **lookups**.
+Lookups are simply non-numeric parameters, for example, a boolean (true/false) switch used to choose between two possible constraint formulations.
+
+The `results` correspond to variables, global expressions, or post-processed results.
+They can be one of three things:
+
+* **Variables** are defined in the math, for example, `flow_cap`, a technology's flow capacity, also known as its nominal or nameplate capacity.
+* **Global expressions** are defined in the math and combine variables and parameters. For example, `cost`, the total annualised cost of a technology, is a combination of several variables and parameters.
+* **Post-processed results** are calculated after a model is solved. For example, `capacity_factor` is calculated in post-processing based on the operation of all technologies, but it is _not_ a variable in the mathematical model.
+
+!!! note
+  All parameters, lookups, variables, and global expressions are defined in the model math
+  Refer to the documentation for the [built-in base math](../math/base/index.md) and [additional built-in math](../math/built_in/index.md) for a full listing of all of them.
+
+More on examining model results will follow later, in the section [Analysing a model](analysing.md).

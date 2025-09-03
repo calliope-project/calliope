@@ -90,7 +90,8 @@ markdown_extensions:
       preserve_tabs: true
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      dedent_subsections: true
   - pymdownx.details
   - pymdownx.tasklist:
       clickable_checkbox: true

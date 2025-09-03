@@ -685,6 +685,7 @@ constraints:
     equations:
       - expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
 
+# --8<-- [start:flow_out_max]
   flow_out_max:
     description: >-
       Set the upper bound of a technology's outflow.
@@ -692,6 +693,7 @@ constraints:
     where: "carrier_out"
     equations:
       - expression: flow_out <= flow_cap * timestep_resolution * flow_out_parasitic_eff
+# --8<-- [end:flow_out_max]
 
   flow_out_min:
     description: >-
