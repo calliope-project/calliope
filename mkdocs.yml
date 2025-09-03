@@ -124,6 +124,8 @@ nav:
       - user_defined_math/syntax.md
       - user_defined_math/helper_functions.md
       - user_defined_math/customise.md
+  - User-defined math examples:
+    - user_defined_math/examples/index.md
   - Advanced features:
     - advanced/constraints.md
     - advanced/time.md
@@ -132,7 +134,7 @@ nav:
     - advanced/backend_choice.md
     - advanced/backend_interface.md
     - advanced/shadow_prices.md
-  - Examples and tutorials:
+  - Example models and tutorials:
     - Overview: examples/overview.md
     - National scale example model:
       - examples/national_scale/index.md
@@ -148,8 +150,6 @@ nav:
     - examples/piecewise_constraints.py
     - examples/calliope_model_object.py
     - examples/calliope_logging.py
-    - Example additional math gallery:
-      - user_defined_math/examples/index.md
   - Reference:
     - YAML as used in Calliope: reference/yaml.md
     - Command line interface: reference/cli.md
