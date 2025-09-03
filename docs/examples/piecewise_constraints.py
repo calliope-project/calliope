@@ -69,8 +69,8 @@ fig.show()
 #
 
 # %%
-new_params = f"""
-  parameters:
+new_input_data = f"""
+  data_definitions:
     capacity_steps:
       data: {capacity_steps}
       index: [0, 1, 2, 3, 4]
@@ -80,7 +80,7 @@ new_params = f"""
       index: [0, 1, 2, 3, 4]
       dims: "breakpoints"
 """
-print(new_params)
+print(new_input_data)
 
 # %% [markdown]
 # ## Creating our piecewise constraint
@@ -143,11 +143,11 @@ new_math = """
 # With our inputs and piecewise constraint defined, we can build our optimisation problem and inject this new math.
 
 # %%
-new_params_as_dict = read_rich_yaml(new_params)
+new_input_data_as_dict = read_rich_yaml(new_input_data)
 new_math_as_dict = read_rich_yaml(new_math)
 
 m = calliope.examples.national_scale(
-    override_dict=new_params_as_dict,
+    override_dict=new_input_data_as_dict,
     math_dict={"piecewise_math": new_math_as_dict},
     extra_math=["piecewise_math"],
 )

@@ -20,7 +20,7 @@ overrides:
       init.name: SPORES mode
       init.mode: spores
       solve.spores.number: 2
-    parameters:
+    data_definitions:
       spores_slack: 0.1
 
 config.init.name: base

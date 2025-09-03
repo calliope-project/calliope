@@ -8,7 +8,7 @@ config:
   solve:
     solver: cbc
 
-parameters:
+data_definitions:
   objective_cost_weights:
     data: 1
     index: monetary

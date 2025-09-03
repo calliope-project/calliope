@@ -1351,7 +1351,7 @@ checks:
 
   distance_only_for_transmission:
     where: not base_tech==transmission and (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance or cost_purchase_per_distance)
-    message: Only transmission technologies can define `distance` or `..._per_distance` parameters.
+    message: Only transmission technologies can define `distance` or `..._per_distance`.
     errors: raise
 
   unbounded_flow_cap_cost:

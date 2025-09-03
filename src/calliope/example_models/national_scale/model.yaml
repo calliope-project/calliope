@@ -14,7 +14,7 @@ config:
     calliope_version: 0.7.0
     subset:
       timesteps: ["2005-01-01", "2005-01-05"] # Subset of timesteps
-    broadcast_param_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
+    broadcast_input_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
     mode: base # Choices: base, operate, spores
 
   build:
@@ -25,9 +25,8 @@ config:
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
 # --8<-- [end:config]
 
-
 # --8<-- [start:parameters]
-parameters:
+data_definitions:
   objective_cost_weights:
     data: 1
     index: monetary

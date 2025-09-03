@@ -76,16 +76,61 @@ def read_yaml(
         Model: Calliope Model instance.
     """
     raw_data = io.read_rich_yaml(file)
-    definition_path = Path(file)
-    return Model.from_dict(
-        raw_data,
-        scenario,
-        override_dict,
-        math_dict,
-        data_table_dfs,
-        definition_path,
-        **kwargs,
+    return read_dict(
+        raw_data, scenario, override_dict, math_dict, data_table_dfs, file, **kwargs
     )
+
+
+def read_dict(
+    model_definition: dict,
+    scenario: str | None = None,
+    override_dict: dict | None = None,
+    math_dict: dict | None = None,
+    data_table_dfs: dict[str, pd.DataFrame] | None = None,
+    definition_path: str | Path | None = None,
+    **kwargs,
+):
+    """Return a Model object reconstructed from a model definition dictionary loaded into memory.
+
+    Args:
+        model_definition (dict): Model definition YAML loaded into memory.
+        scenario (str | None, optional):
+            Comma delimited string of pre-defined `scenarios` to apply to the model.
+            Defaults to None.
+        override_dict (dict | None, optional):
+            Additional overrides to apply to `config`.
+            These will be applied *after* applying any defined `scenario` overrides.
+            Defaults to None.
+        math_dict (dict | None, optional):
+            Additional math definitions to apply after loading the math paths.
+            Defaults to None.
+        data_table_dfs (dict[str, pd.DataFrame] | None, optional):
+            Model definition `data_table` entries can reference in-memory pandas DataFrames.
+            The referenced data must be supplied here as a dictionary of those DataFrames.
+            Defaults to None.
+        definition_path (Path | None): If given, the path relative to which all path references in `model_definition` will be taken.
+        **kwargs: initialisation overrides.
+    """
+    model_def = preprocess.prepare_model_definition(
+        model_definition, scenario, override_dict, math_dict, definition_path, **kwargs
+    )
+    log_time(
+        LOGGER,
+        model_def.runtime.timings,
+        "preprocess_start",
+        comment="Model: preprocessing data",
+    )
+    model_data_factory = ModelDataFactory(
+        model_def.config.init,
+        AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
+        model_def.math.init,
+        definition_path,
+        data_table_dfs,
+    )
+    model_data_factory.build()
+    model_data_factory.clean()
+    model_def = model_def.update({"math.build": model_data_factory.math.model_dump()})
+    return Model(inputs=model_data_factory.dataset, attrs=model_def, _reentry=False)
 
 
 class Model(ModelStructure):
@@ -98,27 +143,26 @@ class Model(ModelStructure):
         inputs: xr.Dataset,
         attrs: CalliopeAttrs,
         results: xr.Dataset | None = None,
+        _reentry: bool = True,
         **kwargs,
     ) -> None:
         """Returns a instantiated Calliope Model.
 
         Args:
             inputs (xr.Dataset): Input dataset.
+            attrs (CalliopeAttrs): Model attributes & properties.
             results (xr.Dataset | None, optional):
-                If given, the results dataset. Defaults to None.
-            attrs (CalliopeAttrs):
-                Model attributes & properties.
-                Any of _SAVE_ATTRS_T that are not given here will be initialised with default values.
+                Results dataset from another Calliope Model with compatible math formulation.
+                Defaults to None.
+            _reentry (bool, optional):
+                Specifies model math and configuration must be reinitialised.
+                Should only be set to `False` if this is the first time the model has been instantiated.
+                Defaults to True.
             **kwargs:
                 initialisation keyword arguments
-
-        See Also:
-            `calliope.Model.from_dict`: Initialise from a model YAML loaded into memory.
-            `calliope.Model.from_datasets`: Initialise from model data loaded into memory.
-            `calliope.read_yaml`: Read from YAML definition.
-            `calliope.read_netcdf`: Read from a calliope model saved to NetCDF.
         """
-        self.results = xr.Dataset() if results is None else results
+        self.inputs: xr.Dataset
+        self.results: xr.Dataset = xr.Dataset() if results is None else results
         self.backend: BackendModel
 
         self.definition = attrs.definition
@@ -130,21 +174,34 @@ class Model(ModelStructure):
         self._is_built: bool = False
         self._is_solved: bool = False if results is None else True
 
-        self.config = self.config.update({"init": kwargs})
+        if _reentry:
+            # Data may come from a previous run. Update math and clean inputs.
+            log_time(
+                LOGGER,
+                self.runtime.timings,
+                "preprocess_start",
+                comment="Model: preprocessing data (reentry)",
+            )
+            self.config = self.config.update({"init": kwargs})
+            model_data_factory = ModelDataFactory(
+                self.config.init, inputs, self.math.init
+            )
+            model_data_factory.clean()
+
+            self.inputs = model_data_factory.dataset
+            self.math = self.math.update(
+                {"build": model_data_factory.math.model_dump()}
+            )
+        else:
+            # First time the model has been created. No need for cleanups.
+            self.inputs = inputs
+
         self._check_versions()
-
-        model_data_factory = ModelDataFactory(self.config.init, inputs, self.math.init)
-
-        model_data_factory.clean()
-        self.inputs = model_data_factory.dataset
-
-        self.math = self.math.update({"build": model_data_factory.math.model_dump()})
-
         log_time(
             LOGGER,
             self.runtime.timings,
-            "model_creation",
-            comment="Model: initialising",
+            "init_complete",
+            comment="Model: initialisation complete",
         )
 
     def _check_versions(self) -> None:
@@ -163,77 +220,6 @@ class Model(ModelStructure):
                 f"Model configuration specifies calliope version {version_def}, "
                 f"but you are running {version_init}. Proceed with caution!"
             )
-
-    @classmethod
-    def from_dict(
-        cls,
-        model_definition: dict,
-        scenario: str | None = None,
-        override_dict: dict | None = None,
-        math_dict: dict | None = None,
-        data_table_dfs: dict[str, pd.DataFrame] | None = None,
-        definition_path: Path | None = None,
-        **kwargs,
-    ):
-        """Return a Model object reconstructed from a model definition dictionary loaded into memory.
-
-        Args:
-            model_definition (dict): Model definition YAML loaded into memory.
-            scenario (str | None, optional):
-                Comma delimited string of pre-defined `scenarios` to apply to the model.
-                Defaults to None.
-            override_dict (dict | None, optional):
-                Additional overrides to apply to `config`.
-                These will be applied *after* applying any defined `scenario` overrides.
-                Defaults to None.
-            math_dict (dict | None, optional):
-                Additional math definitions to apply after loading the math paths.
-                Defaults to None.
-            data_table_dfs (dict[str, pd.DataFrame] | None, optional):
-                Model definition `data_table` entries can reference in-memory pandas DataFrames.
-                The referenced data must be supplied here as a dictionary of those DataFrames.
-                Defaults to None.
-            definition_path (Path | None): If given, the path relative to which all path references in `model_definition` will be taken.
-            **kwargs: initialisation overrides.
-        """
-        model_def = preprocess.prepare_model_definition(
-            model_definition,
-            scenario,
-            override_dict,
-            math_dict,
-            definition_path,
-            **kwargs,
-        )
-
-        log_time(
-            LOGGER,
-            model_def.runtime.timings,
-            "model_data_creation",
-            comment="Model: preprocessing stage 2 (data)",
-        )
-        model_data_factory = ModelDataFactory(
-            model_def.config.init,
-            AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
-            model_def.math.init,
-            definition_path,
-            data_table_dfs,
-        )
-        model_data_factory.build()
-
-        inputs = model_data_factory.dataset
-
-        inputs_attrs = list(model_data_factory.dataset.attrs.keys())
-        to_update = {k: model_data_factory.dataset.attrs.pop(k) for k in inputs_attrs}
-
-        model_def = model_def.update({"runtime": to_update})
-
-        log_time(
-            LOGGER,
-            model_def.runtime.timings,
-            "model_preprocessing_complete",
-            comment="Model: preprocessing complete",
-        )
-        return cls(inputs=inputs, attrs=model_def)
 
     @property
     def name(self) -> str | None:
@@ -649,7 +635,7 @@ class Model(ModelStructure):
             "spores_baseline_cost_tracked", self.inputs.get("spores_baseline_cost")
         )
         if not constraining_cost or constraining_cost == base_cost_default:
-            # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
+            # Update the slack-cost backend value based on the calculated minimum feasible system design cost
             constraining_cost = baseline_results[self.config.build.objective]
         self.backend.update_input("spores_baseline_cost", constraining_cost)
 
