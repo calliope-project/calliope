@@ -159,7 +159,7 @@ They can be one of three things:
 * **Post-processed results** are calculated after a model is solved. For example, `capacity_factor` is calculated in post-processing based on the operation of all technologies, but it is _not_ a variable in the mathematical model. More detail on these are in the [postprocessing documentation](../basic/postprocessing.md).
 
 !!! note
-  All parameters, lookups, variables, and global expressions are defined in the model math
-  Refer to the documentation for the [built-in base math][base-math] and [additional built-in math](../math/built_in/index.md) for a full listing of all of them.
+    All parameters, lookups, variables, and global expressions are defined in the model math
+    Refer to the documentation for the [built-in base math][base-math] and [additional built-in math](../math/built_in/index.md) for a full listing of all of them.
 
 More on examining model results will follow later, in the section [Analysing a model](analysing.md).
