@@ -10,7 +10,7 @@ You then populate the subset with any number of [equation expressions](#equation
 
 !!! info "See also"
 
-    Reference for the allowed key-value pairs in your additional math YAML file is available in the [reference section of the documentation][model-definition-schema].
+    Reference for the allowed key-value pairs in your additional math YAML file is available in the [reference section of the documentation](../reference/math_schema.md).
 
 ## `foreach` lists
 
@@ -201,12 +201,12 @@ sub_expressions:
 
 Similarly to [sub-expressions](#sub-expressions), you can use references when [slicing your data](#slicing-data), again using the `$` identifier.
 Standard slicing only allows for dimensions to reference plain strings or lists of plain strings.
-If you want to slice using a "lookup" parameter, you will need to provide it within the `slices` sub-key, e.g.:
+If you want to slice using a lookup table, you will need to provide it within the `slices` sub-key, e.g.:
 
-If you define a lookup parameter "lookup_techs" as:
+If you define a lookup "`lookup_techs`" as:
 
 ```yaml
-parameters:
+data_definitions:
   lookup_techs:
     data: [True, True]
     index: [tech_1, tech_2]

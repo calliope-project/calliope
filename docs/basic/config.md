@@ -52,11 +52,11 @@ To avoid the solver failing to find a solution because your constraints do not e
 config.build.ensure_feasibility: true
 ```
 
-This will create an `unmet_demand` decision variable in the optimisation, which can pick up any mismatch between supply and demand, across all carriers.
-It has a very high cost associated with its use, so it will only appear when absolutely necessary.
+This will create `unmet_demand` and `unused_supply` decision variables in the optimisation, which can pick up any mismatch between supply and demand, across all carriers.
+These have a very high cost associated with its use, so will only appear when absolutely necessary.
 
 !!! note
-    When ensuring feasibility, you can also set a [big M value](https://en.wikipedia.org/wiki/Big_M_method) (`parameters.bigM`). This is the "cost" of unmet demand.
+    When ensuring feasibility, you can also define data for the [big M parameter](https://en.wikipedia.org/wiki/Big_M_method) (`data_definitions.bigM`). This is the "cost" of unmet demand.
     It is possible to make model convergence very slow if bigM is set too high.
     Default bigM is 1x10$^9$, but should be close to the maximum total system cost that you can imagine.
     This is perhaps closer to 1x10$^6$ for urban scale models and can be as low as 1x10$^4$ if you have re-scaled your data in advance.

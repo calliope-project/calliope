@@ -26,7 +26,7 @@ config:
     solver: cbc
 # --8<-- [end:config]
 
-# --8<-- [start:parameters]
+# --8<-- [start:parameter_data_definitions]
 data_definitions:
   objective_cost_weights:
     data: 1
@@ -38,7 +38,7 @@ data_definitions:
     data: 0.10
     index: monetary
     dims: costs
-# --8<-- [end:parameters]
+# --8<-- [end:parameter_data_definitions]
 
 # --8<-- [start:data-tables]
 data_tables:

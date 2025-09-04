@@ -4,7 +4,6 @@ On this page, we look at some of the more advanced features of Calliope's math a
 
 !!! info "See also"
     [Pre-defined math formulation][base-math] (which includes a description of our pre-defined parameters),
-    [Model definition schema][model-definition-schema],
     [Introducing your own math to your model](../user_defined_math/customise.md),
     ["MILP" example model](../examples/milp/index.md).
 

@@ -123,7 +123,7 @@ Any technology _not_ being tracked will not be penalised in the optimisation for
 
     ```yaml
     config.solve.spores.tracking_parameter: my_tracking_parameter
-    parameters:
+    data_definitions:
       my_tracking_parameter: # defines which techs are going to be subject to SPORES scoring
         data: [true, true, true]
         index: [ccgt, csp, battery]

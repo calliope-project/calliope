@@ -121,6 +121,12 @@ It spans across the four top-level keys [`techs`](../basic/techs.md), [`nodes`](
 
 More on this will follow in the next "getting started" section, [Creating a model](creating.md).
 
+!!! note "Note on units"
+    Calliope does not ensure consistency of units across a model.
+    It is the responsibility of the modeller to ensure that units are consistent.
+    Our math definitions do specify a `unit` for variables and parameters, but we keep these at a generic level, for example `energy` for `flow_out` and `power` for `flow_cap`.
+    These unit definitions are listed in the [math documentation](../math/built_in/index.md) and there for you to double-check the consistency of your data.
+
 ### Model configuration
 
 The model configuration are the options provided to Calliope to do its work, and this includes specifying what maths to use.
@@ -132,20 +138,11 @@ This is explained in more detail in the documentation on [modes](../basic/modes.
 
 Again, more on this will follow in the next "getting started" section, [Creating a model](creating.md).
 
-### Overrides and scenarios
+### Templates, overrides, scenarios
 
-The final two basic building blocks to know about are **overrides** and **scenarios**.
-They are defined in the top-level YAML keys [`overrides` and `scenarios`](../basic/scenarios.md).
+**Templates** allow you to re-use model parts to reduce repetition and increase readability. They are under the `templates` top-level key. You can see them in use in the example models and find more details in the [YAML reference](../reference/yaml.md#reusing-definitions-through-templates).
 
-Their purpose is define alternatives to the model configuration/definition that you can refer to when you initialise your model.
-For example, you might want to explore several pre-defined capacity expansion plans in a model of the European power grid.
-To do so, you first define a base model, then define one `override` with each alternative grid configuration.
-
-The `scenarios` can combine several `overrides`.
-For example, you might also want to explore different future cost developments, and define `overrides` for those.
-In your scenarios, you can then combine overrides for a specific realisation of future costs and a specific grid configuration.
-
-Overrides (and the scenarios that reference overrides) can overwrite anything that is defined in the Calliope YAML files: both model configuration and model definition.
+**Overrides** and **scenarios** define alternatives to the model configuration/definition that you can refer to when you initialise your model. They are defined in the top-level YAML keys [`overrides` and `scenarios`](../basic/scenarios.md). Find more on them on the next page of the getting started guide, [Creating a model](creating.md).
 
 ## Model data structure
 
@@ -159,7 +156,7 @@ They can be one of three things:
 
 * **Variables** are defined in the math, for example, `flow_cap`, a technology's flow capacity, also known as its nominal or nameplate capacity.
 * **Global expressions** are defined in the math and combine variables and parameters. For example, `cost`, the total annualised cost of a technology, is a combination of several variables and parameters.
-* **Post-processed results** are calculated after a model is solved. For example, `capacity_factor` is calculated in post-processing based on the operation of all technologies, but it is _not_ a variable in the mathematical model.
+* **Post-processed results** are calculated after a model is solved. For example, `capacity_factor` is calculated in post-processing based on the operation of all technologies, but it is _not_ a variable in the mathematical model. More detail on these are in the [postprocessing documentation](../basic/postprocessing.md).
 
 !!! note
   All parameters, lookups, variables, and global expressions are defined in the model math

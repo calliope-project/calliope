@@ -205,11 +205,19 @@ This is particularly useful when making use of more advanced functionality such 
 
 More details on how techs are defined is in the [data definitions documentation](../basic/data_definitions.md).
 
-## Features not touched upon here
+## Overrides and scenarios
 
-We have already discussed the basic concept of overrides and scenarios in the [concepts](concepts.md) section. For more details on how these are used in practice, refer to the [overrides and scenarios documentation](../basic/scenarios.md).
+For example, you might want to explore several pre-defined capacity expansion plans in a model of the European power grid.
+To do so, you first define a base model, then define one `override` with each alternative grid configuration.
 
-Furthermore, there are many advanced features explained in the advanced features section of the documentation.
+The `scenarios` can combine several `overrides`.
+For example, you might also want to explore different future cost developments, and define `overrides` for those.
+In your scenarios, you can then combine overrides for a specific realisation of future costs and a specific grid configuration.
+
+Overrides (and the scenarios that reference overrides) can overwrite anything that is defined in the Calliope YAML files: both model configuration and model definition.
+
+For more details on how these are used in practice, refer to the example models, and to the [overrides and scenarios documentation](../basic/scenarios.md).
+
 
 ## Creating a new model from a built-in template
 

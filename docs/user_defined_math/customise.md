@@ -79,7 +79,7 @@ config:
 
 ## Adding your own parameters to the math definition
 
-The math definition contains metadata about the parameters, dimensions, and lookup tables used in defining the optimisation problem.
+The math definition contains metadata about the parameters, dimensions, and lookups used in defining the optimisation problem.
 We use this to validate user inputs.
 
 When you add your own math you are likely to be adding new parameters to the model.
@@ -109,6 +109,12 @@ lookups:
     one_of: [absolute, per_cap, per_area]
 
 ```
+
+## Validating the math
+
+You can tell Calliope to scan all math definitions for errors during model initialisation, i.e., _before_ undertaking the much more time-consuming operation of building the optimisation problem.
+This way, you can catch errors earlier while you are developing and testing custom math.
+To do so, set `config.init.pre_validate_math_strings: true`.
 
 ## Writing your own math documentation
 

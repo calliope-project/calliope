@@ -54,7 +54,7 @@ def on_files(files: list, config: dict, **kwargs):
         textwrap.dedent(
             """
         Complete base mathematical formulation for a Calliope model.
-        This math is _always_ applied but can be overridden with pre-defined additional math or [your own math][adding-your-own-math-to-a-model].
+        This math is _always_ applied but can be overridden with pre-defined additional math or [your own math](../user_defined_math/index.md).
         """
         ),
         base_documentation,

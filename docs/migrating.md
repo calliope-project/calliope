@@ -332,12 +332,11 @@ Here are the main changes to parameter/decision variable names that are not link
 * `exists` → `active`.
 
 !!! info "See also"
-    [Our full list of internally defined parameters][model-definition-schema];
-    the `Parameters` section of our [pre-defined base math documentation][base-math].
+    [Our full list of internally defined parameters](./math/built_in/index.md).
 
 ### Renaming / moving configuration options
 
-Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flat YAML hierarchy or to group settings alphabetically:
+Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flatter YAML hierarchy or to group settings alphabetically:
 
 * `model.subset_time` → `config.init.subset.timesteps` (subsetting other dimensions is now also possible)
 * `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.resample.timesteps: '6h'` (resampling other dimensions is now also possible)
@@ -723,10 +722,10 @@ If you want to achieve some of the same plots that were possible with the Callio
 ### Clustering
 
 Time masking and clustering capabilities have been severely reduced.
-Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2H`, `config.init.time_cluster: cluster_param`.
+Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2H`, `config.init.time_cluster: cluster_param` (where `cluster_param` should should separately be read from via e.g. `data_tables`; see the national-scale example model).
 Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries.
 
-If you want to masking/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](advanced/time.md#time-clustering) page.
+If you want to mask/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](advanced/time.md#time-clustering) page.
 We made this decision due to the complex nature of time clustering.
 With our former implementation, we were making decisions about the data that the user should have more awareness of and control over.
 It is also a constantly evolving field, but not the focus of Calliope, so we are liable to fall behind on the best-in-class methods.

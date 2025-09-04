@@ -64,7 +64,7 @@ Additional cost classes can be created simply by adding them to the definition o
     or updating the `objective_cost_weights` data_definitions-defined parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
 
     ```yaml
-    parameters:
+    data_definitions:
       objective_cost_weights:
         data: [1, 0]
         index: [monetary, co2_emissions]
@@ -115,8 +115,8 @@ However, doing so makes it much easier to process your model definition in Calli
 
 ### Pre-defined parameters
 
-There is a long list of pre-defined parameters that we use in our [base math][base-math].
-These are listed in full with descriptions and units in our [model definition reference page][model-definition-schema].
+There is a long list of pre-defined parameters in our base math.
+These are listed in full with descriptions and units in our in our [base math documentation][base-math].
 These parameters come with strict types, default values, and other attributes used in internal Calliope processing.
 Therefore they should always be your first port of call.
 However, if you want to add your own parameters, that is also possible.

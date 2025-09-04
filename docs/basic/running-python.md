@@ -15,7 +15,7 @@ model.solve()
 
 Other ways to load a model in Python are:
 
-* Passing an [calliope.AttrDict][] or standard Python dictionary to the [calliope.Model][] constructor, with the same nested format as the YAML model configuration (top-level keys: `config`, `parameters`, `nodes`, `techs`, etc.).
+* Passing an [calliope.AttrDict][] or standard Python dictionary to the [calliope.Model][] constructor, with the same nested format as the YAML model configuration (top-level keys: `config`, `data_definitions`, `data_tables`, `nodes`, `techs`, etc.).
 * Loading a previously saved model from a NetCDF file with `#!python model = calliope.read_netcdf('path/to/saved_model.nc')`.
 This can either be a pre-processed model saved before its `build` method was called - which will include input data only - or a completely solved model, which will include input and result data.
 

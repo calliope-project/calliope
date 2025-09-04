@@ -43,21 +43,21 @@ parameters:
     title: Maximum usable area.
     description: >-
       If set to a finite value, limits the upper bound of the `area_use` decision variable to this value.
-    unit: $\text{area}$.
+    unit: $\text{area}$
 
   area_use_min:
     default: 0
     title: Minimum usable area.
     description: >-
       Limits the lower bound of the `area_use` decision variable to this value.
-    unit: $\text{area}$.
+    unit: $\text{area}$
 
   area_use_per_flow_cap:
     default: .nan
     title: Area use per flow capacity
     description: >-
       If set, forces `area_use` to follow `flow_cap` with the given numerical ratio (e.g. setting to 1.5 means that `area_use == 1.5 * flow_cap`).
-    unit: $\frac{\text{area}}{\text{power}}$.
+    unit: $\frac{\text{area}}{\text{power}}$
 
   available_area:
     default: .inf
@@ -99,7 +99,7 @@ parameters:
     title: Cost of flow capacity.
     description: >-
       Cost per unit of the decision variable `flow_cap`.
-    unit: $\frac{\{cost}}{\text{power}}$.
+    unit: $\frac{\{cost}}{\text{power}}$
 
   cost_export:
     default: 0
@@ -108,7 +108,7 @@ parameters:
     description: >-
       Cost per unit of `flow_export` in each timestep.
       Usually used in the negative sense, as a subsidy.
-    unit: $\frac{\{cost}}{\text{energy}}$.
+    unit: $\frac{\{cost}}{\text{energy}}$
 
   cost_interest_rate:
     default: 0
@@ -123,7 +123,7 @@ parameters:
     description: >-
       Annual costs applied per unit `flow_cap`.
       These costs are not subject to being recalculated relative to technology lifetime, only scaled to reflect the fraction of one year that the model represents (e.g., 7 days ~= 0.02 of a year).
-    unit: $\frac{\{cost}}{\text{power}}$.
+    unit: $\frac{\{cost}}{\text{power}}$
 
   cost_om_annual_investment_fraction:
     default: 0
@@ -137,16 +137,16 @@ parameters:
     resample_method: mean
     title: Carrier inflow cost.
     description: >-
-      Cost per unit of `flow_in` in each timestep.
-    unit: $\frac{\{cost}}{\text{energy}}$.
+      Cost per unit of `flow_in` in each timestep. Also used as the cost per unit of `source_use` in `supply` technologies.
+    unit: $\frac{\{cost}}{\text{energy}}$
 
   cost_flow_out:
     default: 0
     resample_method: mean
     title: Carrier outflow cost
     description: >-
-      Cost per unit of `flow_in` in each timestep.
-    unit: $\frac{\{cost}}{\text{energy}}$.
+      Cost per unit of `flow_out` in each timestep.
+    unit: $\frac{\{cost}}{\text{energy}}$
 
   cost_purchase:
     default: 0
@@ -161,21 +161,21 @@ parameters:
     title: Cost of area use.
     description: >-
       Cost per unit `area_use`.
-    unit: $\text{area}$.
+    unit: $\text{area}$
 
   cost_source_cap:
     default: 0
     title: Cost of source flow capacity.
     description: >-
       Cost per unit `source_cap`.
-    unit: $\frac{\{cost}}{\text{power}}$.
+    unit: $\frac{\{cost}}{\text{power}}$
 
   cost_storage_cap:
     default: 0
     title: Cost of storage capacity.
     description: >-
       Cost per unit `storage_cap`, i.e., the maximum available capacity of the storage technology's "reservoir".
-    unit: $\frac{\{cost}}{\text{energy}}$.
+    unit: $\frac{\{cost}}{\text{energy}}$
 
   cost_depreciation_rate:
     default: 1
@@ -235,7 +235,7 @@ parameters:
     description: >-
       Limits the sum of `flow_cap` over all nodes in the model to a maximum.
       If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
-    unit: power or $\frac{\text{power}}{\text{unit}}$.
+    unit: power or $\frac{\text{power}}{\text{unit}}$
 
   flow_cap_min:
     default: 0
@@ -244,7 +244,7 @@ parameters:
       Limits `flow_cap` to a minimum.
       NOTE: this will _force_ `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
       If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
-    unit: power or $\frac{\text{power}}{\text{unit}}$.
+    unit: power or $\frac{\text{power}}{\text{unit}}$
 
   flow_cap_min_systemwide:
     default: 0
@@ -268,7 +268,7 @@ parameters:
     title: Flow capacity per purchased unit
     description: >-
       Set the capacity of each integer unit of a technology purchased, if `cap_method` is `integer`.
-    unit: $\frac{\text{power}}{\text{unit}}$.
+    unit: $\frac{\text{power}}{\text{unit}}$
 
   flow_in_eff:
     default: 1.0
@@ -286,7 +286,7 @@ parameters:
     description: >-
       Total link efficiency will be calculated as $\text{flow\_in\_eff}\times{}\text{flow\_in\_eff\_per\_distance}^\text{distance}$.
       Set as value between 1 (no loss) and 0 (all lost).
-    unit: $\frac{\text{1}}{\text{distance}}$.
+    unit: $\frac{\text{1}}{\text{distance}}$
 
   flow_out_eff:
     default: 1.0
@@ -304,7 +304,7 @@ parameters:
     description: >-
       Total link efficiency will be calculated as $\text{flow\_out\_eff}\times{}\text{flow\_out\_eff\_per\_distance}^\text{distance}$.
       Set as value between 1 (no loss) and 0 (all lost).
-    unit: $\frac{\text{1}}{\text{distance}}$.
+    unit: $\frac{\text{1}}{\text{distance}}$
 
   flow_out_parasitic_eff:
     default: 1.0
@@ -320,7 +320,7 @@ parameters:
     title: Ramping rate
     description: >-
       limit maximum outflow / inflow / outflow - inflow (technology base class dependent) to a fraction of maximum capacity, which increases by that fraction at each timestep.
-    unit: $\frac{1}{\text{hour}}$.
+    unit: $\frac{1}{\text{hour}}$
 
   lifetime:
     default: .inf
@@ -373,7 +373,7 @@ parameters:
     description: >-
       Minimum sink use to remove a carrier from the system (e.g., electricity demand, transport distance).
       Unit dictated by `source_unit`.
-    unit: energy | $\frac{\text{energy}}{\text{power}}$. | $\frac{\text{energy}}{\text{area}}$.
+    unit: energy | $\frac{\text{energy}}{\text{power}}$ | $\frac{\text{energy}}{\text{area}}$
 
   sink_use_max:
     default: .inf
@@ -382,7 +382,7 @@ parameters:
     description: >-
       Maximum sink use to remove a carrier from the system (e.g., electricity demand, transport distance).
       Unit dictated by `source_unit`.
-    unit: energy | $\frac{\text{energy}}{\text{power}}$. | $\frac{\text{energy}}{\text{area}}$.
+    unit: energy | $\frac{\text{energy}}{\text{power}}$ | $\frac{\text{energy}}{\text{area}}$
 
   sink_use_equals:
     default: .nan
@@ -391,7 +391,7 @@ parameters:
     description: >-
       Required amount of carrier removal from the system (e.g., electricity demand, transport distance).
       Unit dictated by `source_unit`.
-    unit: energy | $\frac{\text{energy}}{\text{power}}$. | $\frac{\text{energy}}{\text{area}}$.
+    unit: energy | $\frac{\text{energy}}{\text{power}}$ | $\frac{\text{energy}}{\text{area}}$
 
   source_eff:
     default: 1.0
@@ -409,7 +409,7 @@ parameters:
     description: >-
       Minimum source use to add a carrier from the system (e.g., biofuel, coal, rainfall, wind flow).
       Unit dictated by `source_unit`.
-    unit: energy | $\frac{\text{energy}}{\text{power}}$. | $\frac{\text{energy}}{\text{area}}$.
+    unit: energy | $\frac{\text{energy}}{\text{power}}$ | $\frac{\text{energy}}{\text{area}}$
 
   source_use_max:
     default: .inf
@@ -418,7 +418,7 @@ parameters:
     description: >-
       Maximum sink use to remove a carrier from the system (e.g., biofuel, coal, rainfall, wind flow).
       Unit dictated by `source_unit`.
-    unit: energy | $\frac{\text{energy}}{\text{power}}$. | $\frac{\text{energy}}{\text{area}}$.
+    unit: energy | $\frac{\text{energy}}{\text{power}}$ | $\frac{\text{energy}}{\text{area}}$
 
   source_use_equals:
     default: .nan
@@ -427,7 +427,7 @@ parameters:
     description: >-
       Required amount of carrier removal from the system (e.g., biofuel, coal, rainfall, wind flow).
       Unit dictated by `source_unit`.
-    unit: energy | $\frac{\text{energy}}{\text{power}}$. | $\frac{\text{energy}}{\text{area}}$.
+    unit: energy | $\frac{\text{energy}}{\text{power}}$ | $\frac{\text{energy}}{\text{area}}$
 
   source_cap_max:
     default: .inf
@@ -464,7 +464,7 @@ parameters:
     title: Storage capacity per purchased unit.
     description: >-
       Set the storage capacity of each integer unit of a technology purchased.
-    unit: $\frac{\text{energy}}{\text{unit}}$.
+    unit: $\frac{\text{energy}}{\text{unit}}$
 
   storage_discharge_depth:
     default: 0
@@ -487,7 +487,7 @@ parameters:
     title: Storage loss rate
     description: >-
         Rate of storage loss per hour, used to calculate lost stored flow as `(1 - storage_loss)^hours_per_timestep`.
-    unit: $\frac{\text{1}}{\text{hour}}$.
+    unit: $\frac{\text{1}}{\text{hour}}$
 
   timestep_resolution:
     default: 1
@@ -1192,7 +1192,7 @@ global_expressions:
     description: >-
       The operating costs per timestep of a technology.
     default: 0
-    unit: $\frac{\text{cost}}{\text{hour}}$.
+    unit: $\frac{\text{cost}}{\text{hour}}$
     foreach: [nodes, techs, costs, timesteps]
     where: "cost_export OR cost_flow_in OR cost_flow_out"
     equations:

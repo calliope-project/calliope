@@ -71,12 +71,12 @@ Since all the data refers to the one parameter `sink_use_equals`, we don't add t
 !!! info
     You can read more about loading data from file in [our dedicated tutorial][loading-tabular-data].
 
-### Indexed parameters
+### Data definitions for indexed parameters
 
-Before we dive into the technologies and nodes in the model, we have defined some parameters that are independent of both of these:
+Before we dive into the technologies and nodes in the model, we have defined the data for some indexed parameters that are independent of both technologies and nodes:
 
 ```yaml
---8<-- "src/calliope/example_models/urban_scale/model.yaml:parameters"
+--8<-- "src/calliope/example_models/urban_scale/model.yaml:parameter_data_definitions"
 ```
 
 Neither of these parameters is strictly necessary to define.
