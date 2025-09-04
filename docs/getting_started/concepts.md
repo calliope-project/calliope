@@ -125,7 +125,7 @@ More on this will follow in the next "getting started" section, [Creating a mode
     Calliope does not ensure consistency of units across a model.
     It is the responsibility of the modeller to ensure that units are consistent.
     Our math definitions do specify a `unit` for variables and parameters, but we keep these at a generic level, for example `energy` for `flow_out` and `power` for `flow_cap`.
-    These unit definitions are listed in the [math documentation](../math/built_in/index.md) and there for you to double-check the consistency of your data.
+    These unit definitions are listed in the [math documentation][base-math] and there for you to double-check the consistency of your data.
 
 ### Model configuration
 
@@ -160,6 +160,6 @@ They can be one of three things:
 
 !!! note
   All parameters, lookups, variables, and global expressions are defined in the model math
-  Refer to the documentation for the [built-in base math](../math/base/index.md) and [additional built-in math](../math/built_in/index.md) for a full listing of all of them.
+  Refer to the documentation for the [built-in base math][base-math] and [additional built-in math](../math/built_in/index.md) for a full listing of all of them.
 
 More on examining model results will follow later, in the section [Analysing a model](analysing.md).

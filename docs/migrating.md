@@ -332,7 +332,7 @@ Here are the main changes to parameter/decision variable names that are not link
 * `exists` → `active`.
 
 !!! info "See also"
-    [Our full list of internally defined parameters](./math/built_in/index.md).
+    [Our full list of internally defined parameters in the base math][base-math].
 
 ### Renaming / moving configuration options
 
@@ -374,7 +374,7 @@ Investment costs are split out into the component caused by annual operation and
 
 ### Explicitly triggering MILP and storage decision variables/constraints
 
-For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option](math/built_in/index.md).
+For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option][mixed-integer-linear-programming-math].
 
 In v0.6, we inferred that a mixed-integer linear model was desired based on the user defining certain parameters.
 For example, defining `units_max` would trigger the integer `units` decision variable.
