@@ -140,7 +140,7 @@ Again, more on this will follow in the next "getting started" section, [Creating
 
 ### Templates, overrides, scenarios
 
-**Templates** allow you to re-use model parts to reduce repetition and increase readability. They are under the `templates` top-level key. You can see them in use in the example models and find more details in the [YAML reference](../reference/yaml.md#reusing-definitions-through-templates).
+**Templates** allow you to reuse model parts to reduce repetition and increase readability. They are under the `templates` top-level key. You can see them in use in the example models and find more details in the [YAML reference](../reference/yaml.md#reusing-definitions-through-templates).
 
 **Overrides** and **scenarios** define alternatives to the model configuration/definition that you can refer to when you initialise your model. They are defined in the top-level YAML keys [`overrides` and `scenarios`](../basic/scenarios.md). Find more on them on the next page of the getting started guide, [Creating a model](creating.md).
 
