@@ -2,7 +2,7 @@
 # Math components
 
 Here, we will briefly introduce each of the math components you will need to build an optimisation problem.
-A more detailed description of the math YAML syntax is provided on the [math syntax](syntax.md) page and in the [math formulation schema](../reference/math_schema.md).
+A more detailed description of the math YAML syntax is provided on the [math syntax](syntax.md) page and in the [math formulation schema][model-math-schema].
 
 ## Decision variables
 
