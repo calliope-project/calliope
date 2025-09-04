@@ -42,7 +42,7 @@ constraints:
 
   set_storage_initial:
     equations:
-      - expression: storage_inter_cluster[datesteps=$final_step] * ((1 - storage_loss) ** 24) == storage_initial * storage_cap
+      - expression: storage_inter_cluster[datesteps=$final_step] * ((1 - storage_loss) ** 24) = storage_initial * storage_cap
     slices:
       final_step:
         - expression: get_val_at_index(datesteps=-1)
@@ -96,7 +96,7 @@ constraints:
     foreach: [nodes, techs, datesteps]
     where: "include_storage==True OR base_tech==storage"
     equations:
-      - expression: storage_inter_cluster == $storage_previous_step + $storage_intra
+      - expression: storage_inter_cluster = $storage_previous_step + $storage_intra
     sub_expressions:
       storage_previous_step:
         - where: datesteps==get_val_at_index(datesteps=0) AND NOT cyclic_storage==True

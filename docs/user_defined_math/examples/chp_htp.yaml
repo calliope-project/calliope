@@ -114,9 +114,9 @@ constraints:
   balance_conversion:
     equations:
       - where: NOT turbine_type
-        expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+        expression: sum(flow_out_inc_eff, over=carriers) = sum(flow_in_inc_eff, over=carriers)
       - where: turbine_type==backpressure AND NOT boiler_eff
-        expression: flow_out_inc_eff[carriers=electricity] == sum(flow_in_inc_eff, over=carriers)
+        expression: flow_out_inc_eff[carriers=electricity] = sum(flow_in_inc_eff, over=carriers)
 # ~~
 
 # Extraction turbine constraints
@@ -192,5 +192,5 @@ constraints:
     where: turbine_type==backpressure AND NOT boiler_eff
     equations:
       - expression: >
-          flow_out[carriers=electricity] ==
+          flow_out[carriers=electricity] =
           flow_out[carriers=heat] * power_to_heat_ratio

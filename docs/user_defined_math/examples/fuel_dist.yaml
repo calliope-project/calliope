@@ -61,7 +61,7 @@ constraints:
     equations:
       - expression: >
           sum(flow_out, over=techs) - sum(flow_in, over=techs) - $flow_export
-          + $unmet_demand_and_unused_supply + $fuel_distributor == 0
+          + $unmet_demand_and_unused_supply + $fuel_distributor = 0
     sub_expressions:
       fuel_distributor:
         - where: fuel_distributor
@@ -78,7 +78,7 @@ constraints:
     foreach: [carriers, timesteps]
     where: fuel_distributor
     equations:
-      - expression: sum(fuel_distributor, over=nodes) == 0
+      - expression: sum(fuel_distributor, over=nodes) = 0
 
   # fuel_import_max and fuel_export_max could be defined per node and carrier and
   # could be collapsed into one constraining limit e.g., `fuel_distribution_max`.

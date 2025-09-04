@@ -762,7 +762,7 @@ class TestComponentParser:
             func_or_not.format(instring), parse_all=True
         )
 
-    @pytest.mark.parametrize("instring", ["[FOO, BAR]", "foo == 1", "$foo", "[foo]"])
+    @pytest.mark.parametrize("instring", ["[FOO, BAR]", "foo = 1", "$foo", "[foo]"])
     def test_sub_expression_parser_fail(self, generate_sub_expression, instring):
         with pytest.raises(pp.ParseException):
             generate_sub_expression.parse_string(instring, parse_all=True)
@@ -798,7 +798,7 @@ class TestEquationParserComparison:
     def expected_right(self, var_right):
         return self.EXPR_PARAMS_AND_EXPECTED_EVAL[var_right]
 
-    @pytest.fixture(params=["<=", ">=", "=="])
+    @pytest.fixture(params=["<=", ">=", "="])
     def operator(self, request):
         return request.param
 
@@ -828,11 +828,11 @@ class TestEquationParserComparison:
         [
             ("1<=2", True),
             ("1 >= 2", False),
-            ("1  ==  2", False),
+            ("1  =  2", False),
             ("(1) <= (2)", True),
             ("1 * 3 <= 1e2", True),
             ("-1 >= -0.1 / 2", False),
-            ("2**2 == 4 * 1 / 1 * 1**1", True),
+            ("2**2 = 4 * 1 / 1 * 1**1", True),
             ("(1 + 3) * 2 >= 10 + -1", False),
         ],
     )
@@ -852,8 +852,8 @@ class TestEquationParserComparison:
         "equation_string",
         [
             "1 + 2 =<",  # missing RHS
-            "== 1 + 2 ",  # missing LHS
-            "1 = 2",  # unallowed operator
+            "= 1 + 2 ",  # missing LHS
+            "1 == 2",  # unallowed operator
             "1 < 2",  # unallowed operator
             "2 > 1",  # unallowed operator
             "1 (<= 2)",  # weird brackets
@@ -989,7 +989,7 @@ class TestAsMathString:
             ),
             (
                 "equation_comparison",
-                "no_dim_var == with_inf",
+                "no_dim_var = with_inf",
                 r"\textbf{no_dim_var} = \textit{with_inf}_\text{node,tech}",
             ),
         ],

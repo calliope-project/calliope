@@ -46,7 +46,7 @@ constraints:
     where: demand_share_per_timestep_equals
     equations:
       - expression: >
-          sum(flow_out, over=carriers) ==
+          sum(flow_out, over=carriers) =
           sum(flow_in[techs=$demand_tech], over=carriers)
           * demand_share_per_timestep_equals
     slices:
@@ -62,7 +62,7 @@ constraints:
     where: supply_share_per_timestep_equals
     equations:
       - expression: >
-          flow_out[carriers=$carrier] ==
+          flow_out[carriers=$carrier] =
           sum(flow_out[carriers=$carrier], over=techs)
           * supply_share_per_timestep_equals
     slices:

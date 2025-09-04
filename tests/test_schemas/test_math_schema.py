@@ -48,7 +48,7 @@ class TestMathEquationComponent:
         active: true
         equations:
           - where: "True"
-            expression: something == $sub_bar
+            expression: something = $sub_bar
         sub_expressions:
           bar:
             - where: "True"

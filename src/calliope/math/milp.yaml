@@ -156,7 +156,7 @@ constraints:
     foreach: [nodes, techs]
     where: "storage AND purchased_units AND storage_cap_per_unit"
     equations:
-      - expression: storage_cap == purchased_units * storage_cap_per_unit
+      - expression: storage_cap = purchased_units * storage_cap_per_unit
 
   flow_capacity_units_milp:
     description: >-
@@ -164,7 +164,7 @@ constraints:
     foreach: [nodes, techs, carriers]
     where: "purchased_units AND flow_cap_per_unit"
     equations:
-      - expression: flow_cap == purchased_units * flow_cap_per_unit
+      - expression: flow_cap = purchased_units * flow_cap_per_unit
 
   flow_capacity_max_purchase_milp:
     description: >-

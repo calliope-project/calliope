@@ -355,7 +355,7 @@ class EvalSignOp(EvalToArrayStr):
 class EvalComparisonOp(EvalToArrayStr):
     """Class for processing comparison operations."""
 
-    OP_TRANSLATOR = {"<=": r" \leq ", ">=": r" \geq ", "==": " = "}
+    OP_TRANSLATOR = {"<=": r" \leq ", ">=": r" \geq ", "=": " = "}
 
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Parse action to process successfully parsed equations of the form LHS OPERATOR RHS.
@@ -412,7 +412,7 @@ class EvalComparisonOp(EvalToArrayStr):
         rhs_where = rhs.broadcast_like(where)
 
         match self.op:
-            case "==":
+            case "=":
                 op = np.equal
             case "<=":
                 op = np.less_equal
@@ -1162,9 +1162,9 @@ def arithmetic_parser(*args, arithmetic: pp.Forward | None = None) -> pp.Forward
 
 
 def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement:
-    """Parsing grammar to combine equation elements either side of a comparison operator (<= >= ==).
+    """Parsing grammar to combine equation elements either side of a comparison operator (<= >= =).
 
-    Whitespace is ignored on parsing (i.e., "1+foo==$bar" is equivalent to "1 + 1 == $bar").
+    Whitespace is ignored on parsing (i.e., "1+foo=$bar" is equivalent to "1 + 1 = $bar").
 
     Args:
         arithmetic (pp.ParserElement):
@@ -1174,7 +1174,7 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
         pp.ParserElement:
             Parser for strings of the form "LHS OPERATOR RHS".
     """
-    comparison_operators = pp.one_of(["<=", ">=", "=="])
+    comparison_operators = pp.one_of(["<=", ">=", "="])
     equation_comparison = arithmetic + comparison_operators + arithmetic
     equation_comparison.set_parse_action(EvalComparisonOp)
 
@@ -1307,7 +1307,7 @@ def generate_arithmetic_parser(valid_component_names: Iterable) -> pp.ParserElem
 
 
 def generate_equation_parser(valid_component_names: Iterable) -> pp.ParserElement:
-    """Create parser for equation expressions of the form LHS OPERATOR RHS (e.g. `foo == 1 + bar`).
+    """Create parser for equation expressions of the form LHS OPERATOR RHS (e.g. `foo = 1 + bar`).
 
     This parser allows arbitrarily nested arithmetic and function calls (and arithmetic inside function calls)
     and reference to sub-expressions and index slice expressions.

@@ -36,7 +36,7 @@ class ExpressionItem(CalliopeBaseModel):
     """Condition to determine whether the accompanying expression is built."""
     expression: str
     """Expression for this component.
-    - Equations: LHS OPERATOR RHS, where LHS and RHS are math expressions and OPERATOR is one of [==, <=, >=].
+    - Equations: LHS OPERATOR RHS, where LHS and RHS are math expressions and OPERATOR is one of [=, <=, >=].
     - Subexpressions: be one term or a combination of terms using the operators [+, -, *, /, **].
     - Slices: a list of set items or a call to a helper function.
     """

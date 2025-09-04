@@ -159,8 +159,8 @@ class TestValidateMathDict:
     @pytest.mark.parametrize(
         "component_dict",
         [
-            {"equations": [{"expression": "1 = 1"}]},
-            {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"},
+            {"equations": [{"expression": "1 == 1"}]},
+            {"equations": [{"expression": "1 == 1"}], "where": "foo[bar]"},
         ],
     )
     @pytest.mark.parametrize("both_fail", [True, False])
@@ -176,13 +176,13 @@ class TestValidateMathDict:
             math_dict["constraints"]["bar"] = component_dict
             errors_to_check.append("* constraints:bar:")
         else:
-            math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
+            math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 = 1"}]}
 
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             model_math.build_math(math_priority, init_math, math_dict)
         assert check_error_or_warning(excinfo, errors_to_check)
 
-    @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
+    @pytest.mark.parametrize("eq_string", ["1 == 1", "1 =\n1[a]"])
     def test_add_math_fails_marker_correct_position(
         self, init_math, math_priority, eq_string
     ):

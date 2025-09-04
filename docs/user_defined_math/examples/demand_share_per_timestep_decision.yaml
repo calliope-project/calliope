@@ -111,4 +111,4 @@ constraints:
     equations:
       - expression: >
           sum(demand_share_per_timestep_decision, over=[techs])
-          == demand_share_limit
+          = demand_share_limit

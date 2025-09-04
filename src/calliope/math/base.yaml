@@ -650,7 +650,7 @@ constraints:
     foreach: [nodes, techs, carriers]
     where: source_cap AND source_cap_equals_flow_cap==True
     equations:
-      - expression: source_cap == flow_cap
+      - expression: source_cap = flow_cap
 
   force_zero_area_use:
     description: >-
@@ -658,7 +658,7 @@ constraints:
     foreach: [nodes, techs]
     where: "area_use AND flow_cap_max==0"
     equations:
-      - expression: area_use == 0
+      - expression: area_use = 0
 
   area_use_per_flow_capacity:
     description: >-
@@ -666,7 +666,7 @@ constraints:
     foreach: [nodes, techs, carriers]
     where: "area_use AND area_use_per_flow_cap"
     equations:
-      - expression: area_use == flow_cap * area_use_per_flow_cap
+      - expression: area_use = flow_cap * area_use_per_flow_cap
 
   area_use_capacity_per_loc:
     description: >-
@@ -698,7 +698,7 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: base_tech==conversion AND NOT include_storage==true
     equations:
-      - expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+      - expression: sum(flow_out_inc_eff, over=carriers) = sum(flow_in_inc_eff, over=carriers)
 
   flow_out_max:
     description: >-
@@ -757,7 +757,7 @@ constraints:
       - expression: >-
           sum(flow_out, over=techs) -
           sum(flow_in, over=techs) -
-          $flow_export + $unmet_demand_and_unused_supply == 0
+          $flow_export + $unmet_demand_and_unused_supply = 0
     sub_expressions:
       flow_export:
         - where: "any(carrier_export, over=techs)"
@@ -778,7 +778,7 @@ constraints:
     where: "base_tech==demand"
     equations:
       - where: "sink_use_equals"
-        expression: "flow_in_inc_eff == sink_use_equals * $sink_scaler"
+        expression: "flow_in_inc_eff = sink_use_equals * $sink_scaler"
       - where: "NOT sink_use_equals AND sink_use_max"
         expression: "flow_in_inc_eff <= sink_use_max * $sink_scaler"
     sub_expressions:
@@ -807,7 +807,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "base_tech==supply AND NOT include_storage==True"
     equations:
-      - expression: flow_out_inc_eff == source_use * source_eff
+      - expression: flow_out_inc_eff = source_use * source_eff
 
   balance_supply_with_storage:
     description: >-
@@ -816,7 +816,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "storage AND base_tech==supply"
     equations:
-      - expression: storage == $storage_previous_step + source_use * source_eff - flow_out_inc_eff
+      - expression: storage = $storage_previous_step + source_use * source_eff - flow_out_inc_eff
     sub_expressions:
       storage_previous_step: &storage_previous_step
         - where: timesteps==get_val_at_index(timesteps=0) AND NOT cyclic_storage==True
@@ -843,7 +843,7 @@ constraints:
     where: "source_use AND (source_use_equals OR source_use_max)"
     equations:
       - where: "source_use_equals"
-        expression: "source_use == source_use_equals * $source_scaler"
+        expression: "source_use = source_use_equals * $source_scaler"
       - where: "NOT source_use_equals AND source_use_max"
         expression: "source_use <= source_use_max * $source_scaler"
     sub_expressions:
@@ -874,7 +874,7 @@ constraints:
     where: (include_storage==true or base_tech==storage) AND NOT (base_tech==supply OR base_tech==demand)
     equations:
       - expression: >-
-          storage == $storage_previous_step -
+          storage = $storage_previous_step -
             sum(flow_out_inc_eff, over=carriers) + sum(flow_in_inc_eff, over=carriers)
     sub_expressions:
       storage_previous_step: *storage_previous_step
@@ -890,7 +890,7 @@ constraints:
       - expression: >-
           storage[timesteps=$final_step] * (
             (1 - storage_loss) ** timestep_resolution[timesteps=$final_step]
-          ) == storage_initial * storage_cap
+          ) = storage_initial * storage_cap
     slices:
       final_step:
         - expression: get_val_at_index(timesteps=-1)
@@ -904,7 +904,7 @@ constraints:
     foreach: [techs, timesteps]
     where: "base_tech==transmission"
     equations:
-      - expression: sum(flow_out_inc_eff, over=[nodes, carriers]) == sum(flow_in_inc_eff, over=[nodes, carriers])
+      - expression: sum(flow_out_inc_eff, over=[nodes, carriers]) = sum(flow_in_inc_eff, over=[nodes, carriers])
 
   symmetric_transmission:
     description: >-
@@ -912,7 +912,7 @@ constraints:
     foreach: [nodes, techs]
     where: "base_tech==transmission"
     equations:
-      - expression: sum(flow_cap, over=carriers) == link_flow_cap
+      - expression: sum(flow_cap, over=carriers) = link_flow_cap
 
   export_balance:
     description: >-
