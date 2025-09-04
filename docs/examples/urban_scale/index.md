@@ -37,7 +37,7 @@ You can find out more about this user-defined math [below](#interlude-user-defin
 ### Bringing the YAML files together
 
 Technically, you could define everything about your model in the same file as your configuration.
-One file with the top-level keys `config`, `parameters`, `techs`, `nodes`, `templates`, `scenarios`, `overrides`.
+One file with the top-level keys `config`, `data_definitions`, `techs`, `nodes`, `templates`, `scenarios`, `overrides`.
 However, this tends to become unwieldy.
 
 Instead, various parts of the model are defined in different files and then we `import` them in the YAML file that we are going to load into calliope (`calliope.Model("my_main_model_file.yaml")`).

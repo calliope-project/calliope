@@ -205,6 +205,12 @@ This is particularly useful when making use of more advanced functionality such 
 
 More details on how techs are defined is in the [data definitions documentation](../basic/data_definitions.md).
 
+!!! note "Three kinds of parameters: tech-specific, node-specific and indexed parameters"
+    Above, we describe how you can directly define data for tech-specific parameters within `techs` and node-specific parameters within `nodes`.
+    With data definitions (and of course also with data tables), you can define parameters with any dimensions (including techs/nodes).
+    The data definition syntax used for this can also be used in the `nodes` and `techs` keys, for example to define data with additional dimensions.
+
+
 ## Overrides and scenarios
 
 For example, you might want to explore several pre-defined capacity expansion plans in a model of the European power grid.

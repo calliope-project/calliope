@@ -901,7 +901,7 @@ You can "switch off" a constraint for a given carrier by setting its value to `n
 
 ### Defining parameters outside the scope of `nodes` and `techs`
 
-We now have a top-level key `data_definitions` in which you can use our data_definitions syntax to define any model parameters that you want, without them necessarily being linked to a node/technology.
+We now have a top-level key `data_definitions` in which you can use our data definition syntax to define any model parameters that you want, without them necessarily being linked to a node/technology.
 For instance, to define a parameter that applies over the `carriers` dimension:
 
 ```yaml
@@ -959,7 +959,7 @@ nodes:
 !!! note
     1. Just defining data for new parameters is not enough to have an effect on the optimisation problem.
     You also need to [define your own math](user_defined_math/index.md).
-    2. Because we process your YAML files to create the `nodes` and `techs` dimensions you will find in your Calliope model, you cannot use `nodes`/`techs` as dimensions of parameters defined through the data_definitions syntax under the `nodes` or `techs` keys.
+    2. Because we process your YAML files to create the `nodes` and `techs` dimensions you will find in your Calliope model, you cannot use `nodes`/`techs` as dimensions of parameters defined through the data definition syntax under the `nodes` or `techs` keys.
     It _is_ possible to refer to `nodes` and `techs` as dimensions under the top-level `data_definitions` key.
 
 !!! info "See also"
