@@ -904,7 +904,7 @@ class GroupDatetime(ParsingHelperFunction):
                     foreach: [nodes, techs, carriers, date]
                     where: sink_use_equals_daily
                     equations:
-                        - expression: "group_datetime(flow_in, timesteps, date) == sink_use_equals_daily"
+                        - expression: "group_datetime(flow_in, timesteps, date) = sink_use_equals_daily"
             ```
 
             Similarly, a monthly maximum resource to a supply technology might be used, to simulate e.g. biofuel feedstock availability:
@@ -1000,7 +1000,7 @@ class SumNextN(ParsingHelperFunction):
                     foreach: ["nodes", "techs", "carriers", "timesteps"]
                     where: "carrier_in AND sink_use_flexible AND timesteps<=get_val_at_index(timesteps=-24)"
                     equations:
-                        - expression: sum_next_n(flow_in, timesteps, 4) == sum_next_n(sink_use_flexible, timesteps, 4)"
+                        - expression: sum_next_n(flow_in, timesteps, 4) = sum_next_n(sink_use_flexible, timesteps, 4)"
             ```
         """
         # We cannot use the xarray rolling window method as it doesn't like operating on Python objects, which our optimisation problem components are.

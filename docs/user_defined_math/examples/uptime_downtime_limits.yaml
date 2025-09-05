@@ -73,7 +73,7 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: downtime_periods
     equations:
-      - expression: sum(flow_out, over=carriers) == 0
+      - expression: sum(flow_out, over=carriers) = 0
 
   downtime_period_decision:
     description: >

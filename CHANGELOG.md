@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| `equations: - expression:` now uses `=` for 'equals' cases (#818)
+
 |fixed| `ModelDataFactory` is no longer run twice during startup, resulting in faster initialisation
 
 |changed| `Model.from_dict` has been removed in favor of `calliope.read_dict` (matching `read_netcdf` and `read_yaml`)

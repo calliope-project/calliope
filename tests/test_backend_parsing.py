@@ -29,7 +29,7 @@ def component_obj():
     foreach: [A, A1]
     where: "True"
     equations:
-        - expression: 1 == 1
+        - expression: 1 = 1
     """
     variable_data = string_to_def(setup_string, math_schema.Constraint)
     return parsing.ParsedBackendComponent("constraints", "foo", variable_data)
@@ -192,7 +192,7 @@ def equation_obj(expression_string_parser, where_string_parser):
     return parsing.ParsedBackendEquation(
         equation_name="foo",
         sets=["A", "A1"],
-        expression=expression_string_parser.parse_string("foo == 1", parse_all=True),
+        expression=expression_string_parser.parse_string("foo = 1", parse_all=True),
         where_list=[where_string_parser.parse_string("True", parse_all=True)],
     )
 
@@ -274,11 +274,11 @@ def evaluatable_component_obj(valid_component_names):
 @pytest.fixture(
     params=[
         ("with_inf <= 100", 7),  # all vals except .inf meet criterion
-        ("with_inf == 100", 2),  # only default vals meet criterion
+        ("with_inf = 100", 2),  # only default vals meet criterion
         # only non-default + non-inf values meet criterion (+ only_techs masks one valid value)
         ("$foo <= 100", 4),
-        ("$foo == 100", 0),  # no expressions are valid
-        ("only_techs + with_inf[techs=$tech] == 2", 1),
+        ("$foo = 100", 0),  # no expressions are valid
+        ("only_techs + with_inf[techs=$tech] = 2", 1),
     ]
 )
 def evaluate_component_where(
@@ -311,7 +311,7 @@ class TestParsedComponent:
     @pytest.mark.parametrize(
         "parse_string",
         [
-            "foo + bar == 1",
+            "foo + bar = 1",
             "foo - $bar + baz[A1=a1] <= 1",
             "-1**foo + dummy_func_1(2) + baz[A1=a1] >= foobar",
         ],
@@ -323,7 +323,7 @@ class TestParsedComponent:
 
     @pytest.mark.parametrize(
         "parse_string",
-        ["foo bar == 1", "foo - $bar + baz[A1=a1] = 1", "1foo == 1", "_foo >= foobar"],
+        ["foo bar = 1", "foo - $bar + baz[A1=a1] == 1", "1foo = 1", "_foo >= foobar"],
     )
     def test_parse_string_malformed(
         self, component_obj, expression_string_parser, parse_string
@@ -335,7 +335,7 @@ class TestParsedComponent:
 
     @pytest.mark.parametrize(
         "parse_string",
-        ["foo == 1", "$foo + (bar + foobar[A1=a1])**2 >= (dummy_func_1(foo) + 1)"],
+        ["foo = 1", "$foo + (bar + foobar[A1=a1])**2 >= (dummy_func_1(foo) + 1)"],
     )
     @pytest.mark.parametrize(
         ("where_string", "expected_where_eval"),
@@ -364,7 +364,7 @@ class TestParsedComponent:
     def test_generate_expression_list_id_prefix(
         self, generate_expression_list, expression_generator, n_dicts
     ):
-        expression_dict = expression_generator("foo == 1", "bar")
+        expression_dict = expression_generator("foo = 1", "bar")
         parsed_list = generate_expression_list(
             [expression_dict] * n_dicts, id_prefix="foo"
         )
@@ -376,7 +376,7 @@ class TestParsedComponent:
     def test_generate_expression_list_no_id_prefix(
         self, generate_expression_list, expression_generator, n_dicts
     ):
-        expression_dict = expression_generator("foo == 1", "bar")
+        expression_dict = expression_generator("foo = 1", "bar")
         parsed_list = generate_expression_list([expression_dict] * n_dicts)
         for expr_num in range(n_dicts):
             assert parsed_list[expr_num].name == str(expr_num)
@@ -384,12 +384,12 @@ class TestParsedComponent:
     def test_generate_expression_list_error(
         self, component_obj, generate_expression_list, expression_generator
     ):
-        expression_dict = expression_generator("foo = 1")
+        expression_dict = expression_generator("foo == 1")
         parsed_list = generate_expression_list([expression_dict])
 
         assert not parsed_list
         assert check_error_or_warning(
-            component_obj._errors, ["equations[0].expression", "foo = 1"]
+            component_obj._errors, ["equations[0].expression", "foo == 1"]
         )
 
     @pytest.mark.parametrize("error_position", [0, 1])
@@ -400,8 +400,8 @@ class TestParsedComponent:
         expression_generator,
         error_position,
     ):
-        expression_list = [expression_generator("foo == 1")]
-        expression_list.insert(error_position, expression_generator("foo = 1"))
+        expression_list = [expression_generator("foo = 1")]
+        expression_list.insert(error_position, expression_generator("foo == 1"))
 
         parsed_list = generate_expression_list(expression_list)
 
@@ -417,8 +417,8 @@ class TestParsedComponent:
         self, component_obj, generate_expression_list, expression_generator
     ):
         expression_list = [
-            expression_generator("foo = 1"),
-            expression_generator("foo = 2"),
+            expression_generator("foo == 1"),
+            expression_generator("foo == 2"),
         ]
         parsed_list = generate_expression_list(expression_list)
 
@@ -428,8 +428,8 @@ class TestParsedComponent:
         assert check_error_or_warning(
             component_obj._errors,
             [
-                "equations[0].expression (line 1, char 5): foo = 1",
-                "equations[1].expression (line 1, char 5): foo = 2",
+                "equations[0].expression (line 1, char 6): foo == 1",
+                "equations[1].expression (line 1, char 6): foo == 2",
             ],
         )
 
@@ -444,7 +444,7 @@ class TestParsedComponent:
         n_foos,
         n_bars,
     ):
-        equation_list = generate_expression_list([expression_generator("$foo == $bar")])
+        equation_list = generate_expression_list([expression_generator("$foo = $bar")])
         expression_list = component_obj.extend_equation_list_with_expression_group(
             equation_list[0],
             parsed_sub_expression_dict(n_foos, n_bars),
@@ -460,7 +460,7 @@ class TestParsedComponent:
         expression_generator,
     ):
         equation_ = generate_expression_list(
-            [expression_generator("$foo == $bar + $ba")]
+            [expression_generator("$foo = $bar + $ba")]
         )
         with pytest.raises(KeyError) as excinfo:
             component_obj.extend_equation_list_with_expression_group(
@@ -473,7 +473,7 @@ class TestParsedComponent:
 
     @pytest.mark.parametrize(
         ("equation_", "expected"),
-        [("$foo == $bar", False), ("$foo <= $bar", True), ("$foo * 20 >= $bar", True)],
+        [("$foo = $bar", False), ("$foo <= $bar", True), ("$foo * 20 >= $bar", True)],
     )
     def test_add_exprs_to_equation_data_multi(
         self,
@@ -518,7 +518,7 @@ class TestParsedComponent:
         n_2,
     ):
         equation_ = generate_expression_list(
-            [expression_generator("foo[techs=$tech1] == bar[techs=$tech2]")]
+            [expression_generator("foo[techs=$tech1] = bar[techs=$tech2]")]
         )
         expression_list = component_obj.extend_equation_list_with_expression_group(
             equation_[0], parsed_slice_dict(n_1, n_2), "slices"
@@ -535,7 +535,7 @@ class TestParsedComponent:
         equation_ = generate_expression_list(
             [
                 expression_generator(
-                    "foo[techs=$tech1] == bar[techs=$tech2, nodes=$node1]"
+                    "foo[techs=$tech1] = bar[techs=$tech2, nodes=$node1]"
                 )
             ]
         )
@@ -550,19 +550,19 @@ class TestParsedComponent:
     @pytest.mark.parametrize(
         ("eq_string", "expected_n_equations"),
         [
-            ("1 == bar", 1),
-            ([{"expression": "1 == bar"}], 1),
-            ([{"expression": "1 == bar"}, {"expression": "foo == bar"}], 2),
-            ("1 == bar[techs=$tech2]", 2),
-            ("$foo == bar[techs=$tech2]", 4),
-            ("$bar == 1", 4),
-            ("$bar == bar[techs=$tech2]", 6),
-            ("$bar + $foo == bar[techs=$tech2]", 12),
-            ("$bar + $foo == bar[techs=$tech2] + foo[techs=$tech1]", 16),
+            ("1 = bar", 1),
+            ([{"expression": "1 = bar"}], 1),
+            ([{"expression": "1 = bar"}, {"expression": "foo = bar"}], 2),
+            ("1 = bar[techs=$tech2]", 2),
+            ("$foo = bar[techs=$tech2]", 4),
+            ("$bar = 1", 4),
+            ("$bar = bar[techs=$tech2]", 6),
+            ("$bar + $foo = bar[techs=$tech2]", 12),
+            ("$bar + $foo = bar[techs=$tech2] + foo[techs=$tech1]", 16),
             (
                 [
-                    {"expression": "$foo == bar[techs=$tech2]"},
-                    {"expression": "$bar + $foo == bar[techs=$tech2]"},
+                    {"expression": "$foo = bar[techs=$tech2]"},
+                    {"expression": "$bar + $foo = bar[techs=$tech2]"},
                 ],
                 16,
             ),
@@ -594,24 +594,24 @@ class TestParsedComponent:
     def test_parse_equations_fail(
         self, obj_with_sub_expressions_and_slices, valid_component_names
     ):
-        component_obj = obj_with_sub_expressions_and_slices("bar = 1")
+        component_obj = obj_with_sub_expressions_and_slices("bar == 1")
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             component_obj.parse_equations(valid_component_names, errors="raise")
         expected_err_string = """
  * constraints:my_constraint:
-    * equations[0].expression (line 1, char 5): bar = 1
-                                                    ^"""
+    * equations[0].expression (line 1, char 6): bar == 1
+                                                     ^"""
         assert check_error_or_warning(excinfo, expected_err_string)
 
     def test_parse_equations_fail_no_raise(
         self, obj_with_sub_expressions_and_slices, valid_component_names
     ):
-        component_obj = obj_with_sub_expressions_and_slices("bar = 1")
+        component_obj = obj_with_sub_expressions_and_slices("bar == 1")
         component_obj.parse_equations(valid_component_names, errors="ignore")
 
         expected_err_string = """\
-equations[0].expression (line 1, char 5): bar = 1
-                                                    ^"""
+equations[0].expression (line 1, char 6): bar == 1
+                                                     ^"""
 
         assert check_error_or_warning(component_obj._errors, expected_err_string)
 
@@ -721,10 +721,10 @@ class TestParsedBackendEquation:
     @pytest.mark.parametrize(
         "parse_string",
         [
-            "$foo == $bar",
+            "$foo = $bar",
             "$foo + $bar >= 1",
-            "$foo * $bar == 1",
-            "($foo * 1) + $bar == 1",
+            "$foo * $bar = 1",
+            "($foo * 1) + $bar = 1",
             "(1**$bar) <= $foo + $bar",
             "(1 / $bar) <= $foo",
             "($foo - $bar) * ($foo + $bar) <= 2",
@@ -745,17 +745,17 @@ class TestParsedBackendEquation:
         ("parse_string", "expected"),
         [
             # sub-expressions in comparisons are always seen
-            ("$foo == $bar", ["foo", "bar"]),
+            ("$foo = $bar", ["foo", "bar"]),
             # sub-expressions in arithmetic are missed
             ("1 + $bar >= $foo", ["foo"]),
             # sub-expressions in arithmetic are missed
-            ("$foo * $bar == 1", []),
+            ("$foo * $bar = 1", []),
             # sub-expressions in arithmetic are missed
-            ("($foo * 1) + $bar == 1", []),
+            ("($foo * 1) + $bar = 1", []),
             # sub-expressions in functions are missed
-            ("dummy_func_1($foo) == $bar", ["bar"]),
+            ("dummy_func_1($foo) = $bar", ["bar"]),
             # sub-expressions in functions and arithmetic are missed
-            ("dummy_func_1($foo) == $bar + 1", []),
+            ("dummy_func_1($foo) = $bar + 1", []),
         ],
     )
     def test_find_items_in_expression_missing_eval_class(
@@ -772,9 +772,9 @@ class TestParsedBackendEquation:
     @pytest.mark.parametrize(
         "parse_string",
         [
-            "foo[techs=$tech1] == bar[techs=$tech2]",
+            "foo[techs=$tech1] = bar[techs=$tech2]",
             "foo[techs=$tech1] + bar[techs=$tech2] >= 1",
-            "(foo[techs=$tech1] * 1) + bar[techs=$tech2] == 1",
+            "(foo[techs=$tech1] * 1) + bar[techs=$tech2] = 1",
             "(1**bar[techs=$tech2]) <= foo[techs=$tech1] + 7",
             "(foo[techs=$tech1] - bar[techs=$tech2]) * 3 <= 2",
             "dummy_func_1(bar[techs=$tech2]) <= dummy_func_2(x=foo[techs=$tech1])",
@@ -795,10 +795,10 @@ class TestParsedBackendEquation:
     @pytest.mark.parametrize(
         "parse_string",
         [
-            "$foo == $bar",
+            "$foo = $bar",
             "$foo + $bar >= 1",
-            "dummy_func_1($foo) == $bar",
-            "($foo * 1) + dummy_func_1($bar) == 1",
+            "dummy_func_1($foo) = $bar",
+            "($foo * 1) + dummy_func_1($bar) = 1",
             "dummy_func_1($bar, x=$foo) <= 2",
         ],
     )
@@ -811,7 +811,7 @@ class TestParsedBackendEquation:
         assert found_slices == {"foo", "bar"}
 
     def test_find_single_sub_expression(self, expression_string_parser, equation_obj):
-        parsed = expression_string_parser.parse_string("$foo == 1", parse_all=True)
+        parsed = expression_string_parser.parse_string("$foo = 1", parse_all=True)
         equation_obj.expression = parsed
         found_sub_expressions = equation_obj.find_sub_expressions()
         assert found_sub_expressions == {"foo"}
@@ -827,11 +827,11 @@ class TestParsedBackendEquation:
     @pytest.mark.parametrize(
         ("equation_expr", "sub_expression_exprs"),
         [
-            ("$foo == 1", {"foo": "foo[techs=$tech1] + bar[techs=$tech2]"}),
-            ("$foo == $bar", {"foo": "foo[techs=$tech1]", "bar": "bar[techs=$tech2]"}),
+            ("$foo = 1", {"foo": "foo[techs=$tech1] + bar[techs=$tech2]"}),
+            ("$foo = $bar", {"foo": "foo[techs=$tech1]", "bar": "bar[techs=$tech2]"}),
             ("foo[techs=$tech1] + $bar >= 1", {"bar": "bar[techs=$tech2]"}),
             (
-                "foo[techs=$tech1] + $bar == $foo",
+                "foo[techs=$tech1] + $bar = $foo",
                 {"foo": "10", "bar": "bar[techs=$tech2]"},
             ),
         ],
@@ -1004,7 +1004,7 @@ class TestParsedConstraint:
             {
                 "foreach": ["techs"],
                 "where": "with_inf",
-                "equations": [{"expression": "$foo == 1"}],
+                "equations": [{"expression": "$foo = 1"}],
                 "sub_expressions": {
                     "foo": [
                         {"expression": "only_techs + 2", "where": "False"},
