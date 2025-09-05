@@ -1,4 +1,4 @@
-## 0.7.0.dev7
+## 0.7.0.dev7 (2025-09-05)
 
 ### User-facing changes
 
