@@ -26,7 +26,8 @@ nodes:
     techs:
       power_supply:
       power_demand:
-        # `sink_use_equals` forces this technology to act as a sink with exactly the amount specified here
+        # `sink_use_equals` forces this technology to act as a sink
+        # with exactly the amount specified here
         sink_use_equals:
           data: [50]  # Unit: MWh
           index: ["2025-01-01 12:00:00"]

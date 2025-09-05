@@ -17,13 +17,11 @@ We can easily run a model defined in `model.yaml` and save results to a single N
 $ calliope run model.yaml --save_netcdf=results.nc
 ```
 
-An alternative is to save results to CSV files in the directory `results_directory`:
+An alternative is to save results to CSV files in the directory `results_directory` - this results in one CSV file per variable:
 
 ```shell
 $ calliope run model.yaml --save_csv=results_directory
 ```
-
-This can be useful for further processing in a tool like Excel, but because of the more than two-dimensional nature of many of Calliope's inputs and results, can be quite unwieldy.
 
 For more details, including how to apply a scenario or override, see the [documentation on running in the command line](../basic/running-cli.md).
 

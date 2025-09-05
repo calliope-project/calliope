@@ -10,14 +10,14 @@ You need these basic building blocks in place for the most minimal possible mode
 * One node
 * One timestep
 
-Without specifying anything further, this model will run in the `base` math mode, which means a capacity expansion problem where both the technology capacities (time-independent) and their operation (time-dependent) are decision variables.
-In the above example, we would find that the `power_supply` technology, which has a maximum capacity of 100, would get a capacity of 50 in the solution, since that is the demand from `power_demand` in the single timestep.
-
 A minimal model that satisfies the above requirements could be written in a single `model.yaml` file like this:
 
 ```yaml
 --8<-- "docs/getting_started/minimal_model.yaml"
 ```
+
+Without specifying anything further, this model will run in the `base` math mode, which means a capacity expansion problem where both the technology capacities (time-independent) and their operation (time-dependent) are decision variables.
+In the above example, we would find that the `power_supply` technology, which has a maximum capacity of 100, would get a capacity of 50 in the solution, since that is the demand from `power_demand` in the single timestep.
 
 !!! note
     Above, you see another feature of YAML: comment strings.
@@ -34,18 +34,18 @@ This works for a single timestep, but for a real-world model with thousands of t
 ## Model directory layout
 
 It makes sense to collect all files belonging to a model inside a single model directory, and to separate different parts of the model into separate files (making use of the `import` top-level key to combine them).
-The layout of a Calliope model directory might look like this (`+` denotes directories, `-` files):
+The layout of a Calliope model directory might look like this:
 
 ```
-+ example_model
-    + model_definition
-        - nodes.yaml
-        - techs.yaml
-    + data_tables
-        - solar_resource.csv
-        - electricity_demand.csv
-    - model.yaml
-    - scenarios.yaml
+example_model/
+├── data_tables/
+│   ├── electricity_demand.csv
+│   └── solar_resource.csv
+├── model_definition/
+│   ├── nodes.yaml
+│   └── techs.yaml
+├── model.yaml
+└── scenarios.yaml
 ```
 
 We use the above layout in the example models, where the files `model.yaml`, `nodes.yaml` and `techs.yaml` together are the model definition.
@@ -112,6 +112,13 @@ ccgt:
     dims: costs
 ```
 
+1. Note that YAML is flexible about dealing with text strings.
+You can, but do not need to, enclose them in quotation marks.
+However, in this example using quotation marks is important.
+Without them, the colour code would be interpreted as a YAML comment due to the `#` character!
+2. The period at the start of `.inf` will ensure that this is read as a floating-point number (`float`) type rather than as the text string `"inf"`.
+3. Costs require us to explicitly define data in the [data definition syntax](../basic/data_definitions.md) format so that we can define their mandatory cost class (in this case: `monetary`).
+
 More details on how techs are defined is in the [techs documentation](../basic/techs.md).
 
 ## Nodes
@@ -137,8 +144,7 @@ nodes:
 
 Note that:
 
-* Some of the node-level model specification pertains to the node itself, e.g. the `latitude`, `longitude`, and `available_area`. The former two are used in visualisation, the latter can be used in area-related constraints. These are all optional
-* `node_flow_out_max`
+* Some of the node-level model specification pertains to the node itself, e.g. the `latitude`, `longitude`, and `available_area`. The former two are used in visualisation, the latter can be used in area-related constraints. These are all optional.
 * The `techs` key at the node level specifies which techs are installable (available) at that node. As seen in the example above, each allowed tech must be listed (e.g. the case of `demand_power`), and can optionally specify node-specific parameters (e.g. the case of `ccgt`).
 
 If given, node-specific parameters supersede any parameters given at the technology level. In the above example, `flow_cap_max` for the tech `ccgt` in the node `region` will supersede any model-wide value for `ccgt`'s `flow_cap_max` defined in the `techs` top-level key.
@@ -172,12 +178,12 @@ Therefore, alongside your YAML model definition, you can load tabular data from 
 Recall our simple directory layout above. We have a `data_tables` directory with two tabular CSV files:
 
 ```
-+ example_model
-   ...
-    + data_tables
-        - solar_resource.csv
-        - electricity_demand.csv
-    ...
+example_model/
+├── data_tables/
+│   ├── electricity_demand.csv
+│   └── solar_resource.csv
+├── ...
+...
 ```
 
 To read such a file into our model, we specify the file we want to load and how exactly we want to treat the rows and columns, for example:
@@ -212,14 +218,14 @@ More details on how techs are defined is in the [data definitions documentation]
 
 ## Overrides and scenarios
 
+Overrides (and the scenarios that reference overrides) can overwrite anything that is defined in the Calliope YAML files: both model configuration and model definition.
+
 For example, you might want to explore several pre-defined capacity expansion plans in a model of the European power grid.
 To do so, you first define a base model, then define one `override` with each alternative grid configuration.
 
 The `scenarios` can combine several `overrides`.
 For example, you might also want to explore different future cost developments, and define `overrides` for those.
 In your scenarios, you can then combine overrides for a specific realisation of future costs and a specific grid configuration.
-
-Overrides (and the scenarios that reference overrides) can overwrite anything that is defined in the Calliope YAML files: both model configuration and model definition.
 
 For more details on how these are used in practice, refer to the example models, and to the [overrides and scenarios documentation](../basic/scenarios.md).
 

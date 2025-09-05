@@ -45,7 +45,6 @@ These are the most important concepts around which Calliope's maths are built:
 * **Technologies** supply, consume, convert, store or transmit _carriers_, e.g., transmission lines/pipes, batteries, power plants, wind turbines, or home appliances.
 * **Nodes** contain groups of _technologies_ and are usually geographic, e.g., a country, municipality or a single house.
 * Carrier flows can enter the system from **sources**, e.g., energy from the sun to power a solar panel, and can exit it into **sinks**, e.g., electricity consumed by household appliances.
-Unlike _carriers_, we do not explicitly track the type of commodity described by sources and sinks.
 
 The visual overview below gives you a sense of how a simple model might be set up.
 It has two nodes (blue boxes), two carriers (yellow and red), and various technologies (grey boxes).
@@ -64,7 +63,7 @@ Calliope's syntax ensures these models are intuitive, and easy to understand and
 
 ### YAML: keys and values
 
-Models in Calliope are defined in a text file format called [YAML](https://en.wikipedia.org/wiki/YAML), referring to tabular data files (in the CSV format) where necessary.
+Models in Calliope are defined in a text file format called [YAML](https://en.wikipedia.org/wiki/YAML), referring to tabular data files where necessary.
 These files are essentially a collection of `key: value` entries, where `key` is a given setting - for example the nameplate capacity of a power plant - and `value` might be a number, a text string, or a list (e.g. a list of further settings).
 We will often refer to "keys" and "values" in the documentation.
 The keys and values can be nested, for example, to define which solver will be called to solve the problem:
@@ -119,6 +118,7 @@ Math that comes later in this order can modify and overwrite the earlier math.
 The model definition is your representation of the physical system you are modelling and includes the data with which the components specified in the math will be "populated".
 It spans across the four top-level keys [`techs`](../basic/techs.md), [`nodes`](../basic/nodes.md), [`data_definitions`](../basic/data_definitions.md), and [`data_tables`](../basic/data_tables.md).
 
+Note that you can define your data directly in the YAML text files that make up your model, but you can also define them in tabular data files in the CSV format.
 More on this will follow in the next "getting started" section, [Creating a model](creating.md).
 
 !!! note "Note on units"

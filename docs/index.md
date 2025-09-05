@@ -1,5 +1,18 @@
 # Calliope: energy system modelling made simple
 
+!!! note
+
+    This version of Calliope is available as a pre-release with the purpose of gathering feedback from users.
+    To install the pre-release:
+
+    ```shell
+    mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
+    ```
+
+    To see a full list of changes, read our [page on migrating between v0.6 and v0.7](migrating.md).
+
+    If you want to install the most recent _stable_ version of Calliope, see our [v0.6.10 documentation](https://calliope.readthedocs.io/en/v0.6.10/).
+
 Calliope is an energy system modelling framework based on mathematical optimisation.
 It is designed to formulate and solve typical problems from the energy field such as capacity expansion planning, economic dispatch, power market modelling and energy system modelling in general.
 It is used in such roles by both commercial and research organisations.
@@ -14,19 +27,6 @@ See the [main project website at www.callio.pe](https://www.callio.pe/) for more
 !!! tip "Where to start"
 
     If you are new to Calliope, we recommend that you first read through the [getting started guide](getting_started/concepts.md), then review the [examples and tutorials](examples/overview.md). The remaining sections primarily contain reference material that is most useful if you already know the basics and need to look up specifics.
-
-!!! note
-
-    This version of Calliope is available as a pre-release with the purpose of gathering feedback from users.
-    To install the pre-release:
-
-    ```shell
-    mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
-    ```
-
-    To see a full list of changes, read our [page on migrating between v0.6 and v0.7](migrating.md).
-
-    If you want to install the most recent _stable_ version of Calliope, see our [v0.6.10 documentation](https://calliope.readthedocs.io/en/v0.6.10/).
 
 A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials.
 Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of [xarray Datasets](https://docs.xarray.dev/en/v2022.03.0/user-guide/data-structures.html#dataset) which in turn can easily be converted into [Pandas data structures](https://pandas.pydata.org/pandas-docs/version/1.5/user_guide/dsintro.html#dsintro) for further analysis.
