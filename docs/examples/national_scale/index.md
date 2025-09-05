@@ -55,15 +55,15 @@ Where there is no data for that combination of technology and cost parameter, th
 !!! info
     You can read more about loading data from file in [our dedicated tutorial][loading-tabular-data].
 
-### Indexed parameters
+### Data definitions for indexed parameters
 
-Before we dive into the technologies and nodes in the model, we have defined some parameters that are independent of both of these:
+Before we dive into the technologies and nodes in the model, we have defined the data for some indexed parameters that are independent of both technologies and nodes:
 
 ```yaml
---8<-- "src/calliope/example_models/national_scale/model.yaml:parameters"
+--8<-- "src/calliope/example_models/national_scale/model.yaml:parameter_data_definitions"
 ```
 
-Neither of these parameters is strictly necessary to define.
+Data for neither of these parameters is strictly necessary to define.
 They have defaults assigned to them (see the model definition schema in the `reference` section of the documentation).
 However, we have included them in here as examples.
 
@@ -73,7 +73,7 @@ However, we have included them in here as examples.
 but not so large that it causes numerical trouble.
 
 `bigM` is dimensionless, while `objective_cost_weights` is indexed over the `costs` dimension.
-You will see this same `parameter` definition structure elsewhere in the model definition as we index certain parameters over other dimensions.
+You will see this same `data_definitions` definition structure elsewhere in the model definition as we index certain parameters over other dimensions.
 
 ### Supply technologies
 
@@ -201,7 +201,7 @@ As the name suggests, it applies no cost or efficiency losses to this transmissi
 
 We can see that those technologies which rely on `free_transmission` inherit a lot of this information from elsewhere in the model definition.
 `free_transmission` is defined in `templates`, which makes it inheritable.
-[Templates](../../creating/yaml.md#reusing-definitions-through-templates) allow us to avoid excessive repetition in our model definition.
+[Templates](../../reference/yaml.md#reusing-definitions-through-templates) allow us to avoid excessive repetition in our model definition.
 
 Technologies and nodes can inherit from anything defined in `templates`.
 items in `templates` can also inherit from each other, so you can create inheritance chains.

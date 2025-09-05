@@ -55,7 +55,7 @@ model.backend.to_lp('my_saved_model.lp')
 ## Improving solution times by reducing problem size
 
 One way to improve solution time is to reduce the size of a problem.
-Another way is to address potential numerical issues, which is dealt with further below in [understanding-infeasibility-and-numerical-instability][].
+Another way is to address potential numerical issues, which is dealt with [further below][understanding-infeasibility-and-numerical-instability].
 
 ### Number of variables
 
@@ -97,7 +97,7 @@ Then, run `operate` mode with these capacities to get a higher resolution operat
 If necessary, this process could be iterated.
 
 !!! info "See also"
-    [Documentation on `operate` mode](pre_defined_math/index.md#operate-mode)
+    [Documentation on `operate` mode](basic/modes.md#operate-mode)
 
 ## Influence of solver choice on speed
 

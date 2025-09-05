@@ -25,7 +25,7 @@ config:
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
 # --8<-- [end:config]
 
-# --8<-- [start:parameters]
+# --8<-- [start:parameter_data_definitions]
 data_definitions:
   objective_cost_weights:
     data: 1
@@ -37,7 +37,7 @@ data_definitions:
     data: 0.10
     index: monetary
     dims: costs
-# --8<-- [end:parameters]
+# --8<-- [end:parameter_data_definitions]
 
 # --8<-- [start:data-tables]
 data_tables:

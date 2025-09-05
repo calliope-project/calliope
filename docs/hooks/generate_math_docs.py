@@ -20,6 +20,9 @@ TEMPDIR = tempfile.TemporaryDirectory()
 
 MODEL_PATH = Path(__file__).parent / "dummy_model" / "model.yaml"
 
+BASE_MATH_NAV_PATH = ["Math", "Built-in base math"]
+OTHER_MATH_NAV_PATH = ["Math", "Other built-in math"]
+
 PREPEND_SNIPPET = """
 # {title}
 {description}
@@ -51,12 +54,13 @@ def on_files(files: list, config: dict, **kwargs):
         textwrap.dedent(
             """
         Complete base mathematical formulation for a Calliope model.
-        This math is _always_ applied but can be overridden with pre-defined additional math or [your own math][adding-your-own-math-to-a-model].
+        This math is _always_ applied but can be overridden with pre-defined additional math or [your own math](../user_defined_math/index.md).
         """
         ),
         base_documentation,
         files,
         config,
+        base_math=True,
     )
 
     for override in model_config["overrides"].keys():
@@ -78,7 +82,14 @@ def on_files(files: list, config: dict, **kwargs):
             """
             )
 
-        write_file(f"{override}.yaml", text, custom_documentation, files, config)
+        write_file(
+            f"{override}.yaml",
+            text,
+            custom_documentation,
+            files,
+            config,
+            output_path=Path("math/built_in"),
+        )
 
     return files
 
@@ -89,6 +100,8 @@ def write_file(
     math_documentation: MathDocumentation,
     files: list[File],
     config: dict,
+    base_math: bool = False,
+    output_path: Path = Path("math"),
 ) -> None:
     """Parse math files and produce markdown documentation.
 
@@ -98,8 +111,10 @@ def write_file(
         math_documentation (MathDocumentation): calliope math documentation.
         files (list[File]): math files to parse.
         config (dict): documentation configuration.
+        base_math (bool, optional): whether the math is the base math or an override. Defaults to False.
+        output_path (Path, optional): path to output directory for the markdown file. Defaults to Path("math").
     """
-    output_file = (Path("math") / filename).with_suffix(".md")
+    output_file = (output_path / filename).with_suffix(".md")
     output_full_filepath = Path(TEMPDIR.name) / output_file
     output_full_filepath.parent.mkdir(exist_ok=True, parents=True)
 
@@ -121,13 +136,26 @@ def write_file(
             use_directory_urls=config["use_directory_urls"],
         )
     )
-    nav_reference = [
+    if base_math:
+        top_level_page_name, second_level_page_name = BASE_MATH_NAV_PATH
+    else:
+        top_level_page_name, second_level_page_name = OTHER_MATH_NAV_PATH
+
+    top_level_nav_reference = [
         idx
         for idx in config["nav"]
-        if isinstance(idx, dict) and set(idx.keys()) == {"Pre-defined math"}
+        if isinstance(idx, dict) and set(idx.keys()) == {top_level_page_name}
+    ][0]
+    nav_reference = [
+        idx
+        for idx in top_level_nav_reference[top_level_page_name]
+        if isinstance(idx, dict) and set(idx.keys()) == {second_level_page_name}
     ][0]
 
-    nav_reference["Pre-defined math"].append(output_file.as_posix())
+    if base_math:
+        nav_reference[second_level_page_name] = output_file.as_posix()
+    else:
+        nav_reference[second_level_page_name].append(output_file.as_posix())
 
     title = math_documentation.name
     math_doc = math_documentation.write(format="md", mkdocs_features=True)

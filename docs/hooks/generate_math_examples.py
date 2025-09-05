@@ -13,8 +13,7 @@ TEMPDIR = tempfile.TemporaryDirectory()
 
 CUSTOM_MATH_PATH = Path("docs") / "user_defined_math" / "examples"
 
-TOP_LEVEL_PAGE_NAME = "Defining your own math"
-EXAMPLES_PAGE_NAME = "Example additional math gallery"
+EXAMPLES_PAGE_NAME = "User-defined math examples"
 
 MD_EXAMPLE_STRING = """
 # {title}
@@ -35,15 +34,9 @@ MD_EXAMPLE_STRING = """
 
 def on_files(files: list, config: dict, **kwargs):
     """Generate custom math example markdown files and attach them to the documentation and the navigation tree."""
-    # Find the navigation tree list that we will populate with reference to new markdown files
-    top_level_nav_reference = [
-        idx
-        for idx in config["nav"]
-        if isinstance(idx, dict) and set(idx.keys()) == {TOP_LEVEL_PAGE_NAME}
-    ][0]
     nav_reference = [
         idx
-        for idx in top_level_nav_reference[TOP_LEVEL_PAGE_NAME]
+        for idx in config["nav"]
         if isinstance(idx, dict) and set(idx.keys()) == {EXAMPLES_PAGE_NAME}
     ][0]
 

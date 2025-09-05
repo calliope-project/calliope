@@ -37,7 +37,7 @@ You can find out more about this user-defined math [below](#interlude-user-defin
 ### Bringing the YAML files together
 
 Technically, you could define everything about your model in the same file as your configuration.
-One file with the top-level keys `config`, `parameters`, `techs`, `nodes`, `templates`, `scenarios`, `overrides`.
+One file with the top-level keys `config`, `data_definitions`, `techs`, `nodes`, `templates`, `scenarios`, `overrides`.
 However, this tends to become unwieldy.
 
 Instead, various parts of the model are defined in different files and then we `import` them in the YAML file that we are going to load into calliope (`calliope.Model("my_main_model_file.yaml")`).
@@ -71,12 +71,12 @@ Since all the data refers to the one parameter `sink_use_equals`, we don't add t
 !!! info
     You can read more about loading data from file in [our dedicated tutorial][loading-tabular-data].
 
-### Indexed parameters
+### Data definitions for indexed parameters
 
-Before we dive into the technologies and nodes in the model, we have defined some parameters that are independent of both of these:
+Before we dive into the technologies and nodes in the model, we have defined the data for some indexed parameters that are independent of both technologies and nodes:
 
 ```yaml
---8<-- "src/calliope/example_models/urban_scale/model.yaml:parameters"
+--8<-- "src/calliope/example_models/urban_scale/model.yaml:parameter_data_definitions"
 ```
 
 Neither of these parameters is strictly necessary to define.
@@ -226,7 +226,7 @@ Gas is made available in each node without consideration of transmission.
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:transmission"
 ```
 
-To avoid excessive duplication in model definition, our transmission technologies inherit most of the their parameters from [templates](../../creating/yaml.md#reusing-definitions-through-templates):
+To avoid excessive duplication in model definition, our transmission technologies inherit most of the their parameters from [templates](../../reference/yaml.md#reusing-definitions-through-templates):
 
 ```yaml
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:transmission-templates"

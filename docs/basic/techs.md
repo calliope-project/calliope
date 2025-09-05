@@ -1,10 +1,11 @@
 
 # Technologies (`techs`)
 
-The `techs` section in the model configuration specifies all of the model's technologies.
+The `techs` section in the model definition specifies all of the model's technologies.
 
-Calliope allows a modeller to define technologies with arbitrary characteristics by defining one of the abstract base techs as `base_tech`.
-This establishes the basic characteristics in the optimisation model (decision variables and constraints) applied to the technology:
+## Base techs
+
+The choice of `base_tech` in the tech's specification establishes its basic characteristics in the optimisation model (decision variables and constraints) applied to the technology:
 
 * `supply`: Draws from a source to produce a carrier.
 * `demand`: Consumes a carrier to supply to an external sink.
@@ -12,13 +13,7 @@ This establishes the basic characteristics in the optimisation model (decision v
 * `transmission`: Transmits a carrier from one node to another.
 * `conversion`: Converts from one carrier to another.
 
-??? info "Sharing configuration with templates"
-
-    To share definitions between technologies and/or nodes, you can use configuration templates (the `template` key).
-    This allows a technology/node to inherit definitions from [`template` definitions](yaml.md#reusing-definitions-through-templates).
-    Note that `template` is different to setting a `base_tech`.
-    Setting a base_tech does not entail any configuration options being inherited;
-    `base_tech` is only used when building the optimisation problem (i.e., in the `math`).
+## Basic example
 
 The following example shows the definition of a `ccgt` technology, i.e. a combined cycle gas turbine that delivers electricity:
 
@@ -48,11 +43,11 @@ ccgt:
 
 1. This is an example of when using quotation marks is important.
 Without them, the colour code would be interpreted as a YAML comment!
-2. the period at the start of `.inf` will ensure it is read in as a `float` type.
-3. Costs require us to explicitly define data in the [indexed parameter](parameters.md) format so that we can define the cost class (in this case: `monetary`).
+2. the period at the start of `.inf` will ensure it is read in as a floating point number (`float` type) representing an infinite amount, rather than as the text string `"inf"`.
+3. Costs require us to explicitly define data by the [data_definitions](data_definitions.md) format so that we can define the cost class (in this case: `monetary`).
 
 Each technology must specify an abstract base technology and its carrier (`carrier_out` in the case of a `supply` technology).
-Specifying a `color` and a `name` is optional but useful when you want to [visualise or otherwise report your results](../analysing.md).
+Specifying a `color` and a `name` is optional but useful when you want to [visualise or otherwise report your results](../getting_started/analysing.md).
 
 The rest of the data for the technology is used in the optimisation problem: to set constraints and to link the technology to the objective function (via costs).
 In the above example, we have a capacity limit `flow_cap_max`, conversion efficiency `flow_out_eff`, the life time (used in [levelised cost calculations](../reference/api/postprocess.md)), and the resource available for consumption `source_use_max`.
@@ -66,15 +61,23 @@ Additional cost classes can be created simply by adding them to the definition o
 ??? info "Costs in the objective function"
     By default, all defined cost classes are used in the objective function, i.e., the default objective is to minimize total costs.
     Limiting the considered costs can be achieved by [customising the in-built objective function](../user_defined_math/customise.md) to only focus on e.g. monetary costs (`[monetary] in costs`),
-    or updating the `objective_cost_weights` indexed parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
+    or updating the `objective_cost_weights` data_definitions-defined parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
 
     ```yaml
-    parameters:
+    data_definitions:
       objective_cost_weights:
         data: [1, 0]
         index: [monetary, co2_emissions]
         dims: costs
     ```
+
+## Sharing configuration with templates
+
+To share definitions between technologies and/or nodes, you can use configuration templates (the `template` key).
+This allows a technology/node to inherit definitions from [`template` definitions](../reference/yaml.md#reusing-definitions-through-templates).
+Note that `template` is different to setting a `base_tech`.
+Setting a base_tech does not entail any configuration options being inherited;
+`base_tech` is only used when building the optimisation problem (i.e., in the `math`).
 
 ## Transmission technologies
 
@@ -85,6 +88,7 @@ Instead, you associate transmission technologies with nodes in `techs`:
 ```yaml
 techs:
   ac_transmission:
+    base_tech: transmission
     link_from: region1  # (1)!
     link_to: region2
     flow_cap_max: 100
@@ -111,8 +115,8 @@ However, doing so makes it much easier to process your model definition in Calli
 
 ### Pre-defined parameters
 
-There is a long list of pre-defined parameters that we use in our [base math][base-math].
-These are listed in full with descriptions and units in our [model definition reference page][model-definition-schema].
+There is a long list of pre-defined parameters in our base math.
+These are listed in full with descriptions and units in our in our [base math documentation][base-math].
 These parameters come with strict types, default values, and other attributes used in internal Calliope processing.
 Therefore they should always be your first port of call.
 However, if you want to add your own parameters, that is also possible.
@@ -134,7 +138,7 @@ techs:
       dims: costs
 ```
 
-If you forget to use the [indexed parameter](parameters.md) format for a parameter starting with `cost_` then our YAML schema will raise an error.
+If you forget to use the [data_definitions](../basic/data_definitions.md) format for a parameter starting with `cost_` then our YAML schema will raise an error.
 For example, this is not valid and will create an error:
 
 ```yaml
@@ -143,11 +147,11 @@ techs:
     cost_custom: 1
 ```
 
-### Using the indexed parameter format
+### Using the data_definitions format to define parameter data
 
-The [indexed parameter](parameters.md) format allows you to add dimensions to your data.
+The [data_definitions](../basic/data_definitions.md) format allows you to add dimensions to your data.
 By defining just a data value, the resulting parameter will only be indexed over the `techs` dimension (+ optionally the `nodes` dimension if you provide a new value for it at a [node](nodes.md)).
-By using the indexed parameter format, you can add new dimensions.
+By using the data_definitions format, you can add new dimensions.
 We saw this above with `costs`, but you can add _any_ dimension _except_ `nodes`.
 
 !!! example

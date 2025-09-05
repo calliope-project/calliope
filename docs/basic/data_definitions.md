@@ -1,18 +1,18 @@
-# Indexed parameters (`parameters`)
+# Data definitions (`data_definitions`)
 
 Some data is not indexed over [technologies](techs.md) / [nodes](nodes.md).
-This data can be defined under the top-level key `parameters`.
+This data can be defined under the top-level key `data_definitions`.
 This could be a single value:
 
 ```yaml
-parameters:
+data_definitions:
   my_param: 10
 ```
 
 or (equivalent):
 
 ```yaml
-parameters:
+data_definitions:
   my_param:
     data: 10
 ```
@@ -22,7 +22,7 @@ which can then be accessed in the model inputs `model.inputs.my_param` and used 
 Or, it can be indexed over one or more model dimension(s):
 
 ```yaml
-parameters:
+data_definitions:
   my_indexed_param:
     data: 100
     index: monetary
@@ -41,18 +41,48 @@ which can be accessed in the model inputs and [any math you add](../user_defined
 You can also index over a new dimension:
 
 ```yaml
-parameters:
+data_definitions:
   my_indexed_param:
     data: 100
     index: my_index_val
     dims: my_new_dim
 ```
 
-Which will add the new dimension `my_new_dim` to your model: `model.inputs.my_new_dim` which you could choose to build a math component over:
+However, you need to ensure that this dimension exists by defining it in your custom math:
+
+```yaml
+dimensions:
+  my_new_dim:
+    title: "My new dimension"
+    dtype: string
+    ordered: false
+    iterator: my_new_dim  # (1)
+```
+
+1. The `iterator` is the text that will be used for your dimension when you build math documentation.
+You may want to use something shorter, e.g. a single letter.
+
+Assuming the above dimension definition is saved in the file `my_math.yaml`, you need to add this math to your model:
+
+```yaml
+config:
+  init:
+    math_paths:
+      my_new_math: "my_math.yaml"
+    extra_math: [my_new_math]
+```
+
+This will add the new dimension `my_new_dim` to your model (`model.inputs.my_new_dim`), which you could choose to build a math component over:
 `foreach: [my_new_dim]`.
 
 !!! warning
-    The `parameter` section should not be used for large datasets (e.g., indexing over the time dimension) as it will have a high memory overhead when loading the data.
+    The `data_definitions` section should not be used for large datasets (e.g., indexing over the time dimension) as it will have a high memory overhead when loading the data.
+
+## Parameters versus lookups
+
+When you specify data through `data_definitions`, you may be populating either a parameter or what Calliope calls a "lookup". A lookup is essentially a "helper parameter" with non-numeric values, for example, a string or a boolean (True/False) value.
+
+Whether your data definition becomes a parameter or a lookup depends on the defined model math [see the documentation on user-defined math](../user_defined_math/customise.md) for more on how to create new parameters and lookups.
 
 ## Broadcasting data along indexed dimensions
 

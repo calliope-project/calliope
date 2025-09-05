@@ -1,13 +1,5 @@
 # Loading tabular data (`data_tables`)
 
-We have chosen YAML syntax to define Calliope models as it is human-readable.
-However, when you have a large dataset, the YAML files can become large and ultimately not as readable as we would like.
-For instance, for parameters that vary in time we would have a list of 8760 values and timestamps to put in our YAML file!
-
-Therefore, alongside your YAML model definition, you can load tabular data from CSV files (or from in-memory [pandas.DataFrame][] objects) under the `data_tables` top-level key.
-As of Calliope v0.7.0, this tabular data can be of _any_ kind.
-Prior to this, loading from file was limited to timeseries data.
-
 The full syntax from loading tabular data can be found in the associated [schema][data-table-schema].
 In brief it is:
 
@@ -270,7 +262,7 @@ In this section we will show some examples of loading data and provide the equiv
         cost_storage_cap.data: 150
     ```
 
-    1. To limit repetition, we have defined [templates](yaml.md#reusing-definitions-through-templates) for our costs.
+    1. To limit repetition, we have defined [templates](../reference/yaml.md#reusing-definitions-through-templates) for our costs.
 
 !!! info "See also"
     Our [data table loading tutorial][loading-tabular-data] has more examples of loading tabular data into your model.
@@ -331,7 +323,7 @@ override:
     data_tables.tech_data.select.scenarios: scenario2  # (1)!
 ```
 
-1. We use the dot notation as a shorthand for [abbreviate nested dictionaries](yaml.md#abbreviated-nesting).
+1. We use the dot notation as a shorthand for [abbreviate nested dictionaries](../reference/yaml.md#abbreviated-nesting).
 
 ## Adding dimensions
 

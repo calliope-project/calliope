@@ -127,7 +127,7 @@ supply_file.csv:
     ```
 
 !!! info "See also"
-    [`data_tables` introduction](creating/data_tables.md); [`data_tables` tutorial][loading-tabular-data].
+    [`data_tables` introduction](basic/data_tables.md); [`data_tables` tutorial][loading-tabular-data].
 
 ### Negative → positive demand and carrier consumption values
 
@@ -175,7 +175,7 @@ This split means you can change configuration options on-the-fly if you are work
     ```
 
 !!! info "See also"
-    [Introduction to configuring your model](creating/config.md).
+    [Configuring your model](basic/config.md).
 
 ### `locations` → `nodes`
 
@@ -311,7 +311,7 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
     ```
 
 !!! note
-    You can use [`templates`](creating/yaml.md#reusing-definitions-through-templates) to minimise duplications in the new transmission technology definition.
+    You can use [`templates`](reference/yaml.md#reusing-definitions-through-templates) to minimise duplications in the new transmission technology definition.
 
 ### Renaming parameters/decision variables without core changes in function
 
@@ -332,12 +332,11 @@ Here are the main changes to parameter/decision variable names that are not link
 * `exists` → `active`.
 
 !!! info "See also"
-    [Our full list of internally defined parameters][model-definition-schema];
-    the `Parameters` section of our [pre-defined base math documentation][base-math].
+    [Our full list of internally defined parameters in the base math][base-math].
 
 ### Renaming / moving configuration options
 
-Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flat YAML hierarchy or to group settings alphabetically:
+Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flatter YAML hierarchy or to group settings alphabetically:
 
 * `model.subset_time` → `config.init.subset.timesteps` (subsetting other dimensions is now also possible)
 * `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.resample.timesteps: '6h'` (resampling other dimensions is now also possible)
@@ -345,10 +344,10 @@ Along with [changing the YAML hierarchy of model configuration](#model-and-run-�
 * `run.operation.horizon` → `config.build.operate.horizon`
 * `run.operation.use_cap_results` → `config.build.operate.use_cap_results`
 
-We have also moved some _data_ out of the configuration and into the [top-level `parameters` section](creating/parameters.md):
+We have also moved some _data_ out of the configuration and into the [top-level `data_definitions` key](basic/data_definitions.md):
 
-* `run.objective_options.cost_class` → `parameters.objective_cost_weights`
-* `run.bigM` → `parameters.bigM`
+* `run.objective_options.cost_class` → `data_definitions.objective_cost_weights`
+* `run.bigM` → `data_definitions.bigM`
 
 !!! info "See also"
     [Our full list of internally defined configuration options][model-configuration-schema].
@@ -375,7 +374,7 @@ Investment costs are split out into the component caused by annual operation and
 
 ### Explicitly triggering MILP and storage decision variables/constraints
 
-For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option](./pre_defined_math/index.md).
+For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option][mixed-integer-linear-programming-math].
 
 In v0.6, we inferred that a mixed-integer linear model was desired based on the user defining certain parameters.
 For example, defining `units_max` would trigger the integer `units` decision variable.
@@ -718,15 +717,15 @@ Visualisation has moved to a separate tool, [Calligraph](https://calligraph.read
 We made this decision due to the wide variety of visualisations that we saw being created outside our plotting module.
 It has proven impossible to keep our plotting methods agile given the almost infinite tweaks that libraries like [matplotlib](https://matplotlib.org/) and [plotly](https://plotly.com/) allow.
 
-If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/index.md).
+If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/overview.md).
 
 ### Clustering
 
 Time masking and clustering capabilities have been severely reduced.
-Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2H`, `config.init.time_cluster: cluster_param`.
+Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2H`, `config.init.time_cluster: cluster_param` (where `cluster_param` should should separately be read from via e.g. `data_tables`; see the national-scale example model).
 Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries.
 
-If you want to masking/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](advanced/time.md#time-clustering) page.
+If you want to mask/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](advanced/time.md#time-clustering) page.
 We made this decision due to the complex nature of time clustering.
 With our former implementation, we were making decisions about the data that the user should have more awareness of and control over.
 It is also a constantly evolving field, but not the focus of Calliope, so we are liable to fall behind on the best-in-class methods.
@@ -752,7 +751,7 @@ This means you could define different output carriers for a `supply` technology,
 
 ### `templates` for nodes
 
-The new [`templates` key](creating/yaml.md#reusing-definitions-through-templates) makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
+The new [`templates` key](reference/yaml.md#reusing-definitions-through-templates) makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
 
 So, to achieve this result:
 
@@ -902,11 +901,11 @@ You can "switch off" a constraint for a given carrier by setting its value to `n
 
 ### Defining parameters outside the scope of `nodes` and `techs`
 
-We now have a top-level key: `parameters` in which you can use our indexed parameter syntax to define any model parameters that you want, without them necessarily being linked to a node/technology.
+We now have a top-level key `data_definitions` in which you can use our data definition syntax to define any model parameters that you want, without them necessarily being linked to a node/technology.
 For instance, to define a parameter that applies over the `carriers` dimension:
 
 ```yaml
-parameters:
+data_definitions:
   my_new_param:
     data: [1, 2, 3]
     index: [heat, electricity, waste]
@@ -916,7 +915,7 @@ parameters:
 Or to define a single value that you might use to limit the total emissions in your system:
 
 ```yaml
-parameters:
+data_definitions:
   emissions_limit:
     data: 100
     index: emissions
@@ -924,18 +923,18 @@ parameters:
 ```
 
 !!! info "See also"
-    [Defining parameters when you create your model](creating/parameters.md).
+    [Defining parameters via `data_definitions`](basic/data_definitions.md).
 
 ### Indexing parameters over arbitrary dimensions
 
-At the `tech` level, `node` level, and the top-level (via the [`parameters` key](#defining-parameters-outside-the-scope-of-nodes-and-techs)), you can extend the dimensions a parameter is indexed over.
+At the `tech` level, `node` level, and the top-level (via the [`data_definitions` key](#defining-parameters-outside-the-scope-of-nodes-and-techs)), you can extend the dimensions a parameter is indexed over.
 
 At the tech level, this allows you to define [different values for different carriers](#differentiating-capacities-and-efficiencies-between-carriers).
 At any level, it allows you to define a brand new model dimension and your values over those.
 For example, if you want to apply some simplified piecewise constraints:
 
 ```yaml
-parameters:
+data_definitions:
   cost_flow_cap_piecewise_slopes:
     data: [5, 7, 14]
     index: [0, 1, 2]
@@ -958,13 +957,13 @@ nodes:
 ```
 
 !!! note
-    1. Just defining new parameters is not enough to have an effect on the optimisation problem.
+    1. Just defining data for new parameters is not enough to have an effect on the optimisation problem.
     You also need to [define your own math](user_defined_math/index.md).
-    2. Because we process your YAML files to create the `nodes` and `techs` dimensions you will find in your Calliope model, you cannot use `nodes`/`techs` as dimensions of indexed parameters under the `nodes` or `techs` keys.
-    It _is_ possible to refer to `nodes` and `techs` as dimensions under the top-level `parameters` key.
+    2. Because we process your YAML files to create the `nodes` and `techs` dimensions you will find in your Calliope model, you cannot use `nodes`/`techs` as dimensions of parameters defined through the data definition syntax under the `nodes` or `techs` keys.
+    It _is_ possible to refer to `nodes` and `techs` as dimensions under the top-level `data_definitions` key.
 
 !!! info "See also"
-    [Defining parameters when you create your model](creating/parameters.md).
+    [Defining parameters when you create your model](basic/data_definitions.md).
 
 ### Loading non-timeseries tabular data
 
@@ -972,7 +971,7 @@ With the [change in loading timeseries data](#filedf-→-data_tables-section), w
 Technically, you can now define all your data in tables (although we would still recommend a mix of YAML and tabular model definition).
 
 !!! info "See also"
-    `data_tables` [introduction](creating/data_tables.md) and [tutorial][loading-tabular-data].
+    `data_tables` [introduction](basic/data_tables.md) and [tutorial][loading-tabular-data].
 
 ### YAML-based math syntax
 
@@ -984,4 +983,4 @@ You can add your own math to update the pre-defined math and to represent the ph
 When adding your own math, you can add [piecewise linear constraints](user_defined_math/components.md#piecewise-constraints), which is a new type of constraint compared to what could be defined in v0.6.
 
 !!! info "See also"
-    Our [pre-defined](pre_defined_math/index.md) and [user-defined](user_defined_math/index.md) math documentation.
+    Our [pre-defined](basic/modes.md) and [user-defined](user_defined_math/index.md) math documentation.

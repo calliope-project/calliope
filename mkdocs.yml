@@ -90,7 +90,8 @@ markdown_extensions:
       preserve_tabs: true
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      dedent_subsections: true
   - pymdownx.details
   - pymdownx.tasklist:
       clickable_checkbox: true
@@ -98,30 +99,45 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Download and installation: installation.md
-  - Creating a model:
-    - creating/index.md
-    - YAML as used in Calliope: creating/yaml.md
-    - Model configuration: creating/config.md
-    - Technologies: creating/techs.md
-    - Nodes: creating/nodes.md
-    - Indexed parameters: creating/parameters.md
-    - Loading data tables: creating/data_tables.md
-    - Scenarios and overrides: creating/scenarios.md
-  - Running a model: running.md
-  - Analysing a model: analysing.md
+  - Getting started:
+    - Basic concepts: getting_started/concepts.md
+    - Creating a model: getting_started/creating.md
+    - Running a model: getting_started/running.md
+    - Analysing a model: getting_started/analysing.md
   - Troubleshooting: troubleshooting.md
-  - Pre-defined math:
-    - index: pre_defined_math/index.md
-  - Defining your own math:
-    - user_defined_math/index.md
-    - user_defined_math/components.md
-    - user_defined_math/syntax.md
-    - user_defined_math/helper_functions.md
-    - user_defined_math/customise.md
-    - Example additional math gallery:
-      - user_defined_math/examples/index.md
-  - Examples and tutorials:
-    - examples/index.md
+  - Building blocks:
+    - Model configuration: basic/config.md
+    - Modes: basic/modes.md
+    - Technologies: basic/techs.md
+    - Nodes: basic/nodes.md
+    - Data tables: basic/data_tables.md
+    - Data definitions: basic/data_definitions.md
+    - Scenarios and overrides: basic/scenarios.md
+    - Running in the command line: basic/running-cli.md
+    - Running in Python: basic/running-python.md
+    - Postprocessing: basic/postprocessing.md
+  - Math:
+    - Built-in base math: math/base/index.md
+    - Other built-in math:
+      - math/built_in/index.md
+    - User-defined math:
+      - user_defined_math/index.md
+      - user_defined_math/components.md
+      - user_defined_math/syntax.md
+      - user_defined_math/helper_functions.md
+      - user_defined_math/customise.md
+  - User-defined math examples:
+    - user_defined_math/examples/index.md
+  - Advanced features:
+    - advanced/constraints.md
+    - advanced/time.md
+    - advanced/scripts.md
+    - advanced/solver.md
+    - advanced/backend_choice.md
+    - advanced/backend_interface.md
+    - advanced/shadow_prices.md
+  - Example models and tutorials:
+    - Overview: examples/overview.md
     - National scale example model:
       - examples/national_scale/index.md
       - examples/national_scale/notebook.py
@@ -136,16 +152,8 @@ nav:
     - examples/piecewise_constraints.py
     - examples/calliope_model_object.py
     - examples/calliope_logging.py
-  - Advanced features:
-    - advanced/constraints.md
-    - advanced/index.md
-    - advanced/time.md
-    - advanced/scripts.md
-    - advanced/solver.md
-    - advanced/backend_choice.md
-    - advanced/backend_interface.md
-    - advanced/shadow_prices.md
   - Reference:
+    - YAML as used in Calliope: reference/yaml.md
     - Command line interface: reference/cli.md
     - Python API:
       - reference/api/model.md

@@ -4,7 +4,6 @@ On this page, we look at some of the more advanced features of Calliope's math a
 
 !!! info "See also"
     [Pre-defined math formulation][base-math] (which includes a description of our pre-defined parameters),
-    [Model definition schema][model-definition-schema],
     [Introducing your own math to your model](../user_defined_math/customise.md),
     ["MILP" example model](../examples/milp/index.md).
 
@@ -183,4 +182,4 @@ Any excess stored energy would result in double the excess the following year, a
 
 !!! note
     Cyclic storage also functions when [time clustering](time.md#time-clustering), if allowing storage to be tracked between clusters.
-    However, it cannot be used in [`operate` mode](../pre_defined_math/index.md#operate-mode).
+    However, it cannot be used in [`operate` mode](../basic/modes.md#operate-mode).

@@ -3,9 +3,9 @@
 Once you understand the [math components](components.md) and the [formulation syntax](syntax.md), you'll be ready to introduce your own math to a model.
 
 !!! info
-    You can find examples of additional math that we have put together in our [math example gallery](examples/index.md).
+    You can find examples of additional math that we have put together in our [math example gallery](../examples/overview.md).
 
-Whenever you introduce your own math, it can either be _added_ on top of our [pre-defined math](../pre_defined_math/index.md) or _replace_ it entirely.
+Whenever you introduce your own math, it can either be _added_ on top of our pre-defined math or _replace_ it entirely.
 
 ## Adding extra math
 
@@ -32,7 +32,7 @@ config:
 ```
 
 You can then select which math to apply in this model run by specifying it in `config.init.extra_math`.
-It is even possible to define a mixture of your math and other [pre-defined math](../pre_defined_math/index.md):
+It is even possible to define a mixture of your math and other [pre-defined math](../basic/modes.md):
 
 ```yaml
 config:
@@ -79,7 +79,7 @@ config:
 
 ## Adding your own parameters to the math definition
 
-The math definition contains metadata about the parameters, dimensions, and lookup tables used in defining the optimisation problem.
+The math definition contains metadata about the parameters, dimensions, and lookups used in defining the optimisation problem.
 We use this to validate user inputs.
 
 When you add your own math you are likely to be adding new parameters to the model.
@@ -110,9 +110,15 @@ lookups:
 
 ```
 
+## Validating the math
+
+You can tell Calliope to scan all math definitions for errors during model initialisation, i.e., _before_ undertaking the much more time-consuming operation of building the optimisation problem.
+This way, you can catch errors earlier while you are developing and testing custom math.
+To do so, set `config.init.pre_validate_math_strings: true`.
+
 ## Writing your own math documentation
 
-You can write your model's mathematical formulation to view it in a rich-text format (as we do for our [pre-defined math](../pre_defined_math/index.md) in this documentation).
+You can write your model's mathematical formulation to view it in a rich-text format (as we do for our [pre-defined math](../basic/modes.md) in this documentation).
 To write a LaTeX, reStructuredText, or Markdown file that includes only the math valid for your model:
 
 ```python
@@ -132,4 +138,4 @@ We recommend you only use HTML as the equations can become too long for a PDF pa
     You can add interactive elements to your documentation, if you are planning to host them online using MKDocs.
     This includes tabs to flip between rich-text math and the input YAML snippet, and dropdown lists for math component cross-references.
     Just set the `mkdocs_features` argument to `True` in `math_documentation.write`.
-    We use this functionality in our [pre-defined math](../pre_defined_math/index.md).
+    We use this functionality in our [pre-defined math](../basic/modes.md).
