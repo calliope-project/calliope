@@ -64,7 +64,7 @@ Calliope's syntax ensures these models are intuitive, and easy to understand and
 
 ### YAML: keys and values
 
-Models in Calliope are defined in a text file format called YAML, referring to tabular data files (in the CSV format) where necessary.
+Models in Calliope are defined in a text file format called [YAML](https://en.wikipedia.org/wiki/YAML), referring to tabular data files (in the CSV format) where necessary.
 These files are essentially a collection of `key: value` entries, where `key` is a given setting - for example the nameplate capacity of a power plant - and `value` might be a number, a text string, or a list (e.g. a list of further settings).
 We will often refer to "keys" and "values" in the documentation.
 The keys and values can be nested, for example, to define which solver will be called to solve the problem:
@@ -108,7 +108,7 @@ It includes, for example, the basic concepts of carriers, nodes, and techs descr
 On top of the base math, it is possible to activate **mode math**.
 This allows special cases which require additional processing, for example, the operate (dispatch / receding horizon control) and SPORES (near-optimal alternative generation) modes.
 
-Finally, it is possible to supply **extra math** which are applied on top of the base and mode math (if used).
+Finally, it is possible to supply **extra math** which is applied on top of the base and mode math (if used).
 For instance, the [inter-cluster storage][inter-cluster-storage-math] extra math supplied with Calliope allows you to track storage levels in technologies more accurately when you are using timeseries clustering in your model.
 
 Calliope follows a strict order of priority when applying math: **base math -> mode math -> extra math**.
@@ -159,7 +159,7 @@ They can be one of three things:
 * **Post-processed results** are calculated after a model is solved. For example, `capacity_factor` is calculated in post-processing based on the operation of all technologies, but it is _not_ a variable in the mathematical model. More detail on these are in the [postprocessing documentation](../basic/postprocessing.md).
 
 !!! note
-    All parameters, lookups, variables, and global expressions are defined in the model math
+    All parameters, lookups, variables, and global expressions are defined in the model math.
     Refer to the documentation for the [built-in base math][base-math] and [additional built-in math](../math/built_in/index.md) for a full listing of all of them.
 
 More on examining model results will follow later, in the section [Analysing a model](analysing.md).

@@ -27,11 +27,11 @@ For more, see the [Calligraph documentation](https://calligraph.readthedocs.io/)
 
 A model which solved successfully has two primary [xarray.Dataset][]s with data of interest:
 
-* `model.inputs`: contains all input data, such as renewable resource capacity factors
+* `model.inputs`: contains all input data, such as renewable resource capacity factors.
 * `model.results`: contains all results data, such as dispatch decisions and installed capacities.
   It also includes [results calculated in postprocessing](../reference/api/postprocess.md), such as levelised cost of electricity (LCOE) and capacity factor.
 
-Both of these are [xarray.Dataset][]s and can be further processed with Python.
+Both of these are an  [xarray.Dataset][] and can be further processed with Python.
 
 Data is indexed over a subset of the core Calliope dimensions, e.g. `techs` (technologies), `nodes`, `timesteps`.
 Not all combinations of the dimensions items will contain data; if you did not define your `PV` technology at node `X1` then there will be no data for `#!python model.inputs.flow_cap.sel(techs="PV", nodes="X1")`.

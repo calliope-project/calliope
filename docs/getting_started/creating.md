@@ -48,8 +48,7 @@ The layout of a Calliope model directory might look like this (`+` denotes direc
     - scenarios.yaml
 ```
 
-We use the above layout in the example models.
-In the above example, the files `model.yaml`, `nodes.yaml` and `techs.yaml` together are the model definition.
+We use the above layout in the example models, where the files `model.yaml`, `nodes.yaml` and `techs.yaml` together are the model definition.
 Part of `model.yaml` is also taken up by the model configuration.
 We will first look at that in more detail, before moving on to the model definition.
 
@@ -87,7 +86,7 @@ Each technology must specify its `base_tech`, which defines its basic characteri
 
 As explained above, a model must contain at least one `supply` and `demand` tech, whereas the other techs are optional.
 
-Technologies generally need to specify, besides their `base_tech`, at least one `carrier`, and at least one or two constraints like `flow_cap_max` (which constraints the maximum nameplate capacity to produce a flow of the given carrier). A more fully-featured tech definition would look like this:
+Technologies generally need to specify, besides their `base_tech`, at least one `carrier`, and at least one or two constraints like `flow_cap_max` (which constraints the maximum nameplate capacity to produce a flow of the given carrier). A more fully-featured technology definition would look like this:
 
 ```yaml
 ccgt:
@@ -165,8 +164,8 @@ techs:
 ## Data tables
 
 We have chosen YAML syntax to define Calliope models as it is human-readable.
-However, when you have a large dataset, the YAML files can quickly become unreadable.
-For instance, for parameters that vary in time we would have a list of 8760 values and timestamps to put in our YAML file!
+However, when you have a large dataset this can become cumbersome.
+For instance, for parameters that vary in time we would have a list of 8760 hourly values and timestamps to put in our YAML file!
 
 Therefore, alongside your YAML model definition, you can load tabular data from CSV files (or from in-memory [pandas.DataFrame][] objects) using the `data_tables` top-level key.
 

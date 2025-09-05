@@ -6,7 +6,7 @@ There are essentially three ways to run a Calliope model:
 2. By programmatically creating and running a model from within other Python code, or in an interactive Python session (see [Running in Python](../basic/running-python.md)).
 3. By generating and then executing scripts with the `#!shell calliope generate_runs` command-line tool, which is primarily designed for running many scenarios on a high-performance cluster (see the [Generating scripts](../advanced/scripts.md) section in the advanced docs).
 
-!!! example
+!!! note
     Refer to the [examples and tutorials section](../examples/overview.md) for a more practical look at how to run a Calliope model.
 
 ## Easiest to start: using the command line interface
@@ -37,12 +37,12 @@ Details on strategies to improve solution times are given in the [troubleshootin
 
 ## Debugging failing runs
 
-These things will typically go wrong, in order of decreasing likelihood:
+If things go wrong, start by checking for the following issues, in order of decreasing likelihood:
 
 * The model is improperly defined or missing data.
 Calliope will attempt to diagnose some common errors and raise an appropriate error message.
 * The model is consistent and properly defined but infeasible.
 Calliope will be able to construct the model and pass it on to the solver, but the solver (after a potentially long time) will abort with a message stating that the model is infeasible.
-* There is a bug in Calliope causing the model to crash either before being passed to the solver, or after the solver has completed and when results are passed back to Calliope.
+* A bug in Calliope may be causing the model to crash either before being passed to the solver, or after the solver has completed and when results are passed back to Calliope.
 
 Calliope provides help in diagnosing all of these model issues. For details, see the [troubleshooting](../troubleshooting.md) section.
