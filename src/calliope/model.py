@@ -15,7 +15,8 @@ import xarray as xr
 
 from calliope import _version, backend, exceptions, io, postprocess, preprocess
 from calliope.attrdict import AttrDict
-from calliope.preprocess.model_data import ModelDataFactory
+from calliope.preprocess import model_math
+from calliope.preprocess.model_data import ModelDataBuilder, ModelDataCleaner
 from calliope.schemas import CalliopeAttrs, ModelStructure, config_schema
 from calliope.util.logging import log_time
 
@@ -25,11 +26,12 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
-def read_netcdf(path: str | Path) -> Model:
+def read_netcdf(path: str | Path, **kwargs) -> Model:
     """Return a Model object reconstructed from model data in a NetCDF file.
 
     Args:
         path (str | Path): Path to Calliope model NetCDF file.
+        **kwargs: initialisation overrides.
 
     Returns:
         Model: Calliope Model instance.
@@ -39,6 +41,7 @@ def read_netcdf(path: str | Path) -> Model:
         model_data["inputs"],
         CalliopeAttrs(**model_data["attrs"].attrs),
         model_data["results"],
+        **kwargs,
     )
 
 
@@ -120,17 +123,25 @@ def read_dict(
         "preprocess_start",
         comment="Model: preprocessing data",
     )
-    model_data_factory = ModelDataFactory(
+    # TODO: build math on re-init, too.
+    math_priority = model_math.get_math_priority(model_def.config.init)
+    math = model_math.build_math(
+        math_priority,
+        model_def.math.init.model_dump(),
+        validate=model_def.config.init.pre_validate_math_strings,
+    )
+    model_data_factory = ModelDataBuilder(
         model_def.config.init,
         AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
-        model_def.math.init,
+        math,
         definition_path,
         data_table_dfs,
     )
     model_data_factory.build()
-    model_data_factory.clean()
-    model_def = model_def.update({"math.build": model_data_factory.math.model_dump()})
-    return Model(inputs=model_data_factory.dataset, attrs=model_def, _reentry=False)
+    model_def = model_def.update(
+        {"math.build": math.model_dump(), "runtime.math_priority": math_priority}
+    )
+    return Model(inputs=model_data_factory.dataset, attrs=model_def)
 
 
 class Model(ModelStructure):
@@ -143,7 +154,6 @@ class Model(ModelStructure):
         inputs: xr.Dataset,
         attrs: CalliopeAttrs,
         results: xr.Dataset | None = None,
-        _reentry: bool = True,
         **kwargs,
     ) -> None:
         """Returns a instantiated Calliope Model.
@@ -154,10 +164,6 @@ class Model(ModelStructure):
             results (xr.Dataset | None, optional):
                 Results dataset from another Calliope Model with compatible math formulation.
                 Defaults to None.
-            _reentry (bool, optional):
-                Specifies model math and configuration must be reinitialised.
-                Should only be set to `False` if this is the first time the model has been instantiated.
-                Defaults to True.
             **kwargs:
                 initialisation keyword arguments
         """
@@ -167,34 +173,38 @@ class Model(ModelStructure):
 
         self.definition = attrs.definition
         self.config = attrs.config
-        self.math = attrs.math
-        self.runtime = attrs.runtime
 
         self._start_window_idx: int = 0
         self._is_built: bool = False
         self._is_solved: bool = False if results is None else True
+        self.config = self.config.update({"init": kwargs})
 
-        if _reentry:
-            # Data may come from a previous run. Update math and clean inputs.
-            log_time(
-                LOGGER,
-                self.runtime.timings,
-                "preprocess_start",
-                comment="Model: preprocessing data (reentry)",
+        math_priority = model_math.get_math_priority(self.config.init)
+        if math_priority != attrs.runtime.math_priority:
+            math = model_math.build_math(
+                math_priority,
+                attrs.math.init.model_dump(),
+                validate=self.config.init.pre_validate_math_strings,
             )
-            self.config = self.config.update({"init": kwargs})
-            model_data_factory = ModelDataFactory(
-                self.config.init, inputs, self.math.init
+            attrs = attrs.update(
+                {
+                    "runtime.math_priority": math_priority,
+                    "math.build": math.model_dump(),
+                }
+            )
+        if inputs:
+            model_data_factory = ModelDataCleaner(
+                self.config.init, inputs, attrs.math.build, attrs.runtime
             )
             model_data_factory.clean()
 
             self.inputs = model_data_factory.dataset
-            self.math = self.math.update(
-                {"build": model_data_factory.math.model_dump()}
-            )
+            self.runtime = model_data_factory.runtime
         else:
-            # First time the model has been created. No need for cleanups.
             self.inputs = inputs
+            self.runtime = attrs.runtime
+
+        self.math = attrs.math
 
         self._check_versions()
         log_time(
