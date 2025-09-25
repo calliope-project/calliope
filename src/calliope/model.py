@@ -15,7 +15,7 @@ import xarray as xr
 
 from calliope import _version, backend, exceptions, io, postprocess, preprocess
 from calliope.attrdict import AttrDict
-from calliope.preprocess import model_math
+from calliope.preprocess import data_tables, model_math
 from calliope.preprocess.model_data import ModelDataBuilder, ModelDataCleaner
 from calliope.schemas import CalliopeAttrs, ModelStructure, config_schema
 from calliope.util.logging import log_time
@@ -130,12 +130,17 @@ def read_dict(
         model_def.math.init.model_dump(),
         validate=model_def.config.init.pre_validate_math_strings,
     )
+
+    tables = [
+        data_tables.DataTable(table, table_dict, data_table_dfs, definition_path)
+        for table, table_dict in model_def.definition.data_tables.root.items()
+    ]
+
     model_data_factory = ModelDataBuilder(
         model_def.config.init,
         AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
         math,
-        definition_path,
-        data_table_dfs,
+        tables,
     )
     model_data_factory.build()
     model_def = model_def.update(

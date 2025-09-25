@@ -6,9 +6,8 @@ import functools
 import itertools
 import logging
 from abc import ABC
-from collections.abc import Hashable, Mapping
+from collections.abc import Hashable, Iterable, Mapping
 from copy import deepcopy
-from pathlib import Path
 from typing import Literal
 
 import pandas as pd
@@ -31,6 +30,27 @@ from calliope.util.tools import listify
 LOGGER = logging.getLogger(__name__)
 
 DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
+
+
+class ValidatedInput(TypedDict):
+    """Uniform dictionary for validated input data."""
+
+    data: DATA_T
+    """Numeric / boolean / string data or list of them."""
+    index: list[list[str]]
+    """List of lists containing dimension index items,
+    where the length of the sub-lists == length of `dims`)."""
+    dims: list[str]
+    """List of dimension names."""
+
+
+# TODO: remove in favor of using the model def schema.
+class ModelDefinition(TypedDict):
+    """Uniform dictionary for model definition."""
+
+    techs: AttrDict
+    nodes: AttrDict
+    data_definitions: NotRequired[AttrDict]
 
 
 class ModelDTypeUpdater(ABC):
@@ -97,30 +117,6 @@ class ModelDTypeUpdater(ABC):
         return ds
 
 
-class ValidatedInput(TypedDict):
-    """Uniform dictionary for validated input data."""
-
-    data: DATA_T
-    """Numeric / boolean / string data or list of them."""
-    index: list[list[str]]
-    """List of lists containing dimension index items,
-    where the length of the sub-lists == length of `dims`)."""
-    dims: list[str]
-    """List of dimension names."""
-
-
-# TODO: remove in favor of using the model def schema.
-class ModelDefinition(TypedDict):
-    """Uniform dictionary for model definition."""
-
-    techs: AttrDict
-    nodes: AttrDict
-    data_definitions: NotRequired[AttrDict]
-
-
-LOGGER = logging.getLogger(__name__)
-
-
 class ModelDataBuilder(ModelDTypeUpdater):
     """Model data builder class."""
 
@@ -129,8 +125,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
         init_config: config_schema.Init,
         model_definition: AttrDict,
         math: math_schema.CalliopeBuildMath,
-        definition_path: str | Path | None = None,
-        data_table_dfs: dict[str, pd.DataFrame] | None = None,
+        tables: Iterable[data_tables.DataTable] | None = None,
     ):
         """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for constraint generation.
 
@@ -140,29 +135,22 @@ class ModelDataBuilder(ModelDTypeUpdater):
             init_config (config_schema.Init): Model initialisation configuration (i.e., `config`).
             model_definition (ModelDefinition): Definition of model input data.
             math (math_schema.CalliopeBuildMath): Math to apply to the model.
-            definition_path (Path, None): Path to the main model definition file. Defaults to None.
-            data_table_dfs: (dict[str, pd.DataFrame], None): Dataframes with model data. Defaults to None.
+            tables (Iterable[data_tables.DataTable], None): Loaded data tables. Defaults to None.
         """
         self.config = init_config
         self.tech_data_from_tables = AttrDict()
         self.math = math
         self.model_definition: ModelDefinition = model_definition.copy()
         self.dataset = xr.Dataset()
-        tables = []
-        for table, table_dict in model_definition.get("data_tables", {}).items():
-            tables.append(
-                data_tables.DataTable(
-                    table, table_dict, data_table_dfs, definition_path
-                )
-            )
-        self.init_from_data_tables(tables)
+        if tables:
+            self.init_from_data_tables(tables)
 
     def build(self):
         """Build dataset from model definition."""
         self.add_node_tech_data()
         self.add_top_level_data_definitions()
 
-    def init_from_data_tables(self, data_tables: list[data_tables.DataTable]):
+    def init_from_data_tables(self, data_tables: Iterable[data_tables.DataTable]):
         """Initialise the model definition and dataset using data loaded from file / in-memory objects.
 
         A basic skeleton of the dictionary format model definition is created from the data tables,
@@ -691,6 +679,20 @@ class ModelDataCleaner(ModelDTypeUpdater):
         self.dataset = dataset.copy()
         self.runtime = runtime
 
+    def clean(self):
+        """Clean built dataset."""
+        # If input dataset is empty, stop here.
+        self.clean_data_from_undefined_members()
+        self.add_colors()
+        self.add_link_distances()
+        self.update_and_resample_dimensions()
+        self.assign_input_attr()
+        self.dataset = self.dataset.assign_coords(
+            self._update_dtypes(self.dataset.coords)
+        )
+        self.dataset = self._update_dtypes(self.dataset)
+        self.runtime = self.runtime.update({"instantiated": True})
+
     def clean_data_from_undefined_members(self):
         """Generate the `definition_matrix` array and remove undefined members.
 
@@ -850,7 +852,7 @@ class ModelDataCleaner(ModelDTypeUpdater):
             LOGGER.debug(f"Deleting empty input data: {vars_to_delete}")
         return ds.drop_vars(vars_to_delete)
 
-    @functools.cache
+    @functools.lru_cache(maxsize=1000)
     def _get_distance(self, node1: str, node2: str) -> float:
         """Get and cache the distance between two nodes.
 
@@ -928,16 +930,3 @@ class ModelDataCleaner(ModelDTypeUpdater):
                 )
             ds = time.resample(ds, self.math, dim_name, resampler)
         self.dataset = ds
-
-    def clean(self):
-        """Clean built dataset."""
-        # If input dataset is empty, stop here.
-        self.clean_data_from_undefined_members()
-        self.add_colors()
-        self.add_link_distances()
-        self.update_and_resample_dimensions()
-        self.assign_input_attr()
-        self.dataset = self.dataset.assign_coords(
-            self._update_dtypes(self.dataset.coords)
-        )
-        self.dataset = self._update_dtypes(self.dataset)

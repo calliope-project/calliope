@@ -6,7 +6,7 @@ import pytest
 import xarray as xr
 
 from calliope import AttrDict, exceptions, io
-from calliope.preprocess import model_math, prepare_model_definition
+from calliope.preprocess import data_tables, model_math, prepare_model_definition
 from calliope.preprocess.model_data import ModelDataBuilder, ModelDataCleaner
 from calliope.util import DATETIME_DTYPE
 
@@ -25,11 +25,11 @@ def model_def(minimal_test_model_path):
 
 
 @pytest.fixture(scope="class")
-def model_def_no_ts(model_def):
-    # Erase data tables for simplicity
-    # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
-    model_def.definition.data_tables.root = {}
-    return model_def
+def tables(model_def, minimal_test_model_path):
+    return [
+        data_tables.DataTable(table, table_dict, None, minimal_test_model_path)
+        for table, table_dict in model_def.definition.data_tables.root.items()
+    ]
 
 
 @pytest.fixture(scope="class")
@@ -72,12 +72,11 @@ def timeseries_da():
 
 
 @pytest.fixture
-def model_data_builder(minimal_test_model_path, model_def_no_ts, config, math):
+def model_data_builder(model_def, config, math):
     return ModelDataBuilder(
         config.init,
-        AttrDict(model_def_no_ts.definition.model_dump(exclude_defaults=True)),
+        AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
         math,
-        minimal_test_model_path,
     )
 
 
@@ -88,12 +87,12 @@ def model_data_builder_w_params(model_data_builder: ModelDataBuilder):
 
 
 @pytest.fixture(scope="class")
-def model_data_builder_built_data(config, model_def, math, minimal_test_model_path):
+def model_data_builder_built_data(config, model_def, math, tables):
     builder = ModelDataBuilder(
         config.init,
         AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
         math,
-        minimal_test_model_path,
+        tables,
     )
     builder.build()
     return builder.dataset
@@ -858,18 +857,6 @@ class TestActiveFalse:
 
 
 class TestModelDataCleaner:
-    def test_update_time_dimension_and_params(
-        self, model_data_cleaner_with_def_matrix: ModelDataCleaner
-    ):
-        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
-        assert (
-            "timestep_resolution"
-            in model_data_cleaner_with_def_matrix.dataset.data_vars
-        )
-        assert (
-            "timestep_weights" in model_data_cleaner_with_def_matrix.dataset.data_vars
-        )
-
     def test_clean_data_from_undefined_members(
         self, my_caplog, model_data_cleaner: ModelDataCleaner
     ):
@@ -1266,3 +1253,144 @@ class TestResample:
         )
         with pytest.raises(exceptions.ModelError, match="No resampling method defined"):
             model_data_cleaner_with_def_matrix._resample_dims()
+
+
+class TestUpdateAndResample:
+    def test_update_time_dimension_and_params(
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner
+    ):
+        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
+        assert (
+            "timestep_resolution"
+            in model_data_cleaner_with_def_matrix.dataset.data_vars
+        )
+        assert (
+            "timestep_weights" in model_data_cleaner_with_def_matrix.dataset.data_vars
+        )
+
+    def test_no_ts_dimension(self, model_data_cleaner: ModelDataCleaner):
+        """If there is no timeseries dimension, raise an error."""
+        model_data_cleaner.dataset = model_data_cleaner.dataset.drop_dims(
+            "timesteps", errors="ignore"
+        )
+        with pytest.raises(
+            exceptions.ModelError,
+            match="Must define at least one timeseries data input in a Calliope model.",
+        ):
+            model_data_cleaner.update_and_resample_dimensions()
+
+    def test_subset_update_runtime(
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner
+    ):
+        """Subsetting updates the runtime subset."""
+        subset = {"timesteps": ["2005-01-01", "2005-01-02"]}
+        model_data_cleaner_with_def_matrix.config = (
+            model_data_cleaner_with_def_matrix.config.update({"subset": subset})
+        )
+        assert model_data_cleaner_with_def_matrix.runtime.subset.root == {}
+        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
+        assert model_data_cleaner_with_def_matrix.runtime.subset.root == subset
+        assert model_data_cleaner_with_def_matrix.dataset.timesteps.size == 48
+
+    def test_subset_update_runtime_from_something(
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner
+    ):
+        """Subsetting _again_ updates the runtime subset _again_."""
+        subset_1 = {"timesteps": ["2005-01-01", "2005-01-02"]}
+        model_data_cleaner_with_def_matrix.config = (
+            model_data_cleaner_with_def_matrix.config.update({"subset": subset_1})
+        )
+        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
+        assert model_data_cleaner_with_def_matrix.runtime.subset.root == subset_1
+        assert model_data_cleaner_with_def_matrix.dataset.timesteps.size == 48
+
+        subset_2 = {"timesteps": ["2005-01-01", "2005-01-01"]}
+        model_data_cleaner_with_def_matrix.config = (
+            model_data_cleaner_with_def_matrix.config.update({"subset": subset_2})
+        )
+        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
+        assert model_data_cleaner_with_def_matrix.runtime.subset.root == subset_2
+        assert model_data_cleaner_with_def_matrix.dataset.timesteps.size == 24
+
+    def test_resample_update_runtime(
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner
+    ):
+        """Resampling updates the runtime resample."""
+        resample = {"timesteps": "1D"}
+        model_data_cleaner_with_def_matrix.config = (
+            model_data_cleaner_with_def_matrix.config.update({"resample": resample})
+        )
+        assert model_data_cleaner_with_def_matrix.runtime.resample.root == {}
+        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
+        assert model_data_cleaner_with_def_matrix.runtime.resample.root == resample
+        assert model_data_cleaner_with_def_matrix.dataset.timesteps.size == 2
+
+    def test_resample_update_runtime_from_something(
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner
+    ):
+        """Resampling _again_ updates the runtime resample _again_."""
+        resample_1 = {"timesteps": "1D"}
+        model_data_cleaner_with_def_matrix.config = (
+            model_data_cleaner_with_def_matrix.config.update({"resample": resample_1})
+        )
+        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
+        assert model_data_cleaner_with_def_matrix.runtime.resample.root == resample_1
+        assert model_data_cleaner_with_def_matrix.dataset.timesteps.size == 2
+
+        resample_2 = {"timesteps": "2D"}
+        model_data_cleaner_with_def_matrix.config = (
+            model_data_cleaner_with_def_matrix.config.update({"resample": resample_2})
+        )
+        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
+        assert model_data_cleaner_with_def_matrix.runtime.resample.root == resample_2
+        assert model_data_cleaner_with_def_matrix.dataset.timesteps.size == 1
+
+    def test_runtime_not_instantiated(
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner
+    ):
+        """If not yet instantiated, inferred time params are added to dataset."""
+        time_params = ["timestep_resolution", "timestep_weights"]
+        model_data_cleaner_with_def_matrix.runtime = (
+            model_data_cleaner_with_def_matrix.runtime.update({"instantiated": False})
+        )
+        model_data_cleaner_with_def_matrix.dataset = (
+            model_data_cleaner_with_def_matrix.dataset.drop_vars(
+                time_params, errors="ignore"
+            )
+        )
+        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
+        assert all(i in model_data_cleaner_with_def_matrix.dataset for i in time_params)
+
+    def test_runtime_instantiated(
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner
+    ):
+        """If already instantiated, inferred time params are not added to dataset."""
+        time_params = ["timestep_resolution", "timestep_weights"]
+        model_data_cleaner_with_def_matrix.runtime = (
+            model_data_cleaner_with_def_matrix.runtime.update({"instantiated": True})
+        )
+        model_data_cleaner_with_def_matrix.dataset = (
+            model_data_cleaner_with_def_matrix.dataset.drop_vars(
+                time_params, errors="ignore"
+            )
+        )
+        model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
+        assert all(
+            i not in model_data_cleaner_with_def_matrix.dataset for i in time_params
+        )
+
+    def test_recluster_fails(
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner
+    ):
+        """If already instantiated, inferred time params are not added to dataset."""
+        model_data_cleaner_with_def_matrix.config = (
+            model_data_cleaner_with_def_matrix.config.update({"time_cluster": "foo"})
+        )
+        model_data_cleaner_with_def_matrix.runtime = (
+            model_data_cleaner_with_def_matrix.runtime.update({"time_cluster": "bar"})
+        )
+        with pytest.raises(
+            exceptions.ModelError,
+            match="Cannot change time clustering configuration at this stage.",
+        ):
+            model_data_cleaner_with_def_matrix.update_and_resample_dimensions()
