@@ -5,7 +5,8 @@
 from pydantic import Field
 
 from calliope import _version
-from calliope.schemas.general import CalliopeBaseModel
+from calliope.schemas.config_schema import Resamples, Subsets
+from calliope.schemas.general import AttrStr, CalliopeBaseModel
 
 
 class CalliopeRuntime(CalliopeBaseModel):
@@ -27,3 +28,18 @@ class CalliopeRuntime(CalliopeBaseModel):
 
     termination_condition: str | None = None
     """Indicates whether the optimisation problem solved to optimality (`optimal`) or not (e.g. `unbounded`, `infeasible`)."""
+
+    instantiated: bool = False
+    """Indicates whether the model has been instantiated."""
+
+    subset: Subsets = Subsets()
+    """List all applied subsets."""
+
+    resample: Resamples = Resamples()
+    """List all applied resamples."""
+
+    time_cluster: AttrStr | None = None
+    """Indicates the time clustering applied to the model."""
+
+    math_priority: list[AttrStr] = Field(default_factory=list)
+    """The order of math entries applied to the model, with each subsequent one overwriting the last."""

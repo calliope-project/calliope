@@ -77,6 +77,7 @@ class TestModelInit:
     @pytest.mark.parametrize("attr_name", CalliopeAttrs.model_fields.keys())
     def test_model_attrs(
         self,
+        dummy_int: int,
         request: pytest.FixtureRequest,
         model_from_yaml: Model,
         model_name: str,
@@ -91,6 +92,21 @@ class TestModelInit:
         # We _know_ that timing data will be different
         if hasattr(attr, "timings"):
             attr.update({"timings": {}}) == orig_attr.update({"timings": {}})
+        elif attr_name == "math":
+            # NaNs in defaults are converted to None as the comparison below doesn't work with NaNs
+            nan_to_none = {
+                k: {"default": dummy_int}
+                for k, v in attr.build.lookups.root.items()
+                if pd.isnull(v.default)
+            }
+            nan_to_none_orig = {
+                k: {"default": dummy_int}
+                for k, v in orig_attr.build.lookups.root.items()
+                if pd.isnull(v.default)
+            }
+            attr.update({"build.lookups": nan_to_none}) == orig_attr.update(
+                {"build.lookups": nan_to_none_orig}
+            )
         else:
             assert attr == orig_attr
 

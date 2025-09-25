@@ -2,11 +2,12 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Model data processing functionality."""
 
+import functools
 import itertools
 import logging
-from collections.abc import Hashable, Mapping
+from abc import ABC
+from collections.abc import Hashable, Iterable, Mapping
 from copy import deepcopy
-from pathlib import Path
 from typing import Literal
 
 import pandas as pd
@@ -16,8 +17,13 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.preprocess import data_tables, model_math, time
-from calliope.schemas import config_schema, dimension_data_schema, math_schema
+from calliope.preprocess import data_tables, time
+from calliope.schemas import (
+    config_schema,
+    dimension_data_schema,
+    math_schema,
+    runtime_attrs_schema,
+)
 from calliope.util import DATETIME_DTYPE, DTYPE_OPTIONS
 from calliope.util.tools import listify
 
@@ -47,33 +53,79 @@ class ModelDefinition(TypedDict):
     data_definitions: NotRequired[AttrDict]
 
 
-LOGGER = logging.getLogger(__name__)
-
-
-class ModelDataFactory:
+class ModelDTypeUpdater(ABC):
     """Model data production class."""
 
-    # Output of: sns.color_palette('cubehelix', 10).as_hex()
-    _DEFAULT_PALETTE = [
-        "#19122b",
-        "#17344c",
-        "#185b48",
-        "#3c7632",
-        "#7e7a36",
-        "#bc7967",
-        "#d486af",
-        "#caa9e7",
-        "#c2d2f3",
-        "#d6f0ef",
-    ]
+    config: config_schema.Init
+    math: math_schema.CalliopeBuildMath
+
+    def _update_dtypes(
+        self, ds: Mapping[Hashable, "xr.DataArray"], id_: str = ""
+    ) -> Mapping[Hashable, "xr.DataArray"]:
+        """Update data types of coordinates or data variables in the dataset.
+
+        Args:
+            ds (xr.Dataset): Dataset to update.
+            math (math_schema.CalliopeBuildMath): Model math definition.
+            id_ (str, optional): ID of the dataset being updated, for logging purposes. Defaults to an empty string.
+
+        Raises:
+            exceptions.ModelError: If there is a mismatch between the provided variable and its definition in the model math.
+
+        Returns:
+            xr.Dataset: `ds` with data types updated.
+        """
+        prefix = f"{id_} | " if id_ else ""
+        for var_name, var_data in ds.items():
+            try:
+                src, math_def = self.math.find(
+                    var_name, subset=["lookups", "parameters", "dimensions"]
+                )
+            except KeyError:
+                LOGGER.info(
+                    f"{prefix}input data `{var_name}` not defined in model math; "
+                    "it will not be available in the optimisation problem."
+                )
+                continue
+
+            dtype_str = math_def.dtype  # type: ignore
+            dtype = DTYPE_OPTIONS[dtype_str]
+            LOGGER.debug(
+                f"{prefix}{src} | Updating values of `{var_name}` to {dtype_str} type"
+            )
+            match dtype_str:
+                case "string":
+                    updated_var = var_data.astype(dtype).where(var_data.notnull())
+                case "datetime":
+                    updated_var = time._datetime_index(
+                        var_data.to_series(), self.config.datetime_format
+                    ).to_xarray()
+                case "date":
+                    updated_var = (
+                        time._datetime_index(
+                            var_data.to_series(), self.config.date_format
+                        )
+                        .to_xarray()
+                        .assign_attrs(var_data.attrs)
+                    )
+                case "bool":
+                    updated_var = var_data.fillna(False).astype(dtype)
+                case _:
+                    updated_var = var_data.astype(dtype)
+
+            ds[var_name] = updated_var
+        return ds
+
+
+class ModelDataBuilder(ModelDTypeUpdater):
+    """Model data builder class."""
 
     def __init__(
         self,
         init_config: config_schema.Init,
-        model_definition: AttrDict | xr.Dataset,
-        math: math_schema.CalliopeInputMath,
-        definition_path: str | Path | None = None,
-        data_table_dfs: dict[str, pd.DataFrame] | None = None,
+        model_definition: AttrDict,
+        math: math_schema.CalliopeBuildMath,
+        tables: Iterable[data_tables.DataTable] | None = None,
     ):
         """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for constraint generation.
 
@@ -82,57 +134,23 @@ class ModelDataFactory:
         Args:
             init_config (config_schema.Init): Model initialisation configuration (i.e., `config`).
             model_definition (ModelDefinition): Definition of model input data.
-            math (math_schema.CalliopeInputMath): Math schema to apply to the model.
-            definition_path (Path, None): Path to the main model definition file. Defaults to None.
-            data_table_dfs: (dict[str, pd.DataFrame], None): Dataframes with model data. Defaults to None.
-            attributes (dict): Attributes to attach to the model Dataset.
+            math (math_schema.CalliopeBuildMath): Math to apply to the model.
+            tables (Iterable[data_tables.DataTable], None): Loaded data tables. Defaults to None.
         """
-        self.config: config_schema.Init = init_config
-        math_priority = model_math.get_math_priority(self.config)
-        self.math = model_math.build_math(
-            math_priority,
-            math.model_dump(),
-            validate=init_config.pre_validate_math_strings,
-        )
+        self.config = init_config
         self.tech_data_from_tables = AttrDict()
-
-        if isinstance(model_definition, dict):
-            self.model_definition: ModelDefinition = model_definition.copy()
-            self.dataset = xr.Dataset()
-            tables = []
-            for table, table_dict in model_definition.get("data_tables", {}).items():
-                tables.append(
-                    data_tables.DataTable(
-                        table, table_dict, data_table_dfs, definition_path
-                    )
-                )
+        self.math = math
+        self.model_definition: ModelDefinition = model_definition.copy()
+        self.dataset = xr.Dataset()
+        if tables:
             self.init_from_data_tables(tables)
-
-        elif isinstance(model_definition, xr.Dataset):
-            self.model_definition: ModelDefinition = AttrDict()
-            self.dataset = model_definition.copy()
 
     def build(self):
         """Build dataset from model definition."""
         self.add_node_tech_data()
         self.add_top_level_data_definitions()
 
-    def clean(self):
-        """Clean built dataset."""
-        # If input dataset is empty, stop here.
-        if not self.dataset:
-            return None
-        self.clean_data_from_undefined_members()
-        self.add_colors()
-        self.add_link_distances()
-        self.update_and_resample_dimensions()
-        self.assign_input_attr()
-        self.dataset = self.dataset.assign_coords(
-            self._update_dtypes(self.dataset.coords)
-        )
-        self.dataset = self._update_dtypes(self.dataset)
-
-    def init_from_data_tables(self, data_tables: list[data_tables.DataTable]):
+    def init_from_data_tables(self, data_tables: Iterable[data_tables.DataTable]):
         """Initialise the model definition and dataset using data loaded from file / in-memory objects.
 
         A basic skeleton of the dictionary format model definition is created from the data tables,
@@ -258,142 +276,6 @@ class ModelDataFactory:
                 )
 
             self._add_to_dataset(input_ds, f"(Model inputs, {name})")
-
-    def update_and_resample_dimensions(self):
-        """If resampling/clustering is requested in the initialisation config, apply it here."""
-        if not any(
-            dim.dtype.kind == DATETIME_DTYPE for dim in self.dataset.coords.values()
-        ):
-            raise exceptions.ModelError(
-                "Must define at least one timeseries data input in a Calliope model."
-            )
-        self._subset_dims()
-        self._resample_dims()
-
-        self.dataset = time.add_inferred_time_params(self.dataset)
-
-        if self.config.time_cluster is not None:
-            self.dataset = time.cluster(
-                self.dataset, self.config.time_cluster, self.config.datetime_format
-            )
-
-    def clean_data_from_undefined_members(self):
-        """Generate the `definition_matrix` array and remove undefined members.
-
-        Members stripped:
-        - Any dimension items that are NaN in all arrays.
-        - Any arrays that are NaN in all index positions.
-        """
-        ds = self._update_dtypes(self.dataset)
-        def_matrix = ds.carrier_in | ds.carrier_out
-        # NaNing values where they are irrelevant requires definition_matrix to be boolean
-        for var_name, var_data in ds.data_vars.items():
-            non_dims = set(def_matrix.dims).difference(var_data.dims)
-            var_updated = var_data.where(def_matrix.any(non_dims))
-            ds[var_name] = (
-                var_updated
-                if var_data.dtype.kind != "b"
-                else var_updated.fillna(False).astype(bool)
-            )
-        # dropping index values where they are irrelevant requires definition_matrix to be NaN where False
-        ds["definition_matrix"] = def_matrix.where(def_matrix)
-
-        for dim in def_matrix.dims:
-            orig_dim_vals = set(ds.coords[dim].data)
-            ds = ds.dropna(dim, how="all", subset=["definition_matrix"])
-            deleted_dim_vals = orig_dim_vals.difference(set(ds.coords[dim].data))
-            if deleted_dim_vals:
-                LOGGER.debug(
-                    f"Deleting {dim} values as they are not defined anywhere in the model: {deleted_dim_vals}"
-                )
-
-        # The boolean version of definition_matrix is what we keep
-        ds["definition_matrix"] = def_matrix
-
-        vars_to_delete = [
-            var_name for var_name, var in ds.data_vars.items() if var.isnull().all()
-        ]
-        if vars_to_delete:
-            LOGGER.debug(f"Deleting empty input data: {vars_to_delete}")
-        self.dataset = ds.drop_vars(vars_to_delete)
-
-    def add_link_distances(self):
-        """If latitude/longitude are provided but distances between nodes have not been computed, compute them now.
-
-        The schema will have already handled the fact that if one of lat/lon is provided, the other must also be provided.
-        """
-        # If no distance was given, we calculate it from coordinates
-        if (
-            "latitude" in self.dataset.data_vars
-            and "longitude" in self.dataset.data_vars
-        ):
-            geod = geodesic.Geodesic.WGS84
-            distances = {}
-            for tech in self.dataset.techs:
-                if self.dataset.base_tech.sel(techs=tech).item() != "transmission":
-                    continue
-                tech_def = self.dataset.definition_matrix.sel(techs=tech).any(
-                    "carriers"
-                )
-                node1, node2 = tech_def.where(tech_def).dropna("nodes").nodes.values
-                distances[tech.item()] = geod.Inverse(
-                    self.dataset.latitude.sel(nodes=node1).item(),
-                    self.dataset.longitude.sel(nodes=node1).item(),
-                    self.dataset.latitude.sel(nodes=node2).item(),
-                    self.dataset.longitude.sel(nodes=node2).item(),
-                )["s12"]
-            distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
-            if self.config.distance_unit == "km":
-                distance_array /= 1000
-        else:
-            LOGGER.debug(
-                "Link distances will not be computed automatically since lat/lon coordinates are not defined."
-            )
-            return None
-
-        if "distance" not in self.dataset.data_vars:
-            self.dataset["distance"] = distance_array
-            LOGGER.debug(
-                "Link distance matrix automatically computed from lat/lon coordinates."
-            )
-        else:
-            self.dataset["distance"] = self.dataset["distance"].fillna(distance_array)
-            LOGGER.debug(
-                "Any missing link distances automatically computed from lat/lon coordinates."
-            )
-
-    def add_colors(self):
-        """If technology colours have not been provided / only partially provided, generate a sequence of colors to fill the gap.
-
-        This is a convenience function for downstream plotting.
-        Since we have removed core plotting components from Calliope, it is not a strictly necessary preprocessing step.
-        """
-        techs = self.dataset.techs
-        color_array = self.dataset.get("color")
-        default_palette_cycler = itertools.cycle(range(len(self._DEFAULT_PALETTE)))
-        new_color_array = xr.DataArray(
-            [self._DEFAULT_PALETTE[next(default_palette_cycler)] for tech in techs],
-            coords={"techs": techs},
-        )
-        if color_array is None:
-            LOGGER.debug("Building technology color array from default palette.")
-            self.dataset["color"] = new_color_array
-        elif color_array.isnull().any():
-            LOGGER.debug(
-                "Filling missing technology color array values from default palette."
-            )
-            self.dataset["color"] = self.dataset["color"].fillna(new_color_array)
-
-    def assign_input_attr(self):
-        """Assign metadata as attributes to each input array."""
-        all_attrs = {
-            **self.math.parameters.model_dump(),
-            **self.math.lookups.model_dump(),
-        }
-        for var_name, var_data in self.dataset.data_vars.items():
-            self.dataset[var_name] = var_data.assign_attrs(all_attrs.get(var_name, {}))
-            # Remove this redundant attribute
-            self.dataset[var_name].attrs.pop("active", None)
 
     def _get_relevant_node_refs(self, techs_dict: AttrDict, node: str) -> list[str]:
         """Get all references to input data made in technologies at nodes.
@@ -733,62 +615,261 @@ class ModelDataFactory:
         )  # cannot import carriers at the `link_from` node
         node_to_data.pop("carrier_in")  # cannot export carrier at the `link_to` node
 
-    def _update_dtypes(
-        self, ds: Mapping[Hashable, "xr.DataArray"], id_: str = ""
-    ) -> Mapping[Hashable, "xr.DataArray"]:
-        """Update data types of coordinates or data variables in the dataset.
+    def _raise_error_on_transmission_tech_def(
+        self, tech_def_dict: AttrDict, node_name: str
+    ):
+        """Do not allow any transmission techs to be defined in the node-level tech dict.
 
         Args:
-            ds (xr.Dataset): Dataset to update.
-            to_update (Literal["coords", "data_vars"]): Which part of the dataset to update.
-            id_ (str, optional): ID of the dataset being updated, for logging purposes. Defaults to an empty string.
+            tech_def_dict (dict): Tech definition dict (after full inheritance) at a node.
+            node_name (str): Node name.
 
         Raises:
-            exceptions.ModelError: If there is a mismatch between the provided variable and its definition in the model math.
+            exceptions.ModelError: Raise if any defined techs have the `transmission` base_tech.
+        """
+        transmission_techs = [
+            k
+            for k, v in tech_def_dict.items()
+            if v.get("base_tech", "") == "transmission"
+        ]
+
+        if transmission_techs:
+            raise exceptions.ModelError(
+                f"(nodes, {node_name}) | Transmission techs cannot be directly defined at nodes; "
+                f"they will be automatically assigned to nodes based on `link_to` and `link_from` for: {transmission_techs}."
+            )
+
+
+class ModelDataCleaner(ModelDTypeUpdater):
+    """Model data cleaning class."""
+
+    # Output of: sns.color_palette('cubehelix', 10).as_hex()
+    _DEFAULT_PALETTE = [
+        "#19122b",
+        "#17344c",
+        "#185b48",
+        "#3c7632",
+        "#7e7a36",
+        "#bc7967",
+        "#d486af",
+        "#caa9e7",
+        "#c2d2f3",
+        "#d6f0ef",
+    ]
+
+    def __init__(
+        self,
+        init_config: config_schema.Init,
+        dataset: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
+        runtime: runtime_attrs_schema.CalliopeRuntime,
+    ):
+        """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for constraint generation.
+
+        This includes resampling/clustering timeseries data as necessary.
+
+        Args:
+            init_config (config_schema.Init): Model initialisation configuration (i.e., `config`).
+            dataset (xr.Dataset): Dataset containing model input data.
+            math (math_schema.CalliopeInputMath): Math schema to apply to the model.
+            runtime (runtime_attrs_schema.CalliopeRuntime): Runtime attributes of the model.
+        """
+        self.config = init_config
+        self.math = math
+        self.dataset = dataset.copy()
+        self.runtime = runtime
+
+    def clean(self):
+        """Clean built dataset."""
+        # If input dataset is empty, stop here.
+        self.clean_data_from_undefined_members()
+        self.add_colors()
+        self.add_link_distances()
+        self.update_and_resample_dimensions()
+        self.assign_input_attr()
+        self.dataset = self.dataset.assign_coords(
+            self._update_dtypes(self.dataset.coords)
+        )
+        self.dataset = self._update_dtypes(self.dataset)
+        self.runtime = self.runtime.update({"instantiated": True})
+
+    def clean_data_from_undefined_members(self):
+        """Generate the `definition_matrix` array and remove undefined members.
+
+        Members stripped:
+        - Any dimension items that are NaN in all arrays.
+        - Any arrays that are NaN in all index positions.
+        """
+        ds = self._update_dtypes(self.dataset)
+        def_matrix = ds.carrier_in | ds.carrier_out
+        # NaNing values where they are irrelevant requires definition_matrix to be boolean
+        for var_name, var_data in ds.data_vars.items():
+            non_dims = set(def_matrix.dims).difference(var_data.dims)
+            var_updated = var_data.where(def_matrix.any(non_dims))
+            ds[var_name] = (
+                var_updated
+                if var_data.dtype.kind != "b"
+                else var_updated.fillna(False).astype(bool)
+            )
+        # dropping index values where they are irrelevant requires definition_matrix to be NaN where False
+        self.dataset = self._drop_undefined(ds, def_matrix)
+
+    def add_colors(self):
+        """If technology colours have not been provided / only partially provided, generate a sequence of colors to fill the gap.
+
+        This is a convenience function for downstream plotting.
+        Since we have removed core plotting components from Calliope, it is not a strictly necessary preprocessing step.
+        """
+        techs = self.dataset.techs
+        color_array = self.dataset.get("color")
+        default_palette_cycler = itertools.cycle(range(len(self._DEFAULT_PALETTE)))
+        new_color_array = xr.DataArray(
+            [self._DEFAULT_PALETTE[next(default_palette_cycler)] for tech in techs],
+            coords={"techs": techs},
+        )
+        if color_array is None:
+            LOGGER.debug("Building technology color array from default palette.")
+            self.dataset["color"] = new_color_array
+        elif color_array.isnull().any():
+            LOGGER.debug(
+                "Filling missing technology color array values from default palette."
+            )
+            self.dataset["color"] = self.dataset["color"].fillna(new_color_array)
+
+    def add_link_distances(self):
+        """If latitude/longitude are provided but distances between nodes have not been computed, compute them now.
+
+        The schema will have already handled the fact that if one of lat/lon is provided, the other must also be provided.
+        """
+        # If no distance was given, we calculate it from coordinates
+        if (
+            "latitude" in self.dataset.data_vars
+            and "longitude" in self.dataset.data_vars
+            and (self.dataset.base_tech == "transmission").any()
+        ):
+            distances = {}
+            for tech in self.dataset.techs:
+                if self.dataset.base_tech.sel(techs=tech).item() != "transmission":
+                    continue
+                tech_def = self.dataset.definition_matrix.sel(techs=tech).any(
+                    "carriers"
+                )
+                node1, node2 = tech_def.where(tech_def).dropna("nodes").nodes.values
+                distances[tech.item()] = self._get_distance(node1, node2)
+            distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
+            if self.config.distance_unit == "km":
+                distance_array /= 1000
+        else:
+            LOGGER.debug(
+                "Link distances will not be computed automatically since lat/lon coordinates are not defined."
+            )
+            return None
+
+        if "distance" not in self.dataset.data_vars:
+            self.dataset["distance"] = distance_array
+            LOGGER.debug(
+                "Link distance matrix automatically computed from lat/lon coordinates."
+            )
+        else:
+            self.dataset["distance"] = self.dataset["distance"].fillna(distance_array)
+            LOGGER.debug(
+                "Any missing link distances automatically computed from lat/lon coordinates."
+            )
+
+    def update_and_resample_dimensions(self):
+        """If resampling/clustering is requested in the initialisation config, apply it here."""
+        if not any(
+            dim.dtype.kind == DATETIME_DTYPE for dim in self.dataset.coords.values()
+        ):
+            raise exceptions.ModelError(
+                "Must define at least one timeseries data input in a Calliope model."
+            )
+        runtime_updater = {}
+        if self.config.subset != self.runtime.subset:
+            self._subset_dims()
+            runtime_updater["subset"] = self.config.subset.model_dump()
+        if self.config.resample != self.runtime.resample:
+            self._resample_dims()
+            runtime_updater["resample"] = self.config.resample.model_dump()
+
+        if not self.runtime.instantiated:
+            self.dataset = time.add_inferred_time_params(self.dataset)
+
+        if self.runtime.time_cluster is None and self.config.time_cluster is not None:
+            self.dataset = time.cluster(
+                self.dataset, self.config.time_cluster, self.config.datetime_format
+            )
+            runtime_updater["time_cluster"] = self.config.time_cluster
+        elif self.config.time_cluster != self.runtime.time_cluster:
+            raise exceptions.ModelError(
+                "Cannot change time clustering configuration at this stage."
+            )
+        self.runtime = self.runtime.update(runtime_updater)
+
+    def assign_input_attr(self):
+        """Assign metadata as attributes to each input array."""
+        all_attrs = {
+            **self.math.parameters.model_dump(),
+            **self.math.lookups.model_dump(),
+        }
+        for var_name, var_data in self.dataset.data_vars.items():
+            self.dataset[var_name] = var_data.assign_attrs(all_attrs.get(var_name, {}))
+            # Remove this redundant attribute
+            self.dataset[var_name].attrs.pop("active", None)
+
+    @staticmethod
+    def _drop_undefined(ds: xr.Dataset, def_matrix: xr.DataArray) -> xr.Dataset:
+        """Drop undefined members from a dataset.
+
+        Members dropped:
+        - Any dimension items that are NaN in all arrays.
+        - Any arrays that are NaN in all index positions.
+
+        Args:
+            ds (xr.Dataset): Dataset to drop undefined members from.
+            def_matrix (xr.DataArray): Definition matrix to use to identify undefined members.
 
         Returns:
-            xr.Dataset: `ds` with data types updated.
+            xr.Dataset: Input `ds` with undefined members dropped.
         """
-        prefix = f"{id_} | " if id_ else ""
-        for var_name, var_data in ds.items():
-            try:
-                src, math_def = self.math.find(
-                    var_name, subset=["lookups", "parameters", "dimensions"]
+        ds["definition_matrix"] = def_matrix.where(def_matrix)
+        for dim in def_matrix.dims:
+            orig_dim_vals = set(ds.coords[dim].data)
+            ds = ds.dropna(dim, how="all", subset=["definition_matrix"])
+            deleted_dim_vals = orig_dim_vals.difference(set(ds.coords[dim].data))
+            if deleted_dim_vals:
+                LOGGER.debug(
+                    f"Deleting {dim} values as they are not defined anywhere in the model: {deleted_dim_vals}"
                 )
-            except KeyError:
-                LOGGER.info(
-                    f"{prefix}input data `{var_name}` not defined in model math; "
-                    "it will not be available in the optimisation problem."
-                )
-                continue
 
-            dtype_str = math_def.dtype  # type: ignore
-            dtype = DTYPE_OPTIONS[dtype_str]
-            LOGGER.debug(
-                f"{prefix}{src} | Updating values of `{var_name}` to {dtype_str} type"
-            )
-            match dtype_str:
-                case "string":
-                    updated_var = var_data.astype(dtype).where(var_data.notnull())
-                case "datetime":
-                    updated_var = time._datetime_index(
-                        var_data.to_series(), self.config.datetime_format
-                    ).to_xarray()
-                case "date":
-                    updated_var = (
-                        time._datetime_index(
-                            var_data.to_series(), self.config.date_format
-                        )
-                        .to_xarray()
-                        .assign_attrs(var_data.attrs)
-                    )
-                case "bool":
-                    updated_var = var_data.fillna(False).astype(dtype)
-                case _:
-                    updated_var = var_data.astype(dtype)
+        # The boolean version of definition_matrix is what we keep
+        ds["definition_matrix"] = def_matrix
 
-            ds[var_name] = updated_var
-        return ds
+        vars_to_delete = [
+            var_name for var_name, var in ds.data_vars.items() if var.isnull().all()
+        ]
+        if vars_to_delete:
+            LOGGER.debug(f"Deleting empty input data: {vars_to_delete}")
+        return ds.drop_vars(vars_to_delete)
+
+    @functools.lru_cache(maxsize=1000)
+    def _get_distance(self, node1: str, node2: str) -> float:
+        """Get and cache the distance between two nodes.
+
+        Args:
+            node1 (str): The first node.
+            node2 (str): The second node.
+
+        Returns:
+            float: The geodesic distance between the two nodes.
+        """
+        geod = geodesic.Geodesic.WGS84
+        return geod.Inverse(
+            self.dataset.latitude.sel(nodes=node1).item(),
+            self.dataset.longitude.sel(nodes=node1).item(),
+            self.dataset.latitude.sel(nodes=node2).item(),
+            self.dataset.longitude.sel(nodes=node2).item(),
+        )["s12"]
 
     def _subset_dims(self):
         """Subset all timeseries dimensions according to an input slice of start and end times.
@@ -818,7 +899,22 @@ class ModelDataFactory:
             else:
                 selectors[dim_name] = subset
 
-        self.dataset = self.dataset.sel(**selectors)
+        subset_dataset = self.dataset.sel(**selectors)
+
+        # Drop any transmission links that are now hanging (i.e., only connected to one node)
+        hanging_links = (
+            subset_dataset.definition_matrix.sel(
+                techs=subset_dataset.base_tech == "transmission"
+            )
+            .sum("nodes")
+            .where(lambda x: x == 1, drop=True)
+            .techs
+        )
+        subset_dataset = subset_dataset.drop_sel(techs=hanging_links)
+
+        self.dataset = self._drop_undefined(
+            subset_dataset, subset_dataset.definition_matrix
+        )
 
     def _resample_dims(self):
         ds = self.dataset
@@ -834,27 +930,3 @@ class ModelDataFactory:
                 )
             ds = time.resample(ds, self.math, dim_name, resampler)
         self.dataset = ds
-
-    def _raise_error_on_transmission_tech_def(
-        self, tech_def_dict: AttrDict, node_name: str
-    ):
-        """Do not allow any transmission techs to be defined in the node-level tech dict.
-
-        Args:
-            tech_def_dict (dict): Tech definition dict (after full inheritance) at a node.
-            node_name (str): Node name.
-
-        Raises:
-            exceptions.ModelError: Raise if any defined techs have the `transmission` base_tech.
-        """
-        transmission_techs = [
-            k
-            for k, v in tech_def_dict.items()
-            if v.get("base_tech", "") == "transmission"
-        ]
-
-        if transmission_techs:
-            raise exceptions.ModelError(
-                f"(nodes, {node_name}) | Transmission techs cannot be directly defined at nodes; "
-                f"they will be automatically assigned to nodes based on `link_to` and `link_from` for: {transmission_techs}."
-            )

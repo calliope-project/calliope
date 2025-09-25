@@ -1,3 +1,11 @@
+## 0.7.0.dev8
+
+### User-facing changes
+
+|fixed| Reloading a clustered model from file was attempting to re-cluster (#824).
+
+|changed| Init config can be updated on re-init _and_ on loading a model from NetCDF, e.g. to apply new subsetting, resampling, clustering, math.
+
 ## 0.7.0.dev7 (2025-09-05)
 
 ### User-facing changes

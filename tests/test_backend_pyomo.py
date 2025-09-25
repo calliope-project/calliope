@@ -2016,7 +2016,7 @@ class TestVerboseStrings:
             )
             .item()
             .name
-            == "variables[flow_out][4]"
+            == "variables[flow_out][8]"
         )
         assert not simple_supply.backend.variables.flow_out.coords_in_name
 

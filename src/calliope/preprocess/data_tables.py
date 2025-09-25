@@ -3,37 +3,23 @@
 """Preprocessing functionality."""
 
 import logging
-from collections.abc import Hashable
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
 import pandas as pd
 import xarray as xr
-from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import load_config
+from calliope.schemas.data_table_schema import CalliopeDataTable
 from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
 
 
 AXIS_T = Literal["columns", "index"]
-
-
-class DataTableDict(TypedDict):
-    """Uniform dictionary for data tables."""
-
-    rows: NotRequired[str | list[str]]
-    columns: NotRequired[str | list[str]]
-    data: str
-    df: NotRequired[str]
-    rename_dims: NotRequired[dict[str, str]]
-    add_dims: NotRequired[dict[str, str | list[str]]]
-    select: NotRequired[dict[str, str | bool | int]]
-    drop: NotRequired[Hashable | list[Hashable]]
 
 
 class DataTable:
@@ -45,7 +31,7 @@ class DataTable:
     def __init__(
         self,
         table_name: str,
-        data_table: DataTableDict,
+        data_table: CalliopeDataTable,
         data_table_dfs: dict[str, pd.DataFrame] | None = None,
         model_definition_path: str | Path | None = None,
     ):
@@ -67,20 +53,17 @@ class DataTable:
         self.model_definition_path = model_definition_path
         self.columns = self._listify_if_defined("columns")
         self.index = self._listify_if_defined("rows")
-        self._name = table_name
+        self.name = table_name
+        """Data table name."""
+
         self.protected_params = load_config("protected_parameters.yaml")
 
-        if ".csv" in Path(self.input["data"]).suffixes:
+        if ".csv" in Path(self.input.data).suffixes:
             df = self._read_csv()
         else:
-            df = self.dfs[self.input["data"]]
+            df = self.dfs[self.input.data]
 
         self.dataset = self._df_to_ds(df)
-
-    @property
-    def name(self):
-        """Data table name."""
-        return self._name
 
     def drop(self, name: str):
         """Drop a data in-place from the data table.
@@ -235,7 +218,7 @@ class DataTable:
         Returns:
             pd.DataFrame: Loaded data without any processing.
         """
-        filename = self.input["data"]
+        filename = self.input.data
 
         if self.columns is None:
             self._log(
@@ -290,22 +273,22 @@ class DataTable:
         else:
             tdf = df
 
-        if self.input.get("select", None) is not None:
+        if self.input.select is not None:
             selector = tuple(
                 (
-                    listify(self.input["select"][name])
-                    if name in self.input["select"]
+                    listify(self.input.select[name])
+                    if name in self.input.select
                     else slice(None)
                 )
                 for name in tdf.index.names
             )
             tdf = tdf.loc[selector]
 
-        if self.input.get("drop", None) is not None:
-            tdf = tdf.droplevel(self.input["drop"])
+        if self.input.drop is not None:
+            tdf = tdf.droplevel(self.input.drop)
 
-        if self.input.get("add_dims", None) is not None:
-            for dim_name, index_items in self.input["add_dims"].items():
+        if self.input.add_dims is not None:
+            for dim_name, index_items in self.input.add_dims.items():
                 index_items = listify(index_items)
                 tdf = pd.concat(
                     [tdf for _ in index_items], keys=index_items, names=[dim_name]
@@ -336,7 +319,7 @@ class DataTable:
         """
         if len(getattr(df, axis).names) != len(names):
             self._raise_error(f"Expected {len(names)} {axis} levels in loaded data.")
-        mapper = self.input.get("rename_dims", {})
+        mapper = self.input.rename_dims
         if mapper:
             df.rename_axis(inplace=True, **{axis: mapper})
         self._compare_axis_names(getattr(df, axis).names, names, axis)
@@ -390,7 +373,7 @@ class DataTable:
         )
 
     def _listify_if_defined(self, key: str) -> list | None:
-        """If `key` is in data sourtablece definition dictionary, return values as a list.
+        """If `key` is in data table definition dictionary, return values as a list.
 
         If values are not yet an iterable, they will be coerced to an iterable of length 1.
         If they are an iterable, they will be coerced to a list.
@@ -402,7 +385,7 @@ class DataTable:
         Returns:
             list | None: If `key` not defined in data table, return None, else return values as a list.
         """
-        vals = self.input.get(key, None)
+        vals = self.input[key]
         if vals is not None:
             vals = listify(vals)
         return vals
