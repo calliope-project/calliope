@@ -187,7 +187,7 @@ class ParsingHelperFunction(ABC):
         return rf"\text{{{iterator}}} \in \text{{{dim}}}"
 
     def _listify(
-        self, vals: list[str | xr.DataArray] | str | xr.DataArray
+        self, vals: list[str | xr.DataArray] | str | xr.DataArray | list[xr.DataArray]
     ) -> list[str]:
         """Force a string to a list of length one if not already provided as a list.
 
@@ -219,10 +219,9 @@ class WhereAny(ParsingHelperFunction):
     ) -> str:
         over_list = self._listify(over)
         overstring = r" \\ ".join(self._instr(i) for i in over_list)
-        if len(over_list) > 1:
-            overstring = rf"\substack{{{overstring}}}"
+        substack_overstring = rf"\substack{{{overstring}}}"
         # Using bigvee for "collective-or"
-        return rf"\bigvee\limits_{{{overstring}}} ({array})"
+        return rf"\bigvee\limits_{{{substack_overstring}}} ({array})"
 
     def as_array(
         self, input_component: xr.DataArray, *, over: xr.DataArray | list[xr.DataArray]
@@ -240,13 +239,12 @@ class WhereAny(ParsingHelperFunction):
         Returns:
             xr.DataArray: resulting array.
         """
-        if isinstance(input_component, str):
+        if input_component.dtype.kind != "b":
             raise BackendError(
-                f"Input to sum must be a valid math component. Received {input_component}"
+                "Input to `any` must be a boolean array. "
+                f"Received {input_component.name} of dtype {input_component.dtype}"
             )
-
-        over = self._listify(over)
-        available_dims = set(input_component.dims).intersection(over)
+        available_dims = set(input_component.dims).intersection(self._listify(over))
 
         return input_component.any(dim=available_dims, keep_attrs=True)
 
@@ -264,7 +262,7 @@ class Defined(ParsingHelperFunction):
     ) -> str:
         substrings = []
         for name, vals in dims.items():
-            substrings.append(self._latex_substring(how, name, vals, within.name))
+            substrings.append(self._latex_substring(how, name, vals, str(within.name)))
         if len(substrings) == 1:
             return substrings[0]
         else:
@@ -331,7 +329,7 @@ class Defined(ParsingHelperFunction):
         }
         definition_matrix = self._input_data.definition_matrix
         dim_within_da = definition_matrix.any(
-            self._dims_to_remove(dim_names, within.name)
+            self._dims_to_remove(dim_names, str(within.name))
         )
         within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
 
@@ -391,9 +389,8 @@ class Sum(ParsingHelperFunction):
     ) -> str:
         over_list = self._listify(over)
         overstring = r" \\ ".join(self._instr(i) for i in over_list)
-        if len(over_list) > 1:
-            overstring = rf"\substack{{{overstring}}}"
-        return rf"\sum\limits_{{{overstring}}} ({array})"
+        substack_overstring = rf"\substack{{{overstring}}}"
+        return rf"\sum\limits_{{{substack_overstring}}} ({array})"
 
     def as_array(
         self, array: xr.DataArray, *, over: xr.DataArray | list[xr.DataArray]

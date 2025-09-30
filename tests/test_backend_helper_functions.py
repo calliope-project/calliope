@@ -150,11 +150,12 @@ class TestAsArray:
 
         assert all(func_name in helper_functions._registry[i] for i in string_types)
 
-    def test_any_not_exists(self, where_any):
+    @pytest.mark.parametrize("arr", ["with_inf", "no_dims", "timesteps"])
+    def test_any_not_bool(self, dummy_model_data: xr.Dataset, where_any, arr):
         with pytest.raises(
-            exceptions.BackendError, match="Input to sum must be a valid math component"
+            exceptions.BackendError, match="Input to `any` must be a boolean array"
         ):
-            where_any("foo", over="techs")
+            where_any(dummy_model_data[arr], over="techs")
 
     @pytest.mark.parametrize(
         ("var", "over", "expected"),
@@ -517,7 +518,10 @@ class TestAsMathString:
 
     def test_any_not_exists(self, where_any):
         summed_string = where_any("foo", over="techs")
-        assert summed_string == r"\bigvee\limits_{\text{tech} \in \text{techs}} (foo)"
+        assert (
+            summed_string
+            == r"\bigvee\limits_{\substack{\text{tech} \in \text{techs}}} (foo)"
+        )
 
     def test_defined_any(self, where_defined, dummy_model_data):
         defined_string = where_defined(
@@ -584,7 +588,7 @@ class TestAsMathString:
         summed_string = func(r"\textit{with_inf}_\text{node,tech}", over=over)
         assert (
             summed_string
-            == rf"{latex_func}\limits_{{{expected_substring}}} (\textit{{with_inf}}_\text{{node,tech}})"
+            == rf"{latex_func}\limits_{{\substack{{{expected_substring}}}}} (\textit{{with_inf}}_\text{{node,tech}})"
         )
 
     def test_squeeze_carriers(self, expression_reduce_carrier_dim):
