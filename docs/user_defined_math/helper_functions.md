@@ -69,19 +69,6 @@ Using `roll(..., dimension_name=N)` allows you to do this.
 For example, `roll(storage, timesteps=1)` will shift all the storage decision variable objects by one timestep in the array.
 Then, `storage == roll(storage, timesteps=1) + 1` is equivalent to applying `storage[t] == storage[t - 1] + 1` in a for-loop.
 
-## default_if_empty
-
-We work with quite sparse arrays in our models.
-So, although your arrays are indexed over e.g., `nodes`, `techs` and `carriers`, a decision variable or parameter might only have one or two values in the array, with the rest being NaN.
-This can play havoc with defining math, with `nan` values making their way into your optimisation problem and then killing the solver or the solver interface.
-Using `default_if_empty(..., default=...)` in your `expression` string allows you to put a placeholder value in, which will be used if the math expression unavoidably _needs_ a value.
-Usually you shouldn't need to use this, as your `where` string will mask those NaN values.
-But if you're having trouble setting up your math, it is a useful function to getting it over the line.
-
-!!! note
-    Our internally defined parameters, listed in the `Parameters` section of our [pre-defined base math documentation][base-math] all have default values which propagate to the math.
-    You only need to use `default_if_empty` for decision variables and global expressions, and for user-defined parameters.
-
 ## where
 
 [Where strings](syntax.md#where-strings) only allow you to apply conditions across the whole expression equations.

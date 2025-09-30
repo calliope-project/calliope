@@ -332,6 +332,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         self._add_to_dataset(name, values, "parameters", attrs)
 
+        if name not in self.math["parameters"]:
+            self.math = self.math.update(
+                {f"parameters.{name}": definition.model_dump()}
+            )
+
     def add_lookup(  # noqa: D102, override
         self, name: str, values: xr.DataArray, definition: math_schema.Lookup
     ) -> None:
@@ -376,8 +381,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 math_schema.GlobalExpression.model_validate(
                     {"equations": [{"expression": val_name}]}
                 ),
+                self.valid_component_names,
             )
-            eq = parsed_val.parse_equations(self.valid_component_names)
+            eq = parsed_val.parse_equations()
             math_parts[val] = eq[0].evaluate_expression(
                 self, return_type="math_string", references=non_where_refs
             )
@@ -659,8 +665,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 ]
             }
         )
-        parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
-        equations = parsed_bounds.parse_equations(self.valid_component_names)
+        parsed_bounds = parsing.ParsedBackendComponent(
+            "constraints", name, bound_dict, self.valid_component_names
+        )
+        equations = parsed_bounds.parse_equations()
         return tuple(
             {
                 "expression": eq.evaluate_expression(

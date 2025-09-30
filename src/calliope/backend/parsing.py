@@ -410,6 +410,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         ],
         name: str,
         unparsed_data: T,
+        valid_component_names: dict[str, Iterable[str]],
     ) -> None:
         """Parse an optimisation problem configuration.
 
@@ -422,10 +423,12 @@ class ParsedBackendComponent(ParsedBackendEquation):
             name (str): Name of the optimisation problem component
             unparsed_data (T): Unparsed math formulation. Expected structure depends on
                 the group to which the optimisation problem component belongs.
+            valid_component_names (dict[str, Iterable[str]]):
+                Dictionary of valid component names for different categories of model data.
         """
         self.name = f"{group}:{name}"
         self._unparsed = unparsed_data
-
+        self._valid_component_names = valid_component_names
         self.where: list[pp.ParseResults] = []
         self.equations: list[ParsedBackendEquation] = []
         self.equation_expression_parser: Callable = self.PARSERS[group]
@@ -474,15 +477,11 @@ class ParsedBackendComponent(ParsedBackendEquation):
             self.where = [top_level_where]
 
     def parse_equations(
-        self,
-        valid_component_names: Iterable[str],
-        errors: Literal["raise", "ignore"] = "raise",
+        self, errors: Literal["raise", "ignore"] = "raise"
     ) -> list[ParsedBackendEquation]:
         """Parse `expression` and `where` strings of math component dictionary.
 
         Args:
-            valid_component_names (Iterable[str]):
-                strings referring to valid backend objects to allow the parser to differentiate between them and generic strings.
             errors (Literal["raise", "ignore"], optional):
                 Collected parsing errors can be raised directly or ignored.
                 If errors exist and are ignored, the parsed component cannot be successfully evaluated. Defaults to "raise".
@@ -493,7 +492,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 The length of the list depends on the product of provided equations and sub-expression/slice references.
         """
         equations = self.generate_expression_list(
-            expression_parser=self.equation_expression_parser(valid_component_names),
+            expression_parser=self.equation_expression_parser(
+                set().union(*self._valid_component_names.values())
+            ),
             expression_list=self._unparsed.equations,
             expression_group="equations",
             id_prefix=self.name,
@@ -502,7 +503,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         sub_expression_dict = {
             c_name: self.generate_expression_list(
                 expression_parser=expression_parser.generate_sub_expression_parser(
-                    valid_component_names
+                    set().union(*self._valid_component_names.values())
                 ),
                 expression_list=c_list,
                 expression_group="sub_expressions",
@@ -513,7 +514,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         slice_dict = {
             idx_name: self.generate_expression_list(
                 expression_parser=expression_parser.generate_slice_parser(
-                    valid_component_names
+                    set().union(*self._valid_component_names.values())
                 ),
                 expression_list=idx_list,
                 expression_group="slices",
@@ -583,7 +584,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
             pp.ParseResults: Parsed string. If any parsing errors are caught,
                 they will be logged to `self._errors` to raise later.
         """
-        parser = where_parser.generate_where_string_parser()
+        parser = where_parser.generate_where_string_parser(
+            **self._valid_component_names
+        )
         self._tracker["expr_or_where"] = "where"
         return self._parse_string(parser, where_string)
 

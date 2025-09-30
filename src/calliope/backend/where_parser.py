@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -16,7 +16,7 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope.backend import expression_parser
 from calliope.schemas import config_schema, math_schema
-from calliope.util import tools
+from calliope.util import DTYPE_OPTIONS, tools
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -43,6 +43,10 @@ class EvalWhere(expression_parser.EvalToArrayStr):
     """Update type reference for `eval_attrs` to match `where` evaluation kwargs."""
 
     eval_attrs: EvalAttrs = {}
+
+    def _add_references(self, name: str) -> None:
+        """Add name of array to the set of references used in the `where` string."""
+        self.eval_attrs["references"].add(name)
 
 
 class EvalNot(EvalWhere, expression_parser.EvalSignOp):
@@ -134,11 +138,11 @@ class ConfigOptionParser(EvalWhere):
             return xr.DataArray(config_val)
 
 
-class DataVarParser(EvalWhere):
-    """Data variable processing."""
+class VarExprArrayParser(EvalWhere):
+    """Variable/Expression array processing."""
 
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
-        """Parse action to process successfully parsed model data variable names.
+        """Parse action to process successfully parsed model variable/global expression names.
 
         Args:
             instring (str): String that was parsed (used in error message).
@@ -148,104 +152,119 @@ class DataVarParser(EvalWhere):
             tokens (pp.ParseResults):
                 Has one parsed element: model data variable name (str).
         """
-        self.data_var = tokens[0]
+        self.array_name = tokens[0]
         self.instring = instring
         self.loc = loc
 
     def __repr__(self):
         """Programming / official string representation."""
-        return f"DATA_VAR:{self.data_var}"
-
-    def _preprocess(self) -> str:
-        """Get data variable from the optimisation problem dataset.
-
-        Raises:
-            TypeError: Cannot work with math components of type `constraint` or `objective`.
-            TypeError: Cannot check array contents (`apply_where=False`) of `variable` or `global_expression` math components.
-        """
-        self.eval_attrs["references"].add(self.data_var)
-        try:
-            return self.eval_attrs["input_data"][self.data_var].attrs["obj_type"]
-        except KeyError:
-            pass
-        try:
-            return (
-                self.eval_attrs["backend_interface"]
-                ._dataset[self.data_var]
-                .attrs["obj_type"]
-            )
-        except KeyError:
-            raise self.error_msg(
-                f"where string | Data variable `{self.data_var}` not found in model dataset."
-            )
-
-    def _data_var_exists(
-        self, source_dataset: xr.Dataset, resolve_contents: bool
-    ) -> xr.DataArray:
-        """Mask by setting all (NaN | INF/-INF) to False, otherwise True."""
-        var = source_dataset.get(self.data_var, xr.DataArray(np.nan))
-        if var.dtype.kind == "b":
-            return var
-        elif resolve_contents:
-            return var.notnull() & (var != np.inf) & (var != -np.inf)
-        else:
-            return var.notnull()
-
-    def _data_var_with_default(self) -> xr.DataArray:
-        """Access data var and fill with default values.
-
-        Return default value as an array if var does not exist.
-        """
-        var = self.eval_attrs["input_data"][self.data_var]
-        if var.attrs["obj_type"] != "dimensions":
-            default = self.eval_attrs["math"].find(self.data_var)[1]["default"]
-            if pd.notnull(default):
-                var = var.fillna(default)
-        return var
+        return f"VAR_EXPR:{self.array_name}"
 
     def as_math_string(self) -> str:  # noqa: D102, override
-        self._preprocess()
+        self._add_references(self.array_name)
 
         var = self.eval_attrs["backend_interface"]._dataset.get(
-            self.data_var, xr.DataArray()
+            self.array_name, xr.DataArray()
+        )
+        data_var_string = rf"\exists ({var.attrs['math_repr']})"
+        return data_var_string
+
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
+        self._add_references(self.array_name)
+        da = self.eval_attrs["backend_interface"]._dataset[self.array_name]
+        if self.eval_attrs.get("apply_where", True):
+            da = da.notnull()
+        else:
+            raise self.error_msg(
+                f"where string | Cannot compare variable/global expression array contents with expected values. "
+                f"Received `{self.array_name}`."
+            )
+        return da
+
+
+class InputArrayParser(EvalWhere):
+    """Input array processing."""
+
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
+        """Parse action to process successfully parsed model input array names.
+
+        Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
+            tokens (pp.ParseResults):
+                Has one parsed element: model data variable name (str).
+        """
+        self.array_name = tokens[0]
+        self.instring = instring
+        self.loc = loc
+
+    def __repr__(self):
+        """Programming / official string representation."""
+        return f"INPUT:{self.array_name}"
+
+    def as_math_string(self) -> str:  # noqa: D102, override
+        self._add_references(self.array_name)
+
+        var = self.eval_attrs["backend_interface"]._dataset.get(
+            self.array_name, xr.DataArray()
         )
 
         try:
             data_var_string = var.attrs["math_repr"]
         except (AttributeError, KeyError):
-            data_var_string = rf"\text{{{self.data_var}}}"
+            data_var_string = rf"\text{{{self.array_name}}}"
         if self.eval_attrs.get("apply_where", True):
             data_var_string = rf"\exists ({data_var_string})"
         return data_var_string
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        data_var_type = self._preprocess()
-        if data_var_type == "unknown":
-            return xr.DataArray(np.False_)
-        elif self.eval_attrs.get("apply_where", True):
-            if data_var_type in ["parameters", "lookups", "dimensions"]:
-                return self._data_var_exists(
-                    self.eval_attrs["input_data"], resolve_contents=True
-                )
-            elif data_var_type in ["variables", "global_expressions"]:
-                return self._data_var_exists(
-                    self.eval_attrs["backend_interface"]._dataset,
-                    resolve_contents=False,
-                )
-            else:
-                raise self.error_msg(
-                    f"where string | Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
-                    f"Received {data_var_type.removesuffix('s')}: `{self.data_var}`."
-                )
-        else:
-            if data_var_type not in ["lookups", "parameters", "dimensions"]:
-                raise self.error_msg(
-                    f"where string | Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
-                    "These arrays cannot be used for comparison with expected values. "
-                    f"Received `{self.data_var}`."
-                )
+        self._add_references(self.array_name)
+        da = self.eval_attrs["input_data"].get(self.array_name, xr.DataArray(False))
+        if self.eval_attrs.get("apply_where", True) and da.dtype.kind != "b":
+            da = da.notnull() & (da != np.inf) & (da != -np.inf)
+        elif da.isnull().any() and pd.notnull(
+            default := self.eval_attrs["math"].find(self.array_name)[1]["default"]
+        ):
+            da = da.fillna(default)
+        return da
 
-            return self._data_var_with_default()
+
+class DimensionArrayParser(EvalWhere):
+    """Dimension array processing."""
+
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
+        """Parse action to process successfully parsed model dimension names.
+
+        Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used; we include it as pyparsing injects it alongside `instring` when setting the parse action.
+            tokens (pp.ParseResults):
+                Has one parsed element: model data variable name (str).
+        """
+        self.array_name = tokens[0]
+        self.instring = instring
+        self.loc = loc
+
+    def __repr__(self):
+        """Programming / official string representation."""
+        return f"DIM:{self.array_name}"
+
+    def as_math_string(self) -> str:  # noqa: D102, override
+        return self.array_name
+
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
+        if (name := self.array_name) in self.eval_attrs["input_data"]:
+            da = self.eval_attrs["input_data"][name]
+        else:
+            # We want the where string to evaluate successfully even if a dimension hasn't been defined.
+            da = xr.DataArray().astype(
+                DTYPE_OPTIONS[self.eval_attrs["math"].dimensions[name].dtype]
+            )
+        return da
 
 
 class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
@@ -316,13 +335,13 @@ class SubsetParser(EvalWhere):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         subset = self._eval()
-        iterator = self.eval_attrs["math"].dimensions[self.set_name].iterator
+        dim = self.set_name.eval("array", **self.eval_attrs)
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
-        return rf"\text{{{iterator}}} \in \text{{{subset_string}}}"
+        return rf"\text{{{dim.iterator}}} \in \text{{{subset_string}}}"
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         subset = self._eval()
-        set_item_in_subset = self.eval_attrs["input_data"][self.set_name].isin(subset)
+        set_item_in_subset = self.set_name.eval("array", **self.eval_attrs).isin(subset)
         return set_item_in_subset
 
 
@@ -385,26 +404,19 @@ class GenericStringParser(expression_parser.EvalString):
         return str(self.val)
 
 
-def data_var_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
+def data_var_parser(names: Iterable, parse_action: type[EvalWhere]) -> pp.ParserElement:
     """Process model data variables which can be any valid python identifier (string + "_").
 
     Args:
-        generic_identifier (pp.ParserElement): parser for valid python variables
-            without leading underscore and not called "inf". This parser has no parse action.
+        names (Iterable): List of valid component names.
+        parse_action (type[EvalWhere]): Parse action to evaluate the parsed string.
 
     Returns:
         pp.ParserElement: parser for model data variables which will access the data
             variable from the Calliope model dataset.
     """
-    protected_strings = (
-        pp.Keyword("and", caseless=True)
-        | pp.Keyword("or", caseless=True)
-        | pp.Keyword("not", caseless=True)
-        | pp.Keyword("true", caseless=True)
-        | pp.Keyword("false", caseless=True)
-    )
-    data_var = ~protected_strings + generic_identifier
-    data_var.set_parse_action(DataVarParser)
+    data_var = pp.one_of(names, as_keyword=True)
+    data_var.set_parse_action(parse_action)
 
     return data_var
 
@@ -438,31 +450,28 @@ def bool_parser() -> pp.ParserElement:
     return bool_operand
 
 
-def evaluatable_string_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
+def evaluatable_string_parser(
+    generic_identifier: pp.ParserElement, valid_component_names: Iterable
+) -> pp.ParserElement:
     """Parsing grammar to make generic strings used in comparison operations evaluatable."""
-    evaluatable_identifier = generic_identifier.copy()
+    evaluatable_identifier = (
+        ~pp.one_of(valid_component_names, as_keyword=True) + generic_identifier
+    )
     evaluatable_identifier.set_parse_action(GenericStringParser)
 
     return evaluatable_identifier
 
 
 def comparison_parser(
-    evaluatable_identifier: pp.ParserElement,
-    number: pp.ParserElement,
-    helper_function: pp.ParserElement,
-    bool_operand: pp.ParserElement,
-    config_option: pp.ParserElement,
-    data_var: pp.ParserElement,
+    lhs: list[pp.ParserElement], rhs: list[pp.ParserElement]
 ) -> pp.ParserElement:
     """Parsing grammar to process comparisons of the form `variable_or_config=comparator`.
 
     Args:
-        evaluatable_identifier (pp.ParserElement): parser for evaluatable generic strings
-        number (pp.ParserElement): parser for numbers (integer, float, scientific notation, "inf"/".inf")
-        helper_function (pp.ParserElement): parser for helper functions
-        bool_operand (pp.ParserElement): parser for boolean strings
-        config_option (pp.ParserElement): parser for attribute dictionary keys of the form "x.y.z"
-        data_var (pp.ParserElement): parser for Calliope model dataset variable names
+        lhs (list[pp.ParserElement]):
+            Parsers that can be included on the left-hand side of the comparison; will be matched in the order provided.
+        rhs (list[pp.ParserElement]):
+            Parsers that can be included on the right-hand side of the comparison; will be matched in the order provided.
 
     Returns:
         pp.ParserElement:
@@ -470,9 +479,7 @@ def comparison_parser(
     """
     comparison_operators = pp.oneOf(["<", ">", "==", ">=", "<="])
     comparison_expression = (
-        (config_option | data_var)
-        + comparison_operators
-        + (helper_function | bool_operand | number | evaluatable_identifier)
+        pp.MatchFirst(lhs) + comparison_operators + pp.MatchFirst(rhs)
     )
     comparison_expression.set_parse_action(ComparisonParser)
 
@@ -480,12 +487,12 @@ def comparison_parser(
 
 
 def subset_parser(
-    generic_identifier: pp.ParserElement, *subset_items: pp.ParserElement
+    data_var: pp.ParserElement, *subset_items: pp.ParserElement
 ) -> pp.ParserElement:
     """Parsing grammar to process subsets.
 
     Args:
-        generic_identifier (pp.ParserElement): generic identifier parser
+        data_var (pp.ParserElement): data variable parser
         *subset_items (pp.ParserElement): parsers that can be included in the subset list; will be matched in the order provided.
 
     Returns:
@@ -496,29 +503,20 @@ def subset_parser(
         pp.Suppress("[")
         + subset
         + pp.Suppress("]")
+        + pp.Suppress(pp.White(" ", min=1))
         + pp.Suppress("in")
-        + generic_identifier
+        + pp.Suppress(pp.White(" ", min=1))
+        + data_var
     )
     subset_expression.set_parse_action(SubsetParser)
 
     return subset_expression
 
 
-def where_parser(
-    bool_operand: pp.ParserElement,
-    helper_function: pp.ParserElement,
-    data_var: pp.ParserElement,
-    comparison_parser: pp.ParserElement,
-    subset: pp.ParserElement,
-) -> pp.ParserElement:
+def where_parser(*args: pp.ParserElement) -> pp.ParserElement:
     """Parser for strings which use AND/OR/NOT operators to combine other parser elements.
 
-    Args:
-        bool_operand (pp.ParserElement): parser for boolean operands.
-        helper_function (pp.ParserElement): parser for helper functions.
-        data_var (pp.ParserElement): parser for dataset variable names.
-        comparison_parser (pp.ParserElement): parser for comparisons.
-        subset (pp.ParserElement): parser for subsets.
+    Args (pp.ParserElement): parsers that can be included in the where string; will be matched in the order provided.
 
     Returns:
         pp.ParserElement: where parser.
@@ -527,7 +525,7 @@ def where_parser(
     andorop = pp.Keyword("and", caseless=True) | pp.Keyword("or", caseless=True)
 
     where_rules = pp.infixNotation(
-        helper_function | comparison_parser | subset | data_var | bool_operand,
+        pp.MatchFirst(args),
         [
             (notop, 1, pp.opAssoc.RIGHT, EvalNot),
             (andorop, 2, pp.opAssoc.LEFT, EvalAndOr),
@@ -537,35 +535,74 @@ def where_parser(
     return where_rules
 
 
-def generate_where_string_parser() -> pp.ParserElement:
+def generate_where_string_parser(
+    dimension_names: Iterable, input_names: Iterable, var_expr_names: Iterable
+) -> pp.ParserElement:
     """Creates and executes the where parser.
 
     Args:
-        parse_string (str): Constraint subsetting "where" string.
+        dimension_names (Iterable): List of valid dimension names.
+        input_names (Iterable): List of valid input names.
+        var_expr_names (Iterable): List of valid variable/global expression names.
 
     Returns:
         pp.ParseResults: evaluatable to a bool/boolean array.
     """
     number, generic_identifier = expression_parser.setup_base_parser_elements()
-    data_var = data_var_parser(generic_identifier)
+    dimensions = data_var_parser(dimension_names, DimensionArrayParser)
+    inputs = data_var_parser(input_names, InputArrayParser)
+    var_exprs = data_var_parser(var_expr_names, VarExprArrayParser)
     config_option = config_option_parser(generic_identifier)
     bool_operand = bool_parser()
-    evaluatable_string = evaluatable_string_parser(generic_identifier)
-    id_list = (
-        pp.Suppress("[") + pp.delimited_list(evaluatable_string) + pp.Suppress("]")
+    unique_evaluatable_string = evaluatable_string_parser(
+        generic_identifier,
+        set(dimension_names).union(input_names).union(var_expr_names),
     )
-    helper_function = expression_parser.helper_function_parser(
-        evaluatable_string, number, id_list, generic_identifier=generic_identifier
-    )
-    comparison = comparison_parser(
-        evaluatable_string,
-        number,
-        helper_function,
-        bool_operand,
-        config_option,
-        data_var,
+    general_evaluatable_string = evaluatable_string_parser(generic_identifier, [])
+    id_list = expression_parser.list_parser(
+        number, unique_evaluatable_string, dimensions
     )
     subset = subset_parser(
-        generic_identifier, config_option, number, evaluatable_string
+        dimensions, config_option, number, general_evaluatable_string
     )
-    return where_parser(bool_operand, helper_function, data_var, comparison, subset)
+
+    arithmetic = pp.Forward()
+    comparison_helper_function = expression_parser.helper_function_parser(
+        unique_evaluatable_string,
+        number,
+        id_list,
+        arithmetic,
+        generic_identifier=generic_identifier,
+    )
+    comparison_arithmetic = expression_parser.arithmetic_parser(
+        comparison_helper_function,
+        subset,
+        number,
+        dimensions,
+        inputs,
+        config_option,
+        arithmetic=arithmetic,
+    )
+    comparison = comparison_parser(
+        lhs=[comparison_arithmetic],
+        rhs=[
+            comparison_helper_function,
+            bool_operand,
+            number,
+            general_evaluatable_string,
+        ],
+    )
+
+    helper_function = expression_parser.helper_function_parser(
+        unique_evaluatable_string,
+        number,
+        id_list,
+        dimensions,
+        inputs,
+        var_exprs,
+        config_option,
+        generic_identifier=generic_identifier,
+    )
+    return where_parser(
+        bool_operand, helper_function, comparison, subset, inputs, var_exprs
+    )

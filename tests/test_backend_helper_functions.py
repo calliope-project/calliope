@@ -55,11 +55,6 @@ def expression_roll(expression, parsing_kwargs):
 
 
 @pytest.fixture(scope="class")
-def expression_default_if_empty(expression, parsing_kwargs):
-    return expression["default_if_empty"](**parsing_kwargs)
-
-
-@pytest.fixture(scope="class")
 def expression_where(expression, parsing_kwargs):
     return expression["where"](**parsing_kwargs)
 
@@ -140,7 +135,10 @@ class TestAsArray:
 
     @pytest.mark.parametrize(
         ("string_types", "func_name"),
-        [(["where"], "sum"), (["expression", "where"], "my_new_func")],
+        [
+            (["where"], "select_from_lookup_arrays"),
+            (["expression", "where"], "my_new_func"),
+        ],
     )
     def test_new_func(self, string_types, func_name):
         class MyNewFunc(helper_functions.ParsingHelperFunction):
@@ -153,58 +151,75 @@ class TestAsArray:
         assert all(func_name in helper_functions._registry[i] for i in string_types)
 
     def test_any_not_exists(self, where_any):
-        summed = where_any("foo", over="techs")
-        assert summed.equals(xr.DataArray(False))
+        with pytest.raises(
+            exceptions.BackendError, match="Input to sum must be a valid math component"
+        ):
+            where_any("foo", over="techs")
 
     @pytest.mark.parametrize(
         ("var", "over", "expected"),
-        [("with_inf", "techs", "nodes_true"), ("all_nan", "techs", "nodes_false")],
+        [
+            ("with_inf_as_bool", "techs", "nodes_true"),
+            ("all_false", "techs", "nodes_false"),
+        ],
     )
     def test_any_exists(self, where_any, dummy_model_data, var, over, expected):
-        summed = where_any(var, over=over)
+        summed = where_any(dummy_model_data[var], over=over)
         assert summed.equals(dummy_model_data[expected])
 
-    def test_defined_any_one_dim_one_val(self, is_defined_any, where_defined):
+    def test_defined_any_one_dim_one_val(
+        self, dummy_model_data, is_defined_any, where_defined
+    ):
         dims = {"techs": "foobar"}
         dims_check = {"techs": ["foobar"]}
-        defined = where_defined(within="nodes", how="any", **dims)
+        defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
         assert defined.equals(is_defined_any(["carriers"], dims_check))
         assert defined.dtype.kind == "b"
 
-    def test_defined_any_two_dim_one_val(self, is_defined_any, where_defined):
+    def test_defined_any_two_dim_one_val(
+        self, dummy_model_data, is_defined_any, where_defined
+    ):
         dims = {"techs": "foobar", "carriers": "foo"}
         dims_check = {"techs": ["foobar"], "carriers": ["foo"]}
-        defined = where_defined(within="nodes", how="any", **dims)
+        defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
         assert defined.equals(is_defined_any([], dims_check))
 
-    def test_defined_any_one_dim_multi_val(self, is_defined_any, where_defined):
+    def test_defined_any_one_dim_multi_val(
+        self, dummy_model_data, is_defined_any, where_defined
+    ):
         dims = {"techs": ["foobar", "foobaz"]}
-        defined = where_defined(within="nodes", how="any", **dims)
+        defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
         assert defined.equals(is_defined_any(["carriers"], dims))
         assert defined.dtype.kind == "b"
 
     def test_defined_any_one_dim_multi_val_techs_within(
-        self, is_defined_any, where_defined
+        self, dummy_model_data, is_defined_any, where_defined
     ):
         dims = {"carriers": ["foo", "bar"]}
-        defined = where_defined(within="techs", how="any", **dims)
+        defined = where_defined(within=dummy_model_data["techs"], how="any", **dims)
         assert defined.equals(is_defined_any(["nodes"], dims))
 
-    def test_defined_any_two_dim_multi_val(self, is_defined_any, where_defined):
+    def test_defined_any_two_dim_multi_val(
+        self, dummy_model_data, is_defined_any, where_defined
+    ):
         dims = {"techs": ["foobar", "foobaz"], "carriers": ["foo", "bar"]}
-        defined = where_defined(within="nodes", how="any", **dims)
+        defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
         assert defined.equals(is_defined_any([], dims))
         assert defined.dtype.kind == "b"
 
-    def test_defined_all_one_dim_one_val(self, is_defined_all, where_defined):
+    def test_defined_all_one_dim_one_val(
+        self, dummy_model_data, is_defined_all, where_defined
+    ):
         dims = {"techs": ["foobar"]}
-        defined = where_defined(within="nodes", how="all", **dims)
+        defined = where_defined(within=dummy_model_data["nodes"], how="all", **dims)
         assert defined.equals(is_defined_all(["carriers"], dims))
         assert defined.dtype.kind == "b"
 
-    def test_defined_all_two_dim_one_val(self, is_defined_all, where_defined):
+    def test_defined_all_two_dim_one_val(
+        self, dummy_model_data, is_defined_all, where_defined
+    ):
         dims = {"techs": ["foobar"], "carriers": ["foo"]}
-        defined = where_defined(within="nodes", how="all", **dims)
+        defined = where_defined(within=dummy_model_data["nodes"], how="all", **dims)
         assert defined.equals(is_defined_all([], dims))
 
     @pytest.mark.parametrize("over", ["techs", ["techs"]])
@@ -323,27 +338,6 @@ class TestAsArray:
         rolled = expression_roll(dummy_model_data.with_inf, techs=to_roll)
         assert rolled.sel(nodes="foo", techs="foobar") == expected
 
-    def test_default_if_empty_non_existent_var(self, expression_default_if_empty):
-        # The expression parser will always pass a dataarray of this type instead of a plain string
-        result = expression_default_if_empty(
-            xr.DataArray("im_not_here", attrs={"obj_type": "string"}), default=1
-        )
-        assert result == 1
-
-    def test_default_if_empty_all_nan_var(
-        self, expression_default_if_empty, dummy_model_data
-    ):
-        result = expression_default_if_empty(dummy_model_data.all_nan, default=1)
-        assert (result == 1).all()
-
-    def test_default_if_empty_some_nan_var(
-        self, expression_default_if_empty, dummy_model_data
-    ):
-        result = expression_default_if_empty(dummy_model_data.with_inf, default=1)
-        np.testing.assert_array_equal(
-            result, [[1.0, 1, 1.0, 3], [np.inf, 2.0, True, 1]]
-        )
-
     def test_expression_where_techs_only(self, expression_where, dummy_model_data):
         """Test that applying where array masks expected values without affecting the array dimensions."""
         where_array = xr.DataArray(
@@ -424,7 +418,9 @@ class TestAsArray:
                 "new_dim": pd.Index(["group_1", "group_2"]),
             },
         )
-        result = expression_group_sum(dummy_model_data.with_inf, groupby, "new_dim")
+        result = expression_group_sum(
+            dummy_model_data.with_inf, groupby, expected_da.new_dim
+        )
         assert result.equals(expected_da.broadcast_like(result))
 
     def test_expression_group_sum_multi_dim(
@@ -438,7 +434,9 @@ class TestAsArray:
             groupings, coords=dummy_model_data.with_inf.coords
         ).where(lambda x: x != "nan")
         expected_da = xr.DataArray([5, 3], coords={"new_dim": ["group_1", "group_2"]})
-        result = expression_group_sum(dummy_model_data.with_inf, groupby, "new_dim")
+        result = expression_group_sum(
+            dummy_model_data.with_inf, groupby, expected_da.new_dim
+        )
         assert result.equals(expected_da)
 
     def test_expression_group_datetime_date(
@@ -446,7 +444,7 @@ class TestAsArray:
     ):
         expected = xr.DataArray([4], coords={"date": ["2000-01-01"]})
         result = expression_group_datetime(
-            dummy_model_data.timeseries_data, "timesteps", "date"
+            dummy_model_data.timeseries_data, dummy_model_data.timesteps, expected.date
         )
         assert result.equals(expected)
 
@@ -458,7 +456,7 @@ class TestAsArray:
             coords={"time": ["00:00:00", "01:00:00", "02:00:00", "03:00:00"]},
         )
         result = expression_group_datetime(
-            dummy_model_data.timeseries_data, "timesteps", "time"
+            dummy_model_data.timeseries_data, dummy_model_data.timesteps, expected.time
         )
         assert result.equals(expected)
 
@@ -467,7 +465,7 @@ class TestAsArray:
     ):
         expected = xr.DataArray([1, 1, 1, 1], coords={"hour": [0, 1, 2, 3]})
         result = expression_group_datetime(
-            dummy_model_data.timeseries_data, "timesteps", "hour"
+            dummy_model_data.timeseries_data, dummy_model_data.timesteps, expected.hour
         )
         assert result.equals(expected)
 
@@ -479,7 +477,9 @@ class TestAsArray:
             coords={"nodes": dummy_model_data.nodes, "hour": [0, 1, 2, 3]},
         )
         result = expression_group_datetime(
-            dummy_model_data.timeseries_nodes_data, "timesteps", "hour"
+            dummy_model_data.timeseries_nodes_data,
+            dummy_model_data.timesteps,
+            expected.hour,
         )
         assert result.equals(expected.transpose(*result.dims))
 
@@ -487,7 +487,9 @@ class TestAsArray:
         self, expression_sum_next_n, dummy_model_data
     ):
         expected = xr.DataArray([1, 3, 5, 3], coords=dummy_model_data.only_techs.coords)
-        result = expression_sum_next_n(dummy_model_data.only_techs, "techs", 2)
+        result = expression_sum_next_n(
+            dummy_model_data.only_techs, dummy_model_data.techs, 2
+        )
         assert result.equals(expected)
 
     def test_expression_sum_next_n_multidim(
@@ -497,7 +499,9 @@ class TestAsArray:
             [[1.0, 1.0, 4.0, 3.0], [np.inf, 3, 1, np.nan]],
             coords=dummy_model_data.with_inf.coords,
         )
-        result = expression_sum_next_n(dummy_model_data.with_inf, "techs", 2)
+        result = expression_sum_next_n(
+            dummy_model_data.with_inf, dummy_model_data.techs, 2
+        )
         assert result.equals(expected.transpose(*result.dims))
 
 
@@ -515,41 +519,45 @@ class TestAsMathString:
         summed_string = where_any("foo", over="techs")
         assert summed_string == r"\bigvee\limits_{\text{tech} \in \text{techs}} (foo)"
 
-    def test_defined_any(self, where_defined):
-        defined_string = where_defined(within="nodes", how="any", techs="foobar")
+    def test_defined_any(self, where_defined, dummy_model_data):
+        defined_string = where_defined(
+            within=dummy_model_data["nodes"], how="any", techs="foobar"
+        )
         assert (
             defined_string
             == r"\bigvee\limits_{\substack{\text{tech} \in \text{[foobar]}}}\text{tech defined in node}"
         )
 
-    def test_defined_any_multi_val(self, where_defined):
+    def test_defined_any_multi_val(self, dummy_model_data, where_defined):
         defined_string = where_defined(
-            within="nodes", how="any", techs=["foobar", "foobaz"]
+            within=dummy_model_data["nodes"], how="any", techs=["foobar", "foobaz"]
         )
         assert (
             defined_string
             == r"\bigvee\limits_{\substack{\text{tech} \in \text{[foobar,foobaz]}}}\text{tech defined in node}"
         )
 
-    def test_defined_any_multi_dim(self, where_defined):
+    def test_defined_any_multi_dim(self, dummy_model_data, where_defined):
         defined_string = where_defined(
-            within="nodes", how="any", techs="foobar", carriers="foo"
+            within=dummy_model_data["nodes"], how="any", techs="foobar", carriers="foo"
         )
         assert (
             defined_string
             == r"\bigwedge(\bigvee\limits_{\substack{\text{tech} \in \text{[foobar]}}}\text{tech defined in node}, \bigvee\limits_{\substack{\text{carrier} \in \text{[foo]}}}\text{carrier defined in node})"
         )
 
-    def test_defined_all(self, where_defined):
-        defined_string = where_defined(within="nodes", how="all", techs="foobar")
+    def test_defined_all(self, where_defined, dummy_model_data):
+        defined_string = where_defined(
+            within=dummy_model_data["nodes"], how="all", techs="foobar"
+        )
         assert (
             defined_string
             == r"\bigwedge\limits_{\substack{\text{tech} \in \text{[foobar]}}}\text{tech defined in node}"
         )
 
-    def test_defined_all_multi_dim(self, where_defined):
+    def test_defined_all_multi_dim(self, dummy_model_data, where_defined):
         defined_string = where_defined(
-            within="nodes", how="all", techs="foobar", carriers="foo"
+            within=dummy_model_data["nodes"], how="all", techs="foobar", carriers="foo"
         )
         assert (
             defined_string
@@ -615,16 +623,6 @@ class TestAsMathString:
     def test_roll(self, expression_roll, instring, expected_substring):
         rolled_string = expression_roll(instring, techs="-1")
         assert rolled_string == rf"\textit{{foo}}_\text{{{expected_substring}}}"
-
-    def test_default_if_empty_non_existent_int(self, expression_default_if_empty):
-        default_if_empty_string = expression_default_if_empty(r"\text{foo}", default=1)
-        assert default_if_empty_string == r"(\text{foo}\vee{}1)"
-
-    def test_default_if_empty_non_existent_float(self, expression_default_if_empty):
-        default_if_empty_string = expression_default_if_empty(
-            r"\text{foo}", default=1.0
-        )
-        assert default_if_empty_string == r"(\text{foo}\vee{}1.0)"
 
     def test_expression_where_no_dims(self, expression_where):
         expression_where_string = expression_where(r"\text{foo}", r"\text{bar}")

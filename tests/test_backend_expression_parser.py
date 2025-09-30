@@ -75,29 +75,26 @@ def evaluatable_identifier(identifier, valid_component_names):
 
 
 @pytest.fixture
-def id_list(number, evaluatable_identifier):
-    return expression_parser.list_parser(number, evaluatable_identifier)
+def unsliced_param_with_obj_names(valid_component_names):
+    return expression_parser.unsliced_object_parser(valid_component_names)
 
 
 @pytest.fixture
-def unsliced_param():
-    def _unsliced_param(valid_component_names):
-        return expression_parser.unsliced_object_parser(valid_component_names)
-
-    return _unsliced_param
-
-
-@pytest.fixture
-def unsliced_param_with_obj_names(unsliced_param, valid_component_names):
-    return unsliced_param(valid_component_names)
+def helper_func_list(number, evaluatable_identifier, unsliced_param_with_obj_names):
+    return expression_parser.list_parser(
+        number, evaluatable_identifier, unsliced_param_with_obj_names
+    )
 
 
 @pytest.fixture
 def sliced_param(
     number, identifier, evaluatable_identifier, unsliced_param_with_obj_names
 ):
+    slice_list = expression_parser.list_parser(number, evaluatable_identifier)
     return expression_parser.sliced_param_or_var_parser(
-        number, identifier, evaluatable_identifier, unsliced_param_with_obj_names
+        [number, evaluatable_identifier, slice_list],
+        identifier,
+        unsliced_param_with_obj_names,
     )
 
 
@@ -113,14 +110,14 @@ def helper_function(
     sub_expression,
     unsliced_param_with_obj_names,
     identifier,
-    id_list,
+    helper_func_list,
 ):
     return expression_parser.helper_function_parser(
         sliced_param,
         sub_expression,
         unsliced_param_with_obj_names,
         number,
-        id_list,
+        helper_func_list,
         generic_identifier=identifier,
         allow_function_in_function=True,
     )
@@ -133,14 +130,14 @@ def helper_function_no_nesting(
     sub_expression,
     unsliced_param_with_obj_names,
     identifier,
-    id_list,
+    helper_func_list,
 ):
     return expression_parser.helper_function_parser(
         sliced_param,
         sub_expression,
         unsliced_param_with_obj_names,
         number,
-        id_list,
+        helper_func_list,
         generic_identifier=identifier,
         allow_function_in_function=False,
     )
@@ -204,11 +201,11 @@ def helper_function_allow_arithmetic(
     unsliced_param_with_obj_names,
     identifier,
     arithmetic,
-    id_list,
+    helper_func_list,
 ):
     arithmetic = pp.Forward()
     helper_func = expression_parser.helper_function_parser(
-        arithmetic, id_list, generic_identifier=identifier
+        arithmetic, helper_func_list, generic_identifier=identifier
     )
     return expression_parser.arithmetic_parser(
         helper_func,
@@ -326,18 +323,32 @@ class TestEquationParserElements:
             # "foo" is a optimisation problem object, so it is ignored by the evaluatable identifier parser
             evaluatable_identifier.parse_string("foo", parse_all=True)
 
-    def test_id_list(self, id_list, eval_kwargs):
-        parsed_ = id_list.parse_string("[hello, there]", parse_all=True)
+    def test_id_list(self, helper_func_list, eval_kwargs):
+        parsed_ = helper_func_list.parse_string("[hello, there]", parse_all=True)
         assert parsed_[0].eval(**eval_kwargs) == ["hello", "there"]
 
-    def test_id_list_with_numeric(self, id_list, eval_kwargs):
-        parsed_ = id_list.parse_string("[hello, 1, 1.0, there]", parse_all=True)
+    def test_id_list_with_numeric(self, helper_func_list, eval_kwargs):
+        parsed_ = helper_func_list.parse_string(
+            "[hello, 1, 1.0, there]", parse_all=True
+        )
         assert parsed_[0].eval(**eval_kwargs) == ["hello", 1.0, 1.0, "there"]
 
-    @pytest.mark.parametrize("string_val", ["foo", "$foo", "dummy_func_1(1)"])
-    def test_id_list_fail(self, id_list, string_val):
+    @pytest.mark.parametrize("component", ["with_inf", "techs"])
+    def test_id_list_with_component(
+        self, helper_func_list, eval_kwargs, dummy_model_data, component
+    ):
+        parsed_ = helper_func_list.parse_string(f"[hello, {component}]", parse_all=True)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        assert evaluated_[0] == xr.DataArray("hello")
+        assert evaluated_[0].name == "hello"
+        # Can't compare component array elements as they contain nans and pyomo objects
+        assert isinstance(evaluated_[1], xr.DataArray)
+        assert evaluated_[1].name == dummy_model_data[component].name
+
+    @pytest.mark.parametrize("string_val", ["$foo", "dummy_func_1(1)"])
+    def test_id_list_fail(self, helper_func_list, string_val):
         with pytest.raises(pp.ParseException):
-            id_list.parse_string(f"[{string_val}, there]", parse_all=True)
+            helper_func_list.parse_string(f"[{string_val}, there]", parse_all=True)
 
     @pytest.mark.parametrize("string_val", ["with_inf", "no_dims"])
     def test_unsliced_param(
@@ -385,6 +396,10 @@ class TestEquationParserElements:
             (
                 "with_inf[techs=tech, nodes=node]",
                 "SLICED_COMPONENT:with_inf[techs=STRING:tech,nodes=STRING:node]",
+            ),
+            (
+                "with_inf[techs=[tech1, tech2], nodes=node]",
+                "SLICED_COMPONENT:with_inf[techs=[STRING:tech1, STRING:tech2],nodes=STRING:node]",
             ),
         ],
     )
@@ -734,7 +749,7 @@ class TestIndexSliceParser:
         generate_slice.parse_string(func_or_not.format(instring), parse_all=True)
 
     @pytest.mark.parametrize(
-        "instring", ["foo + 1", "foo == 1", "$foo", "foo[bars=$bar]", "[foo]"]
+        "instring", ["foo + 1", "foo == 1", "$foo", "foo[bars=$bar]"]
     )
     @pytest.mark.parametrize("func_or_not", ["dummy_func_1({})", "{}"])
     def test_slice_expression_parser_fail(self, generate_slice, instring, func_or_not):
@@ -906,7 +921,7 @@ class TestAsMathString:
             ("number", "-1", "-1"),
             ("number", "2000000", "2\\mathord{\\times}10^{+06}"),
             ("evaluatable_identifier", "hello_there", "hello_there"),
-            ("id_list", "[hello, hello_there]", "[hello,hello_there]"),
+            ("helper_func_list", "[hello, hello_there]", "[hello,hello_there]"),
             ("unsliced_param_with_obj_names", "no_dims", r"\textit{no_dims}"),
             (
                 "unsliced_param_with_obj_names",

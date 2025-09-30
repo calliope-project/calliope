@@ -154,6 +154,9 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
         self._add_to_dataset(name, values, "lookups", definition.model_dump())
 
+        if name not in self.math["lookups"]:
+            self.math = self.math.update({f"lookups.{name}": definition.model_dump()})
+
     @abstractmethod
     def add_parameter(
         self, name: str, values: xr.DataArray, definition: math_schema.Parameter
@@ -287,7 +290,9 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
     def _check_inputs(self):
         data_checks = self.math.checks
         check_results = {"raise": [], "warn": []}
-        parser_ = parsing.where_parser.generate_where_string_parser()
+        parser_ = parsing.where_parser.generate_where_string_parser(
+            **self.valid_component_names
+        )
         eval_kwargs = {
             "backend_interface": self,
             "math": self.math,
@@ -372,7 +377,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         else:
             self._raise_error_on_preexistence(name, component_type)
             parsed_component = parsing.ParsedBackendComponent(
-                component_type, name, component_def
+                component_type, name, component_def, self.valid_component_names
             )
 
             top_level_where = parsed_component.generate_top_level_where_array(
@@ -386,7 +391,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
             else:
                 self._create_obj_list(name, component_type)
-                equations = parsed_component.parse_equations(self.valid_component_names)
+                equations = parsed_component.parse_equations()
 
                 if not equations:
                     component_da = component_setter(
@@ -648,23 +653,34 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         return self._dataset.filter_by_attrs(obj_type="objectives")
 
     @property
-    def valid_component_names(self) -> set:
+    def valid_component_names(self) -> dict[str, set[str]]:
         """Return a set of valid component names in the model data.
 
         Returns:
             set: set of valid names.
         """
 
-        def _filter(val):
-            return val in ["variables", "parameters", "global_expressions", "lookups"]
+        def _active_names(group) -> set[str]:
+            return set(k for k, v in self.math[group].root.items() if v.active)
 
-        in_data = set(self._dataset.filter_by_attrs(obj_type=_filter).data_vars.keys())
-        in_math = set(
-            name
-            for component in ["variables", "global_expressions"]
-            for name in self.math[component].root
+        names = {
+            "dimension_names": _active_names("dimensions"),
+            "input_names": _active_names("parameters").union(_active_names("lookups")),
+            "var_expr_names": _active_names("variables").union(
+                _active_names("global_expressions")
+            ),
+        }
+        all_input_names = set(self.math.parameters.root).union(self.math.lookups.root)
+        all_var_expr_names = set(self.math.variables.root).union(
+            self.math.global_expressions.root
         )
-        return in_data.union(in_math)
+        inputs_to_add_back = all_input_names - names["input_names"]
+        var_exprs_to_add_back = (
+            all_var_expr_names - names["var_expr_names"] - all_input_names
+        )
+        names["input_names"].update(inputs_to_add_back)
+        names["var_expr_names"].update(var_exprs_to_add_back)
+        return names
 
 
 class BackendModel(BackendModelGenerator, Generic[T]):
@@ -711,8 +727,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                     "piecewise_constraints",
                     name,
                     math_schema.GlobalExpression.model_validate(dummy_expression_dict),
+                    self.valid_component_names,
                 )
-                eq = parsed_component.parse_equations(self.valid_component_names)
+                eq = parsed_component.parse_equations()
                 expression_da = eq[0].evaluate_expression(
                     self, where=where, references=references
                 )

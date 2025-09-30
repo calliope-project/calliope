@@ -102,7 +102,7 @@ class EvalToArrayStr(EvalString):
         """Evaluate and return expression as LaTeX."""
 
     @abstractmethod
-    def as_array(self) -> xr.DataArray | list[str | float]:
+    def as_array(self) -> xr.DataArray | list[xr.DataArray]:
         """Evaluate and return expression as a DataArray or list."""
 
     # Math strings evaluate to strings.
@@ -113,11 +113,11 @@ class EvalToArrayStr(EvalString):
     @overload
     def eval(
         self, return_type: Literal["array"], **eval_kwargs
-    ) -> xr.DataArray | list[str | float]: ...
+    ) -> xr.DataArray | list[xr.DataArray]: ...
 
     def eval(
         self, return_type: RETURN_T, **eval_kwargs
-    ) -> str | list[str | float] | xr.DataArray:
+    ) -> str | xr.DataArray | list[xr.DataArray]:
         """Evaluate math string expression.
 
         Args:
@@ -142,6 +142,7 @@ class EvalToArrayStr(EvalString):
                 If `array` is desired, returns xarray DataArray or a list of strings/numbers (if the expression represents a list).
         """
         self.eval_attrs = eval_kwargs
+        evaluated: str | list[str | float] | xr.DataArray | list[xr.DataArray]
         if return_type == "array":
             evaluated = self.as_array()
         elif return_type == "math_string":
@@ -240,7 +241,7 @@ class EvalOperatorOperand(EvalToArrayStr):
 
     def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
         """Util function to apply where arrays to non-latex strings."""
-        where_array = self.eval_attrs["where_array"]
+        where_array = self.eval_attrs.get("where_array", xr.DataArray(True))
         try:
             evaluated = evaluated.where(where_array)
         except AttributeError:
@@ -605,7 +606,10 @@ class EvalSlicedComponent(EvalToArrayStr):
     def _eval(self, return_type: RETURN_T) -> tuple[str | xr.DataArray, dict]:
         """Evaluate the slice dim and vals of each slice element."""
         slices: dict[str, Any] = {
-            k: v.eval(return_type, **self.eval_attrs) for k, v in self.slices.items()
+            k: xr.concat(slice_, dim=k)
+            if isinstance(slice_ := v.eval(return_type, **self.eval_attrs), list)
+            else slice_
+            for k, v in self.slices.items()
         }
 
         evaluated = self.obj_name.eval(return_type, **self.eval_attrs)
@@ -661,11 +665,11 @@ class EvalIndexSlice(EvalToArrayStr):
     @overload
     def _eval(
         self, return_type: Literal["array"], as_values: bool
-    ) -> xr.DataArray | list[str | float]: ...
+    ) -> xr.DataArray | list[xr.DataArray]: ...
 
     def _eval(
         self, return_type: RETURN_T, as_values: bool
-    ) -> str | xr.DataArray | list[str | float]:
+    ) -> str | xr.DataArray | list[xr.DataArray]:
         """Evaluate the referenced `slice`."""
         self.eval_attrs["as_values"] = as_values
         return self.eval_attrs["slice_dict"][self.name][0].eval(
@@ -675,7 +679,7 @@ class EvalIndexSlice(EvalToArrayStr):
     def as_math_string(self) -> str:  # noqa: D102, override
         return self._eval("math_string", False)
 
-    def as_array(self) -> xr.DataArray | list[str | float]:  # noqa: D102, override
+    def as_array(self) -> xr.DataArray | list[xr.DataArray]:  # noqa: D102, override
         evaluated = self._eval("array", True)
         return evaluated
 
@@ -754,7 +758,7 @@ class EvalNumber(EvalToArrayStr):
         )
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        return xr.DataArray(float(self.value), attrs={"obj_type": "number"})
+        return xr.DataArray(float(self.value), name=float(self.value))
 
 
 class ListParser(EvalToArrayStr):
@@ -782,13 +786,13 @@ class ListParser(EvalToArrayStr):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         input_list = self.as_array()
-        return "[" + ",".join(str(i) for i in input_list) + "]"
+        return "[" + ",".join(str(i.name) for i in input_list) + "]"
 
-    def as_array(self) -> list[str | float]:  # noqa: D102, override
+    def as_array(self) -> list[xr.DataArray]:  # noqa: D102, override
         values = [val.eval("array", **self.eval_attrs) for val in self.val]
         # strings and numbers are returned as xarray arrays of size 1,
         # so we extract those values.
-        return [da.item() if da.size == 1 else da.name for da in values]
+        return values
 
 
 class EvalUnslicedComponent(EvalToArrayStr):
@@ -821,10 +825,10 @@ class EvalUnslicedComponent(EvalToArrayStr):
         evaluated = self.as_array()
         self.eval_attrs["references"].add(self.name)
 
-        if evaluated.attrs["obj_type"] != "string":
+        if "math_repr" in evaluated.attrs:
             data_var_string = evaluated.attrs["math_repr"]
         else:
-            data_var_string = rf"\text{{{self.name}}}"
+            data_var_string = self.name
 
         return data_var_string
 
@@ -845,7 +849,7 @@ class EvalUnslicedComponent(EvalToArrayStr):
                 f"Trying to access a math component that is not yet defined: {self.name}. "
                 "If the referenced component is a global expression, set its `order` to have it defined first."
             )
-        if pd.notna(evaluated.attrs["default"]):
+        if evaluated.isnull().any() and pd.notna(evaluated.attrs["default"]):
             evaluated = evaluated.fillna(evaluated.attrs["default"])
 
         self.eval_attrs["references"].add(self.name)
@@ -879,7 +883,7 @@ class EvalGenericString(EvalToArrayStr):
         return str(self.val)
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        return xr.DataArray(str(self.val), attrs={"obj_type": "string"})
+        return xr.DataArray(str(self.val), name=str(self.val))
 
 
 def helper_function_parser(
@@ -953,9 +957,8 @@ def helper_function_parser(
 
 
 def sliced_param_or_var_parser(
-    number: pp.ParserElement,
+    slicer: Iterable[pp.ParserElement],
     generic_identifier: pp.ParserElement,
-    evaluatable_identifier: pp.ParserElement,
     unsliced_object: pp.ParserElement,
     allow_slice_references: bool = True,
 ) -> pp.ParserElement:
@@ -971,14 +974,12 @@ def sliced_param_or_var_parser(
     evaluation.
 
     Args:
-        number (pp.ParserElement):
-            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
+        slicer (Iterable[pp.ParserElement]):
+            List of parsers that can be used to define the slice of a parameter or variable.
+            E.g., "number", "evaluatable_identifier", "unsliced_param_or_var".
+            These elements will be parsed in the order they are given.
         generic_identifier (pp.ParserElement):
-            Parser for valid python variables without leading underscore and not called "inf".
-            This parser has no parse action.
-        evaluatable_identifier (pp.ParserElement):
-            Parser for valid python variables without leading underscore and not called "inf".
-            Evaluates to a string.
+            Parser that evaluates to a string.
         unsliced_object (pp.ParserElement):
             Parser for valid backend objects.
             On evaluation, this parser will access the backend object from the backend dataset.
@@ -994,7 +995,7 @@ def sliced_param_or_var_parser(
     lspar = pp.Suppress("[")
     rspar = pp.Suppress("]")
 
-    direct_slicer = number | evaluatable_identifier
+    direct_slicer = pp.MatchFirst(slicer)
     if allow_slice_references:
         slicer_ref = pp.Suppress(SUB_EXPRESSION_CLASSIFIER) + generic_identifier
         slicer_ref.set_parse_action(EvalIndexSlice)
@@ -1080,23 +1081,19 @@ def evaluatable_identifier_parser(
     return evaluatable_identifier
 
 
-def list_parser(
-    number: pp.ParserElement, evaluatable_identifier: pp.ParserElement
-) -> pp.ParserElement:
+def list_parser(*args: pp.ParserElement) -> pp.ParserElement:
     """Parse strings which define a list of other strings or numbers.
 
     Lists are defined as anything wrapped in square brackets (`[]`).
 
-    Strings that could be evaluated as model component arrays will still be evaluated as strings (using the model component name).
-
-    Args:
-        number (pp.ParserElement): Parser for numbers (integer, float, scientific notation, "inf"/".inf").
-        evaluatable_identifier (pp.ParserElement): Parser for valid python variables without leading underscore and not called "inf".
+    Args (pp.ParserElement):
+        Parser elements that can be list elements (e.g., "number", "evaluatable_identifier", "unsliced_param_or_var").
+        These elements will be parsed in the order they are given.
 
     Returns:
         pp.ParserElement: Parser for valid lists of strings and/or numbers.
     """
-    list_elements = pp.MatchFirst([evaluatable_identifier, number])
+    list_elements = pp.MatchFirst(args)
     id_list = pp.Suppress("[") + pp.DelimitedList(list_elements) + pp.Suppress("]")
     id_list.set_parse_action(ListParser)
     return id_list
@@ -1200,12 +1197,12 @@ def generate_slice_parser(valid_component_names: Iterable) -> pp.ParserElement:
     evaluatable_identifier = evaluatable_identifier_parser(
         identifier, valid_component_names
     )
-    id_list = list_parser(number, evaluatable_identifier)
     unsliced_param = unsliced_object_parser(valid_component_names)
+    helper_func_list = list_parser(number, evaluatable_identifier, unsliced_param)
+    slice_list = list_parser(number, evaluatable_identifier)
     sliced_param = sliced_param_or_var_parser(
-        number,
+        [number, evaluatable_identifier, slice_list],
         identifier,
-        evaluatable_identifier,
         unsliced_param,
         allow_slice_references=False,
     )
@@ -1214,7 +1211,7 @@ def generate_slice_parser(valid_component_names: Iterable) -> pp.ParserElement:
         sliced_param,
         unsliced_param,
         number,
-        id_list,
+        helper_func_list,
         evaluatable_identifier,
         generic_identifier=identifier,
         allow_function_in_function=True,
@@ -1225,7 +1222,7 @@ def generate_slice_parser(valid_component_names: Iterable) -> pp.ParserElement:
         | sliced_param
         | unsliced_param
         | number
-        | id_list
+        | slice_list
         | evaluatable_identifier
     )
 
@@ -1249,15 +1246,19 @@ def generate_sub_expression_parser(valid_component_names: Iterable) -> pp.Forwar
     evaluatable_identifier = evaluatable_identifier_parser(
         identifier, valid_component_names
     )
-    id_list = list_parser(number, evaluatable_identifier)
     unsliced_param = unsliced_object_parser(valid_component_names)
+    helper_func_list = list_parser(number, evaluatable_identifier, unsliced_param)
+    slice_list = list_parser(number, evaluatable_identifier)
     sliced_param = sliced_param_or_var_parser(
-        number, identifier, evaluatable_identifier, unsliced_param
+        [number, evaluatable_identifier, slice_list], identifier, unsliced_param
     )
 
     arithmetic = pp.Forward()
     helper_function = helper_function_parser(
-        arithmetic, id_list, evaluatable_identifier, generic_identifier=identifier
+        arithmetic,
+        helper_func_list,
+        evaluatable_identifier,
+        generic_identifier=identifier,
     )
     arithmetic = arithmetic_parser(
         helper_function, sliced_param, number, unsliced_param, arithmetic=arithmetic
@@ -1283,16 +1284,20 @@ def generate_arithmetic_parser(valid_component_names: Iterable) -> pp.ParserElem
     evaluatable_identifier = evaluatable_identifier_parser(
         identifier, valid_component_names
     )
-    id_list = list_parser(number, evaluatable_identifier)
     unsliced_param = unsliced_object_parser(valid_component_names)
+    helper_func_list = list_parser(number, evaluatable_identifier, unsliced_param)
+    slice_list = list_parser(number, evaluatable_identifier)
     sliced_param = sliced_param_or_var_parser(
-        number, identifier, evaluatable_identifier, unsliced_param
+        [number, evaluatable_identifier, slice_list], identifier, unsliced_param
     )
     sub_expression = sub_expression_parser(identifier)
 
     arithmetic = pp.Forward()
     helper_function = helper_function_parser(
-        arithmetic, id_list, evaluatable_identifier, generic_identifier=identifier
+        arithmetic,
+        helper_func_list,
+        evaluatable_identifier,
+        generic_identifier=identifier,
     )
     arithmetic = arithmetic_parser(
         helper_function,

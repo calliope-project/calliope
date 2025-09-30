@@ -82,10 +82,10 @@ The default value should be set such that it has no impact on the optimisation p
         where: "cost_operation_monthly OR cost_investment_annualised OR cost_operation_variable OR cost_operation_fixed"
         equations:
           - expression: >-
-            default_if_empty(cost_investment_annualised, 0) +
+            cost_investment_annualised +
             $cost_operation_sum +
-            default_if_empty(cost_operation_fixed, 0) +
-            default_if_empty(cost_operation_monthly, 0)
+            cost_operation_fixed +
+            cost_operation_monthly
     ```
 
     For `cost` to know that `cost_operation_monthly` exists, the latter needs to be defined first.

@@ -1942,14 +1942,13 @@ class TestNewBackend:
                         "foreach": ["nodes", "techs", "costs"],
                         "where": "cost_new",
                         "equations": [{"expression": "source_cap * cost_new"}],
+                        "default": 0,
                     },
                     # cost_investment_source_cap exists in the pre-defined math.
                     "cost_investment_source_cap": {
                         "where": "source_cap",
                         "equations": [
-                            {
-                                "expression": "default_if_empty(cost_source_cap, 0) * source_cap + default_if_empty(new_expr, 0)"
-                            }
+                            {"expression": "cost_source_cap * source_cap + new_expr"}
                         ],
                     },
                 },
