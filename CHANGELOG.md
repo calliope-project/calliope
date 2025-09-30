@@ -6,6 +6,8 @@
 
 |changed| Init config can be updated on re-init _and_ on loading a model from NetCDF, e.g. to apply new subsetting, resampling, clustering, math.
 
+|fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
+
 ## 0.7.0.dev7 (2025-09-05)
 
 ### User-facing changes
