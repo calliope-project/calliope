@@ -6,8 +6,13 @@ import pytest
 import xarray as xr
 
 from calliope import AttrDict, exceptions, io
-from calliope.preprocess import data_tables, model_math, prepare_model_definition
-from calliope.preprocess.model_data import ModelDataBuilder, ModelDataCleaner
+from calliope.preprocess import (
+    ModelDataBuilder,
+    ModelDataCleaner,
+    data_tables,
+    model_math,
+    prepare_model_definition,
+)
 from calliope.util import DATETIME_DTYPE
 
 from .common.util import build_test_model as build_model

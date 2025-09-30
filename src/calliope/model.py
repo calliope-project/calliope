@@ -15,8 +15,12 @@ import xarray as xr
 
 from calliope import _version, backend, exceptions, io, postprocess, preprocess
 from calliope.attrdict import AttrDict
-from calliope.preprocess import data_tables, model_math
-from calliope.preprocess.model_data import ModelDataBuilder, ModelDataCleaner
+from calliope.preprocess import (
+    ModelDataBuilder,
+    ModelDataCleaner,
+    data_tables,
+    model_math,
+)
 from calliope.schemas import CalliopeAttrs, ModelStructure, config_schema
 from calliope.util.logging import log_time
 
@@ -123,7 +127,6 @@ def read_dict(
         "preprocess_start",
         comment="Model: preprocessing data",
     )
-    # TODO: build math on re-init, too.
     math_priority = model_math.get_math_priority(model_def.config.init)
     math = model_math.build_math(
         math_priority,
