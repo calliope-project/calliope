@@ -1202,12 +1202,15 @@ global_expressions:
     default: 0
     unit: $\frac{\text{cost}}{\text{hour}}$
     foreach: [nodes, techs, costs, timesteps]
-    where: "cost_export OR cost_flow_in OR cost_flow_out"
+    where: "cost_export OR cost_flow_in OR cost_flow_out OR cost_source_use"
     equations:
       - expression: timestep_weights * ($cost_export + $cost_flow_out + $cost_flow_in)
     sub_expressions:
       cost_export:
-        - expression: sum(cost_export * flow_export, over=carriers)
+        - where: any(carrier_export, over=carriers) AND any(cost_export, over=carriers)
+          expression: sum(cost_export * flow_export, over=carriers)
+        - where: NOT (any(carrier_export, over=carriers) AND any(cost_export, over=carriers))
+          expression: "0"
       cost_flow_in:
         - where: "base_tech==supply"
           expression: cost_source_use * source_use
