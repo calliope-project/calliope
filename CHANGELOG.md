@@ -4,6 +4,10 @@
 
 |fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
 
+### Internal changes
+
+|changed| Math conditionals removed where math component defaults will achieve the same result.
+
 ## 0.7.0.dev7 (2025-09-05)
 
 ### User-facing changes
