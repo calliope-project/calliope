@@ -2,12 +2,14 @@
 
 ### User-facing changes
 
+|new| Dimensions can now be referenced in math `where` and `expression` strings and arithmetic can be used when making comparisons and using helper functions in `where` strings (#733).
+
 |removed| Duplication of math attributes in array attributes.
 For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available from `model.math.build.parameters.flow_cap_max.default`.
 
 ## 0.7.0.dev7 (2025-09-05)
 
-
+### User-facing changes
 
 |fixed| `ModelDataFactory` is no longer run twice during startup, resulting in faster initialisation
 
