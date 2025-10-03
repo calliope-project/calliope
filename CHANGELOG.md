@@ -1,6 +1,10 @@
-## 0.7.0.dev8 (TBD)
+## 0.7.0.dev8
 
 ### User-facing changes
+
+|fixed| Reloading a clustered model from file was attempting to re-cluster (#824).
+
+|changed| Init config can be updated on re-init _and_ on loading a model from NetCDF, e.g. to apply new subsetting, resampling, clustering, math.
 
 |fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
 
