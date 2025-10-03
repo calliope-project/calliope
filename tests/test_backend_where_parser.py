@@ -166,7 +166,7 @@ def dummy_build_config():
 def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config, dummy_model_math):
     return {
         "input_data": dummy_pyomo_backend_model.inputs,
-        "backend_interface": dummy_pyomo_backend_model,
+        "backend_data": dummy_pyomo_backend_model._dataset,
         "math": dummy_model_math,
         "helper_functions": helper_functions._registry["where"],
         "equation_name": "foo",
@@ -679,8 +679,8 @@ class TestAsMathString:
         self, eval_kwargs, dummy_latex_backend_model, dummy_model_math
     ):
         eval_kwargs["return_type"] = "math_string"
-        eval_kwargs["backend_interface"] = dummy_latex_backend_model
-        eval_kwargs["math"] = dummy_model_math
+        eval_kwargs["backend_data"] = dummy_latex_backend_model._dataset
+        eval_kwargs["math"] = dummy_latex_backend_model.math
         return eval_kwargs
 
     @pytest.mark.parametrize(

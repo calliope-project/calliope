@@ -21,7 +21,7 @@ from calliope.schemas.math_schema import CalliopeBuildMath
 from calliope.util import DTYPE_OPTIONS
 
 if TYPE_CHECKING:
-    from calliope.backend.backend_model import BackendModel
+    pass
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
 ] = {"where": {}, "expression": {}}
@@ -37,7 +37,6 @@ class ParsingHelperFunction(ABC):
         equation_name: str,
         input_data: xr.Dataset,
         math: "CalliopeBuildMath",
-        backend_interface: type["BackendModel"] | None = None,
         **kwargs,
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
@@ -47,7 +46,6 @@ class ParsingHelperFunction(ABC):
         """
         self._equation_name = equation_name
         self._input_data = input_data
-        self._backend_interface = backend_interface
         self._math = math
         self._return_type = return_type
 
@@ -708,9 +706,6 @@ class Where(ParsingHelperFunction):
                         - expression: sum(where(flow_cap, node_grouping), over=nodes) <= node_group_max
             ```
         """
-        if self._backend_interface is not None:
-            condition = self._input_data[condition.name]
-
         return array.where(condition.fillna(False).astype(bool))
 
 
@@ -788,9 +783,6 @@ class GroupSum(ParsingHelperFunction):
         """
         # We can't apply typical xarray rolling window functionality
         grouped: dict[str | int, xr.DataArray] = {}
-
-        if self._backend_interface is not None:
-            groupby = self._input_data[groupby.name]
 
         grouping_dims = groupby.dims
         groups = array.stack(_stacked=grouping_dims).groupby(

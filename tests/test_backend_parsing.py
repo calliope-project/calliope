@@ -525,7 +525,7 @@ class TestParsedComponent:
             assert set(component_sub_dict.keys()) == {"foo", "bar"}
             comparison_expr = constraint_eq.expression[0].eval(
                 sub_expression_dict=component_sub_dict,
-                backend_interface=dummy_backend_interface,
+                backend_data=dummy_backend_interface._dataset,
                 where_array=xr.DataArray(True),
                 return_type="array",
             )

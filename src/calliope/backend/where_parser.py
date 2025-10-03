@@ -19,7 +19,7 @@ from calliope.schemas import config_schema, math_schema
 from calliope.util import DTYPE_OPTIONS, tools
 
 if TYPE_CHECKING:
-    from calliope.backend.backend_model import BackendModel
+    pass
 
 
 pp.ParserElement.enablePackrat()
@@ -30,7 +30,7 @@ class EvalAttrs(TypedDict):
     """Fixed dict checker for `eval_attrs`."""
 
     equation_name: str
-    backend_interface: BackendModel
+    backend_data: xr.Dataset
     math: math_schema.CalliopeBuildMath
     input_data: xr.Dataset
     helper_functions: dict[str, Callable]
@@ -163,15 +163,13 @@ class VarExprArrayParser(EvalWhere):
     def as_math_string(self) -> str:  # noqa: D102, override
         self._add_references(self.array_name)
 
-        var = self.eval_attrs["backend_interface"]._dataset.get(
-            self.array_name, xr.DataArray()
-        )
+        var = self.eval_attrs["backend_data"].get(self.array_name, xr.DataArray())
         data_var_string = rf"\exists ({var.attrs['math_repr']})"
         return data_var_string
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         self._add_references(self.array_name)
-        da = self.eval_attrs["backend_interface"]._dataset[self.array_name]
+        da = self.eval_attrs["backend_data"][self.array_name]
         if self.eval_attrs.get("apply_where", True):
             da = da.notnull()
         else:
@@ -207,9 +205,7 @@ class InputArrayParser(EvalWhere):
     def as_math_string(self) -> str:  # noqa: D102, override
         self._add_references(self.array_name)
 
-        var = self.eval_attrs["backend_interface"]._dataset.get(
-            self.array_name, xr.DataArray()
-        )
+        var = self.eval_attrs["backend_data"].get(self.array_name, xr.DataArray())
 
         try:
             data_var_string = var.attrs["math_repr"]

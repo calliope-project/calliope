@@ -294,7 +294,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             **self.valid_component_names
         )
         eval_kwargs = {
-            "backend_interface": self,
+            "backend_data": self._dataset,
             "math": self.math,
             "input_data": self.inputs,
             "build_config": self.config,

@@ -173,7 +173,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
         "equation_name": "foobar",
         "where_array": xr.DataArray(True),
         "references": set(),
-        "backend_interface": dummy_pyomo_backend_model,
+        "backend_data": dummy_pyomo_backend_model._dataset,
         "math": dummy_pyomo_backend_model.math,
         "input_data": dummy_pyomo_backend_model.inputs,
         "return_type": "array",
@@ -359,9 +359,7 @@ class TestEquationParserElements:
         assert (
             parsed_[0]
             .eval(**eval_kwargs)
-            .equals(
-                eval_kwargs["backend_interface"]._dataset[string_val].fillna(default)
-            )
+            .equals(eval_kwargs["backend_data"][string_val].fillna(default))
         )
 
     def test_unsliced_param_references(
@@ -906,7 +904,7 @@ class TestAsMathString:
             "equation_name": "foobar",
             "where_array": None,
             "references": set(),
-            "backend_interface": dummy_latex_backend_model,
+            "backend_data": dummy_latex_backend_model._dataset,
             "math": dummy_latex_backend_model.math,
             "input_data": dummy_latex_backend_model.inputs,
         }

@@ -47,7 +47,7 @@ from calliope.exceptions import BackendError
 from calliope.schemas.math_schema import CalliopeBuildMath
 
 if TYPE_CHECKING:
-    from calliope.backend.backend_model import BackendModel
+    pass
 
 pp.ParserElement.enablePackrat()
 
@@ -61,7 +61,7 @@ class EvalAttrs(TypedDict):
     where_array: xr.DataArray
     slice_dict: dict
     sub_expression_dict: dict
-    backend_interface: BackendModel
+    backend_data: xr.Dataset
     math: CalliopeBuildMath
     input_data: xr.DataArray
     references: set[str]
@@ -129,7 +129,7 @@ class EvalToArrayStr(EvalString):
             equation_name (str): Name of math component in which expression is defined.
             slice_dict (dict): Dictionary mapping the index slice name to a parsed equation expression.
             sub_expression_dict (dict): Dictionary mapping the sub-expression name to a parsed equation expression.
-            backend_interface (backend_model.BackendModel): Interface to optimisation backend.
+            backend_data (backend_model.BackendModel): Interface to optimisation backend.
             input_data (xr.Dataset): Input data arrays.
             where_array (xr.DataArray): boolean array with which to mask evaluated expressions.
             references (set): any references in the math string to other model components.
@@ -173,7 +173,7 @@ class EvalToCallable(EvalString):
             equation_name (str): Name of math component in which expression is defined.
             slice_dict (dict): Dictionary mapping the index slice name to a parsed equation expression.
             sub_expression_dict (dict): Dictionary mapping the sub-expression name to a parsed equation expression.
-            backend_interface (backend_model.BackendModel): Interface to optimisation backend.
+            backend_data (backend_model.BackendModel): Interface to optimisation backend.
             input_data (xr.Dataset): Input data arrays.
             where_array (xr.DataArray): boolean array with which to mask evaluated expressions.
             references (set): any references in the math string to other model components.
@@ -833,17 +833,13 @@ class EvalUnslicedComponent(EvalToArrayStr):
         return data_var_string
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        backend_interface = self.eval_attrs["backend_interface"]
-
         try:
-            evaluated = backend_interface._dataset[self.name]
+            evaluated = self.eval_attrs["backend_data"][self.name]
             if (
                 self.eval_attrs.get("as_values", False)
                 and evaluated.attrs["obj_type"] == "parameters"
             ):
-                evaluated = backend_interface.get_parameter(
-                    self.name, as_backend_objs=False
-                )
+                evaluated = self.eval_attrs["input_data"][self.name]
         except KeyError:
             raise self.error_msg(
                 f"Trying to access a math component that is not yet defined: {self.name}. "
