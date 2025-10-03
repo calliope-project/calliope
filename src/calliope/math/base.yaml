@@ -1120,19 +1120,15 @@ objectives:
       Cost class weights can be defined in the indexed parameter
       `objective_cost_weights`.
     equations:
-      - where: "any(cost, over=[nodes, techs, costs])"
-        expression: >-
+      - expression: >-
           sum(
             sum(cost, over=[nodes, techs])
             * objective_cost_weights,
             over=costs
           ) + $unmet_demand
-      - where: "NOT any(cost, over=[nodes, techs, costs])"
-        expression: $unmet_demand
     sub_expressions:
       unmet_demand:
-        - where: "config.ensure_feasibility==True"
-          expression: >-
+        - expression: >-
             sum(
               sum(unmet_demand - unused_supply, over=[carriers, nodes])
               * timestep_weights,
