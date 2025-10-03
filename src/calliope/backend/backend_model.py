@@ -130,7 +130,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
         self.inputs = self._add_inputs(inputs)
         self.objective: str = self.config.objective
-        self.math_as_vals: bool = False
 
         self._check_inputs()
 
@@ -1426,7 +1425,6 @@ class Postprocessor(BackendModelGenerator):
         self.inputs = self._add_inputs(inputs)
         self.objective: str = self.config.objective
         self._dataset = self.inputs.assign(results)
-        self.math_as_vals = True
 
     @property
     def valid_component_names(self) -> dict[str, set[str]]:  # noqa: D102, override
