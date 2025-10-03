@@ -1,3 +1,9 @@
+## 0.7.0.dev8
+
+### User-facing changes
+
+|new| Dimensions can now be referenced in math `where` and `expression` strings and arithmetic can be used when making comparisons and using helper functions in `where` strings (#733).
+
 ## 0.7.0.dev7 (2025-09-05)
 
 ### User-facing changes
