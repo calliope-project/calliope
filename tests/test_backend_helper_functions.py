@@ -571,7 +571,7 @@ class TestAsMathString:
     @pytest.mark.parametrize(
         ("over", "expected_substring"),
         [
-            ("techs", r"\text{tech} \in \text{techs}"),
+            ("techs", r"\substack{\text{tech} \in \text{techs}}"),
             (["techs"], r"\substack{\text{tech} \in \text{techs}}"),
             (
                 ["nodes", "techs"],
@@ -588,7 +588,7 @@ class TestAsMathString:
         summed_string = func(r"\textit{with_inf}_\text{node,tech}", over=over)
         assert (
             summed_string
-            == rf"{latex_func}\limits_{{\substack{{{expected_substring}}}}} (\textit{{with_inf}}_\text{{node,tech}})"
+            == rf"{latex_func}\limits_{{{expected_substring}}} (\textit{{with_inf}}_\text{{node,tech}})"
         )
 
     def test_squeeze_carriers(self, expression_reduce_carrier_dim):
