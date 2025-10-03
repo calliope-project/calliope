@@ -96,7 +96,6 @@ class SelectiveWrappingMeta(ABCMeta):
 class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
     """Helper class for backends."""
 
-    LID_COMPONENTS: tuple[ALL_COMPONENTS_T, ...] = typing.get_args(ALL_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = [
         "description",
         "unit",
@@ -131,6 +130,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
         self.inputs = self._add_inputs(inputs)
         self.objective: str = self.config.objective
+        self.math_as_vals: bool = False
 
         self._check_inputs()
 
@@ -341,7 +341,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         name: str,
         component_def: Tp,
         component_setter: Callable,
-        component_type: ORDERED_COMPONENTS_T,
+        component_type: Literal[ORDERED_COMPONENTS_T, "postprocessed"],
         break_early: bool = True,
     ) -> parsing.ParsedBackendComponent | None:
         """Generalised function to add a optimisation problem component array to the model.
@@ -491,6 +491,23 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
     def _clean_arrays(*args) -> None:
         """Preemptively delete of objects with large memory footprints."""
         del args
+
+    def _add_postprocessed_arrays(self, results: xr.Dataset) -> xr.Dataset:
+        postprocessor = Postprocessor(self.inputs, self.math, self.config, results)
+
+        ordered_items = sorted(
+            self.math.postprocessed.root.items(), key=lambda item: item[1].order
+        )
+        for name, definition in ordered_items:
+            start = time.time()
+            postprocessor.add(name, definition)
+            end = time.time() - start
+            LOGGER.debug(
+                f"Optimisation Model | postprocess:{name} | Built in {end:.4f}s"
+            )
+        LOGGER.info("Optimisation Model | postprocess | Generated.")
+        breakpoint()
+        return results.assign(postprocessor.postprocessed)
 
     def _add_to_dataset(
         self,
@@ -651,6 +668,11 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
     def objectives(self):
         """Slice of backend dataset to show only built objectives."""
         return self._dataset.filter_by_attrs(obj_type="objectives")
+
+    @property
+    def postprocessed(self):
+        """Slice of backend dataset to show only built postprocessed arrays."""
+        return self._dataset.filter_by_attrs(obj_type="postprocessed")
 
     @property
     def valid_component_names(self) -> dict[str, set[str]]:
@@ -1178,23 +1200,18 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             return da
 
         all_variables = {
-            name_: _drop_attrs(self.get_variable(name_, as_backend_objs=False))
-            for name_, var in self.variables.items()
-            if var.notnull().any()
+            name_: self.get_variable(name_, as_backend_objs=False)
+            for name_ in self.variables.keys()
         }
         all_global_expressions = {
-            name_: _drop_attrs(
-                self.get_global_expression(name_, as_backend_objs=False, eval_body=True)
+            name_: self.get_global_expression(
+                name_, as_backend_objs=False, eval_body=True
             )
-            for name_, expr in self.global_expressions.items()
-            if expr.notnull().any()
+            for name_ in self.global_expressions.keys()
         }
         all_objectives = {
-            name_: _drop_attrs(
-                self.get_objective(name_, as_backend_objs=False, eval_body=True)
-            )
-            for name_, expr in self.objectives.items()
-            if expr.notnull().any()
+            name_: self.get_objective(name_, as_backend_objs=False, eval_body=True)
+            for name_ in self.objectives.keys()
         }
 
         all_shadow_prices = {
@@ -1212,6 +1229,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             attrs=self._dataset.attrs,
         ).astype(float)
 
+        results = self._add_postprocessed_arrays(results)
+        results = xr.Dataset(
+            {
+                k: _drop_attrs(v)
+                for k, v in results.data_vars.items()
+                if v.notnull().any()
+            },
+            attrs=self._dataset.attrs,
+        )
         return results
 
     def _find_all_references(self, initial_references: set) -> set:
@@ -1366,3 +1392,82 @@ class ShadowPrices:
         if valid_constraints:
             self.activate()
         self._tracked = valid_constraints
+
+
+class Postprocessor(BackendModelGenerator):
+    """Postprocessed array generator."""
+
+    def __init__(
+        self,
+        inputs: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
+        build_config: config_schema.Build,
+        results: xr.Dataset,
+    ) -> None:
+        """Postprocessed array generator.
+
+        Args:
+            inputs (xr.Dataset): backend model input data.
+            math (math_schema.CalliopeBuildMath): Calliope math configuration.
+            build_config (config_schema.Build): Calliope build configuration.
+            results (xr.Dataset): processed results dataset.
+        """
+        self.config = build_config
+        self.math = math
+        self._solve_logger = logging.getLogger(__name__ + ".<solve>")
+
+        self.inputs = self._add_inputs(inputs)
+        self.objective: str = self.config.objective
+        self._dataset = self.inputs.assign(results)
+        self.math_as_vals = True
+
+    @property
+    def valid_component_names(self) -> dict[str, set[str]]:  # noqa: D102, override
+        initial_names = super().valid_component_names
+        initial_names["var_expr_names"] |= set(self.math.postprocessed.root)
+        return initial_names
+
+    def add(self, name: str, definition: math_schema.PostprocessArray):
+        """Add a postprocessed array to the model.
+
+        Args:
+            name (str): Name of the postprocessed array.
+            definition (math_schema.PostprocessArray): Definition of the postprocessed array.
+        """
+
+        def _expression_setter(
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
+        ) -> xr.DataArray:
+            expr = element.evaluate_expression(self, where=where, references=references)
+            to_fill = expr.where(where)
+
+            return to_fill
+
+        self._add_component(name, definition, _expression_setter, "postprocessed")
+
+    def add_parameter(self, *args, **kwargs):  # noqa: D102, override
+        pass
+
+    def add_constraint(self, *args, **kwargs):  # noqa: D102, override
+        pass
+
+    def add_piecewise_constraint(self, *args, **kwargs):  # noqa: D102, override
+        pass
+
+    def add_global_expression(self, *args, **kwargs):  # noqa: D102, override
+        pass
+
+    def add_variable(self, *args, **kwargs) -> None:  # noqa: D102, override
+        pass
+
+    def add_objective(self, *args, **kwargs) -> None:  # noqa: D102, override
+        pass
+
+    def set_objective(self, name: str) -> None:  # noqa: D102, override
+        pass
+
+    def delete_component(self, *args, **kwargs) -> None:  # noqa: D102, override
+        pass
+
+    def _create_obj_list(self, *args, **kwargs) -> None:
+        pass

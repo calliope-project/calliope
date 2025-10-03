@@ -268,6 +268,16 @@ class Objective(MathEquationComponent):
         return "True"
 
 
+class PostprocessArray(GlobalExpression):
+    """Schema for postprocessed expressions.
+
+    Can be used to combine parameters, variables, and global expressions into a single expression solving the model.
+
+    NOTE: If expecting to use postprocessed array `A` in postprocessed array `B`, `A` must
+    be defined above `B`.
+    """
+
+
 class Check(CalliopeBaseModel):
     """Schema for input data checks."""
 
@@ -329,6 +339,12 @@ class Objectives(CalliopeDictModel):
     root: dict[AttrStr, Objective] = Field(default_factory=dict)
 
 
+class PostprocessArrays(CalliopeDictModel):
+    """Calliope model postprocessed expressions dictionary."""
+
+    root: dict[AttrStr, PostprocessArray] = Field(default_factory=dict)
+
+
 class Checks(CalliopeDictModel):
     """Calliope math checks dictionary."""
 
@@ -361,6 +377,8 @@ class CalliopeBuildMath(CalliopeBaseModel):
     """All _piecewise_ constraints to apply to the optimisation problem."""
     objectives: Objectives = Objectives()
     """Possible objectives to apply to the optimisation problem."""
+    postprocessed: PostprocessArrays = PostprocessArrays()
+    """All postprocessed expressions generated after math has completed."""
     checks: Checks = Checks()
     """Checks to apply before building the optimisation problem."""
 

@@ -394,6 +394,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
     PARSERS: dict[str, Callable] = {
         "constraints": expression_parser.generate_equation_parser,
         "global_expressions": expression_parser.generate_arithmetic_parser,
+        "postprocessed": expression_parser.generate_arithmetic_parser,
         "objectives": expression_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
         "piecewise_constraints": expression_parser.generate_arithmetic_parser,
@@ -404,6 +405,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         group: Literal[
             "variables",
             "global_expressions",
+            "postprocessed",
             "constraints",
             "piecewise_constraints",
             "objectives",
@@ -427,6 +429,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 Dictionary of valid component names for different categories of model data.
         """
         self.name = f"{group}:{name}"
+        self.group = group
         self._unparsed = unparsed_data
         self._valid_component_names = valid_component_names
         self.where: list[pp.ParseResults] = []
@@ -585,7 +588,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 they will be logged to `self._errors` to raise later.
         """
         parser = where_parser.generate_where_string_parser(
-            **self._valid_component_names
+            **self._valid_component_names, postprocessing=self.group == "postprocessed"
         )
         self._tracker["expr_or_where"] = "where"
         return self._parse_string(parser, where_string)

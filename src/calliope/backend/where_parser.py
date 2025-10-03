@@ -172,11 +172,6 @@ class VarExprArrayParser(EvalWhere):
         da = self.eval_attrs["backend_data"][self.array_name]
         if self.eval_attrs.get("apply_where", True):
             da = da.notnull()
-        else:
-            raise self.error_msg(
-                f"where string | Cannot compare variable/global expression array contents with expected values. "
-                f"Received `{self.array_name}`."
-            )
         return da
 
 
@@ -532,7 +527,11 @@ def where_parser(*args: pp.ParserElement) -> pp.ParserElement:
 
 
 def generate_where_string_parser(
-    dimension_names: Iterable, input_names: Iterable, var_expr_names: Iterable
+    dimension_names: Iterable,
+    input_names: Iterable,
+    var_expr_names: Iterable,
+    *,
+    postprocessing: bool = False,
 ) -> pp.ParserElement:
     """Creates and executes the where parser.
 
@@ -540,6 +539,9 @@ def generate_where_string_parser(
         dimension_names (Iterable): List of valid dimension names.
         input_names (Iterable): List of valid input names.
         var_expr_names (Iterable): List of valid variable/global expression names.
+        postprocessing (bool, optional):
+            If True, variable/global expression names will be allowed in the comparison parsing grammar.
+            Defaults to False.
 
     Returns:
         pp.ParseResults: evaluatable to a bool/boolean array.
@@ -570,14 +572,19 @@ def generate_where_string_parser(
         arithmetic,
         generic_identifier=generic_identifier,
     )
-    comparison_arithmetic = expression_parser.arithmetic_parser(
+    arithmetic_elements = [
         comparison_helper_function,
         subset,
         number,
         dimensions,
         inputs,
         config_option,
-        arithmetic=arithmetic,
+    ]
+    if postprocessing:
+        arithmetic_elements.append(var_exprs)
+
+    comparison_arithmetic = expression_parser.arithmetic_parser(
+        *arithmetic_elements, arithmetic=arithmetic
     )
     comparison = comparison_parser(
         lhs=[comparison_arithmetic],

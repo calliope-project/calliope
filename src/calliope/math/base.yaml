@@ -1345,6 +1345,68 @@ global_expressions:
 
 piecewise_constraints: {}
 
+postprocessed:
+  capacity_factor:
+    foreach: [nodes, techs, carriers, timesteps]
+    default: 0
+    where: flow_out AND flow_cap>0
+    equations:
+      - expression: flow_out / (flow_cap * timestep_resolution)
+
+  systemwide_capacity_factor:
+    foreach: [techs, carriers]
+    default: 0
+    where: flow_out AND flow_cap>0
+    equations:
+      - expression: >-
+          sum(flow_out * timestep_resolution, over=[nodes, timesteps]) /
+          (sum(flow_cap, over=nodes) * sum(timestep_resolution * timestep_weights, over=timesteps))
+
+  total_generation:
+    foreach: [techs, carriers]
+    default: 0
+    where: flow_out AND (base_tech==supply OR base_tech==conversion)
+    equations:
+      - expression: sum(flow_out + flow_export * timestep_weights, over=[nodes, timesteps])
+
+  systemwide_levelised_cost:
+    foreach: [techs, carriers, costs]
+    default: 0
+    where: total_generation AND any(cost, over=costs)
+    equations:
+      - expression: sum(cost, over=nodes) / total_generation
+
+  total_levelised_cost:
+    foreach: [carriers, costs]
+    default: 0
+    equations:
+      - expression: sum(cost, over=[nodes, techs]) / sum(total_generation, over=techs)
+
+  unmet_sum:
+    foreach: [nodes, carriers, timesteps]
+    default: 0
+    where: config.ensure_feasibility == True
+    equations:
+      - expression: unmet_demand + unused_supply
+
+  curtailment:
+    foreach: [nodes, techs, timesteps]
+    where: base_tech==supply AND source_use_max>0 AND NOT source_use_max==inf AND source_cap>0
+    default: 0
+    equations:
+      - expression: 1 - (source_use / (source_use_max * $source_scaler))
+    sub_expressions:
+      source_scaler: *source_scaler
+
+  total_curtailment:
+    foreach: [nodes, techs, timesteps]
+    where: base_tech==supply AND source_use_max AND source_cap>0
+    default: 0
+    equations:
+      - expression: 1 - (sum(source_use, over=timesteps) / sum(source_use_max * $source_scaler, over=timesteps))
+    sub_expressions:
+      source_scaler: *source_scaler
+
 checks:
   must_have_base:
     where: not base_tech
