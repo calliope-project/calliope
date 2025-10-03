@@ -849,8 +849,10 @@ class EvalUnslicedComponent(EvalToArrayStr):
                 f"Trying to access a math component that is not yet defined: {self.name}. "
                 "If the referenced component is a global expression, set its `order` to have it defined first."
             )
-        if evaluated.isnull().any() and pd.notna(evaluated.attrs["default"]):
-            evaluated = evaluated.fillna(evaluated.attrs["default"])
+        if evaluated.isnull().any() and pd.notna(
+            default := self.eval_attrs["math"].find(self.name)[1].default
+        ):
+            evaluated = evaluated.fillna(default)
 
         self.eval_attrs["references"].add(self.name)
         return evaluated

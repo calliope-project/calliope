@@ -194,7 +194,7 @@ class TestInputParser:
         self, param_lookup, dummy_model_data, data_var_string, expected, eval_kwargs
     ):
         parsed_ = param_lookup.parse_string(data_var_string, parse_all=True)
-        default = eval_kwargs["input_data"][expected].attrs["default"]
+        default = eval_kwargs["math"].parameters[data_var_string].default
         assert (
             parsed_[0]
             .eval(apply_where=False, **eval_kwargs)

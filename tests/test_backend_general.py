@@ -205,10 +205,6 @@ class TestGetters:
             "symmetric_transmission",
         }
 
-    def test_get_variable_default(self, variable):
-        """Check a decision variable has expected default val."""
-        assert variable.attrs["default"] == 0
-
     def test_get_variable_coords_in_name(self, variable):
         """Check a decision variable does not have verbose strings activated."""
         assert variable.attrs["coords_in_name"] is False
@@ -268,10 +264,6 @@ class TestGetters:
             "cost_investment_annualised",
             "cost_operation_fixed",
         }
-
-    def test_get_global_expression_default(self, global_expression):
-        """Check a global expression has expected default."""
-        assert global_expression.attrs["default"] == 0
 
     def test_get_global_expression_coords_in_name(self, global_expression):
         """Check a global expression does not have verbose strings activated."""

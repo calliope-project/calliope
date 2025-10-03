@@ -1275,7 +1275,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 f"Applying bound according to the {bound} parameter values.",
             )
             bound_array = self.get_parameter(bound)
-            fill_na = bound_array.attrs["default"]
+            fill_na = self.math.parameters[bound].default
             references.add(bound)
         else:
             bound_array = xr.DataArray(bound)

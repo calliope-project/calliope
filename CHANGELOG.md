@@ -1,6 +1,13 @@
-## 0.7.0.dev7 (2025-09-05)
+## 0.7.0.dev8
 
 ### User-facing changes
+
+|removed| Duplication of math attributes in array attributes.
+For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available from `model.math.build.parameters.flow_cap_max.default`.
+
+## 0.7.0.dev7 (2025-09-05)
+
+
 
 |fixed| `ModelDataFactory` is no longer run twice during startup, resulting in faster initialisation
 
