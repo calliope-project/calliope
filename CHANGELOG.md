@@ -1,8 +1,9 @@
 ## 0.7.0.dev8 (TBD)
 
-### User-facing changes
+### Internal changes
 
-|fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
+|fixed| Remove `stderr` redirect at pyomo backend model solve stage to avoid random infinite recursion errors in CI tests (#833).
+
 
 ## 0.7.0.dev7 (2025-09-05)
 
