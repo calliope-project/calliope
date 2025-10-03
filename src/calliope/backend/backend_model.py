@@ -37,7 +37,9 @@ if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
 
 T = TypeVar("T")
-ALL_COMPONENTS_T = Literal["parameters", "lookups", ORDERED_COMPONENTS_T]
+ALL_COMPONENTS_T = Literal[
+    "parameters", "lookups", ORDERED_COMPONENTS_T, "postprocessed"
+]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -335,6 +337,26 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 )
             LOGGER.info(f"Optimisation Model | {components} | Generated.")
 
+    def _add_postprocessed(
+        self, name: str, definition: math_schema.PostprocessArray
+    ) -> None:
+        """Add a postprocessed array to the model.
+
+        Args:
+            name (str): Name of the postprocessed array.
+            definition (math_schema.PostprocessArray): Definition of the postprocessed array.
+        """
+
+        def _expression_setter(
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
+        ) -> xr.DataArray:
+            expr = element.evaluate_expression(self, where=where, references=references)
+            to_fill = expr.where(where)
+
+            return to_fill
+
+        self._add_component(name, definition, _expression_setter, "postprocessed")
+
     def _add_component(
         self,
         name: str,
@@ -375,8 +397,13 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 parsed_component = None
         else:
             self._raise_error_on_preexistence(name, component_type)
+            valid_names = self.valid_component_names
+            if component_type == "postprocessed":
+                valid_names["var_expr_names"] = valid_names["var_expr_names"] | set(
+                    self.math.postprocessed.root
+                )
             parsed_component = parsing.ParsedBackendComponent(
-                component_type, name, component_def, self.valid_component_names
+                component_type, name, component_def, valid_names
             )
 
             top_level_where = parsed_component.generate_top_level_where_array(
@@ -491,7 +518,38 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         """Preemptively delete of objects with large memory footprints."""
         del args
 
-    def _add_postprocessed_arrays(self, results: xr.Dataset) -> xr.Dataset:
+    @contextmanager
+    def _postprocess(self, temp_dataset: xr.Dataset):
+        """Context manager to temporarily replace _dataset and optionally extend some_set.
+
+        Args:
+            temp_dataset: The temporary xarray Dataset to use
+            extend_set_with: Optional iterable of items to temporarily add to some_set
+
+        Yields:
+            The temporary dataset
+
+        Example:
+            with self.temporary_dataset(other_dataset, extend_set_with={'extra1', 'extra2'}):
+                # Work with the temporary dataset and extended set
+                result = self.some_method()
+            # Both original dataset and set are automatically restored
+        """
+        original_dataset = self._dataset
+        methods_to_mock = ["_create_obj_list", "delete_component"]
+        original_methods = {k: getattr(self, k) for k in methods_to_mock}
+        try:
+            self._dataset = temp_dataset
+            for method in methods_to_mock:
+                setattr(self, method, lambda *args, **kwargs: None)
+            yield None
+        finally:
+            # Always restore the original attributes, even if an exception occurs
+            self._dataset = original_dataset
+            for method in methods_to_mock:
+                setattr(self, method, original_methods[method])
+
+    def add_postprocessed_arrays(self, results: xr.Dataset) -> xr.Dataset:
         """Add postprocessed arrays to the results dataset.
 
         Args:
@@ -500,20 +558,22 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         Returns:
             xr.Dataset: The updated results dataset with postprocessed arrays.
         """
-        postprocessor = Postprocessor(self.inputs, self.math, self.config, results)
-
+        postprocessed_math = self.math.postprocessed.root
         ordered_items = sorted(
-            self.math.postprocessed.root.items(), key=lambda item: item[1].order
+            postprocessed_math.items(), key=lambda item: item[1].order
         )
-        for name, definition in ordered_items:
-            start = time.time()
-            postprocessor.add(name, definition)
-            end = time.time() - start
-            LOGGER.debug(
-                f"Optimisation Model | postprocess:{name} | Built in {end:.4f}s"
-            )
-        LOGGER.info("Optimisation Model | postprocess | Generated.")
-        return results.assign(postprocessor.postprocessed)
+
+        with self._postprocess(self.inputs.assign(results)):
+            for name, definition in ordered_items:
+                start = time.time()
+                self._add_postprocessed(name, definition)
+                end = time.time() - start
+                LOGGER.debug(
+                    f"Optimisation Model | postprocess:{name} | Built in {end:.4f}s"
+                )
+            LOGGER.info("Optimisation Model | postprocess | Generated.")
+            updated_results = results.assign(self.postprocessed)
+        return updated_results
 
     def _add_to_dataset(
         self,
@@ -1235,8 +1295,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             attrs=self._dataset.attrs,
         ).astype(float)
 
-        results = self._add_postprocessed_arrays(results)
-        results = xr.Dataset(
+        results = self.add_postprocessed_arrays(results)
+        cleaned_results = xr.Dataset(
             {
                 k: _drop_attrs(v)
                 for k, v in results.data_vars.items()
@@ -1244,7 +1304,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             },
             attrs=self._dataset.attrs,
         )
-        return results
+        return cleaned_results
 
     def _find_all_references(self, initial_references: set) -> set:
         """Find all nested references to optimisation problem components from an initial set of references.
@@ -1398,81 +1458,3 @@ class ShadowPrices:
         if valid_constraints:
             self.activate()
         self._tracked = valid_constraints
-
-
-class Postprocessor(BackendModelGenerator):
-    """Postprocessed array generator."""
-
-    def __init__(
-        self,
-        inputs: xr.Dataset,
-        math: math_schema.CalliopeBuildMath,
-        build_config: config_schema.Build,
-        results: xr.Dataset,
-    ) -> None:
-        """Postprocessed array generator.
-
-        Args:
-            inputs (xr.Dataset): backend model input data.
-            math (math_schema.CalliopeBuildMath): Calliope math configuration.
-            build_config (config_schema.Build): Calliope build configuration.
-            results (xr.Dataset): processed results dataset.
-        """
-        self.config = build_config
-        self.math = math
-        self._solve_logger = logging.getLogger(__name__ + ".<solve>")
-
-        self.inputs = self._add_inputs(inputs)
-        self.objective: str = self.config.objective
-        self._dataset = self.inputs.assign(results)
-
-    @property
-    def valid_component_names(self) -> dict[str, set[str]]:  # noqa: D102, override
-        initial_names = super().valid_component_names
-        initial_names["var_expr_names"] |= set(self.math.postprocessed.root)
-        return initial_names
-
-    def add(self, name: str, definition: math_schema.PostprocessArray):
-        """Add a postprocessed array to the model.
-
-        Args:
-            name (str): Name of the postprocessed array.
-            definition (math_schema.PostprocessArray): Definition of the postprocessed array.
-        """
-
-        def _expression_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> xr.DataArray:
-            expr = element.evaluate_expression(self, where=where, references=references)
-            to_fill = expr.where(where)
-
-            return to_fill
-
-        self._add_component(name, definition, _expression_setter, "postprocessed")
-
-    def add_parameter(self, *args, **kwargs):  # noqa: D102, override
-        pass
-
-    def add_constraint(self, *args, **kwargs):  # noqa: D102, override
-        pass
-
-    def add_piecewise_constraint(self, *args, **kwargs):  # noqa: D102, override
-        pass
-
-    def add_global_expression(self, *args, **kwargs):  # noqa: D102, override
-        pass
-
-    def add_variable(self, *args, **kwargs) -> None:  # noqa: D102, override
-        pass
-
-    def add_objective(self, *args, **kwargs) -> None:  # noqa: D102, override
-        pass
-
-    def set_objective(self, name: str) -> None:  # noqa: D102, override
-        pass
-
-    def delete_component(self, *args, **kwargs) -> None:  # noqa: D102, override
-        pass
-
-    def _create_obj_list(self, *args, **kwargs) -> None:
-        pass
