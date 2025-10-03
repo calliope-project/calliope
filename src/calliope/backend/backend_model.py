@@ -493,6 +493,14 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         del args
 
     def _add_postprocessed_arrays(self, results: xr.Dataset) -> xr.Dataset:
+        """Add postprocessed arrays to the results dataset.
+
+        Args:
+            results (xr.Dataset): The results dataset to add postprocessed arrays to.
+
+        Returns:
+            xr.Dataset: The updated results dataset with postprocessed arrays.
+        """
         postprocessor = Postprocessor(self.inputs, self.math, self.config, results)
 
         ordered_items = sorted(
@@ -506,7 +514,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 f"Optimisation Model | postprocess:{name} | Built in {end:.4f}s"
             )
         LOGGER.info("Optimisation Model | postprocess | Generated.")
-        breakpoint()
         return results.assign(postprocessor.postprocessed)
 
     def _add_to_dataset(
