@@ -1593,8 +1593,8 @@ class TestLogging:
         return model
 
     def test_no_duplicate_log_message(self, caplog, gurobi_model):
-        caplog.set_level(logging.DEBUG)
-        gurobi_model.solve()
+        with caplog.at_level(logging.DEBUG):
+            gurobi_model.solve(solver_io="python")
         all_log_messages = [r.msg for r in caplog.records]
         assert sum([i.find("Gurobi Optimizer") > -1 for i in all_log_messages]) == 1
 
