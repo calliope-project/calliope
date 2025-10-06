@@ -8,7 +8,7 @@ import logging
 import re
 from abc import ABC
 from collections.abc import Iterable
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any, Literal, SupportsFloat, overload
 
@@ -295,11 +295,10 @@ class PyomoBackendModel(backend_model.BackendModel):
             warmstart = False
 
         with redirect_stdout(LogWriter(self._solve_logger, "debug", strip=True)):  # type: ignore
-            with redirect_stderr(LogWriter(self._solve_logger, "error", strip=True)):  # type: ignore
-                # Ignore most of gurobipy's logging, as it's output is
-                # already captured through STDOUT
-                logging.getLogger("gurobipy").setLevel(logging.ERROR)
-                results = opt.solve(self._instance, tee=True, **solve_kwargs)
+            # Ignore most of gurobipy's logging, as it's output is
+            # already captured through STDOUT
+            logging.getLogger("gurobipy").setLevel(logging.ERROR)
+            results = opt.solve(self._instance, tee=True, **solve_kwargs)
 
         termination = results.solver[0].termination_condition
 
