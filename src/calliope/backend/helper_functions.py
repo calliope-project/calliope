@@ -279,9 +279,7 @@ class Defined(ParsingHelperFunction):
         Args:
             within (str): the model dimension to check.
             how (Literal[all, any]): Whether to return True for `any` match of nested members or for `all` nested members.
-
-        Kwargs:
-            dims (dict[str, str]):
+            **dims (str):
                 **key**: dimension whose members will be searched for as being defined under the primary dimension (`within`).
                 Must be one of the core model dimensions: [nodes, techs, carriers]
                 **value**: subset of the dimension members to find.
@@ -471,9 +469,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
 
         Args:
             array (xr.DataArray): Array on which to apply vectorised indexing.
-
-        Kwargs:
-            lookup_arrays (dict[str, xr.DataArray]):
+            **lookup_arrays (xr.DataArray):
                 key: dimension on which to apply vectorised indexing
                 value: array whose values are either NaN or values from the dimension given in the key.
 

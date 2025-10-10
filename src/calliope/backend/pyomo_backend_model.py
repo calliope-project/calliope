@@ -554,8 +554,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         Args:
             mask (bool | np.bool_): If True, add constraint, otherwise return np.nan
             expr (Any): Equation expression.
-
-        Kwargs:
             name (str): Name of constraint
 
         Returns:
@@ -588,8 +586,6 @@ class PyomoBackendModel(backend_model.BackendModel):
             mask (Union[bool, np.bool_]): If True, add variable, otherwise return np.nan.
             ub (Any): Upper bound to apply to the variable.
             lb (Any): Lower bound to apply to the variable.
-
-        Kwargs:
             domain_type (Literal["RealSet", "IntegerSet"]):
                 Domain over which variables are valid (real = continuous, integer = integer/binary)
             name (str): Name of variable.
@@ -655,7 +651,6 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         Args:
             val (ObjConstraint): constraint object to be evaluated
-        Kwargs:
             eval_body (bool, optional):
                 If True, attempt to evaluate the constraint object `body`, which will evaluate the
                 linear expression contained in the constraint body and produce a numeric value.
