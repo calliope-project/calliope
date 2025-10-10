@@ -150,7 +150,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
         if values.isnull().all():
             self.log("lookups", name, "Component not added; no data found in array.")
-            values = values.astype(float)
+            values = xr.DataArray(np.nan, attrs=values.attrs)
 
         self._add_to_dataset(name, values, "lookups", definition.model_dump())
 

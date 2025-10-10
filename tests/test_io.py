@@ -209,18 +209,12 @@ class TestIO:
             with open(out_path) as f:
                 assert "variables(flow_cap)" in f.read()
 
-    @pytest.mark.skip(
-        reason="SPORES mode will fail until the cost max group constraint can be reproduced"
-    )
     def test_save_per_spore(self):
         with tempfile.TemporaryDirectory() as tempdir:
             os.mkdir(os.path.join(tempdir, "output"))
             model = calliope.examples.national_scale(scenario="spores")
             model.build()
-            model.solve(
-                spores_save_per_spore=True,
-                save_per_spore_path=os.path.join(tempdir, "output/spore_{}.nc"),
-            )
+            model.solve(spores={"save_per_spore_path": os.path.join(tempdir, "output")})
 
             for i in ["0", "1", "2", "3"]:
                 assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))

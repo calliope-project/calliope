@@ -130,24 +130,28 @@ class TestCalliopeBuildMath:
         ):
             math_schema.CalliopeBuildMath.model_validate(base_math_raw)
 
-    @pytest.mark.parametrize(
-        ("to_search", "group"),
-        [
-            ("foo", "variables"),
-            ("flow_out", "variables"),
-            ("flow_cap", "parameters"),
-            ("bigM", "parameters"),
-            ("timesteps", "dimensions"),
-            ("cap_method", "lookups"),
-            ("force_zero_area_use", "constraints"),
-            ("min_cost_optimisation", "objectives"),
-            ("cost_operation_variable", "global_expressions"),
-        ],
-    )
+    search_group_args = [
+        ("foo", "variables"),
+        ("flow_out", "variables"),
+        ("flow_cap", "parameters"),
+        ("bigM", "parameters"),
+        ("timesteps", "dimensions"),
+        ("cap_method", "lookups"),
+        ("force_zero_area_use", "constraints"),
+        ("min_cost_optimisation", "objectives"),
+        ("cost_operation_variable", "global_expressions"),
+    ]
+
+    @pytest.mark.parametrize(("to_search", "group"), search_group_args)
     def test_find(self, to_search, group, base_math_validated):
         """Component searches should return the expected data."""
         data = base_math_validated.find(to_search)
         assert data == base_math_validated[group][to_search]
+
+    @pytest.mark.parametrize(("to_search", "group"), search_group_args)
+    def test_group(self, to_search, group, base_math_validated):
+        """Component searches should return the expected data."""
+        base_math_validated[group][to_search]._group == group
 
     def test_find_duplicate_error(self, base_math_validated):
         """Finding duplicate parameters should return an error."""

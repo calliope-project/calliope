@@ -26,46 +26,38 @@ class TestCLI:
             # Assert that `model.yaml` in the target dir exists
             assert os.path.isfile(os.path.join(tempdir, "test", "model.yaml"))
 
-    def test_run_from_yaml(self):
+    def test_run_from_yaml(self, tmp_path):
         runner = CliRunner()
+        output = tmp_path / "output.nc"
+        result = runner.invoke(
+            cli.run,
+            [
+                _MODEL_NATIONAL,
+                f"--save_netcdf={output}",
+                # FIXME: should be CBC but a timeout error causes issues on OSX CI
+                # (likely fixed by updating pyomo)
+                "--override_dict={'config.solve.solver': 'glpk'}",
+            ],
+        )
+        assert result.exit_code == 0
+        assert output.exists()
 
-        with runner.isolated_filesystem() as tempdir:
-            result = runner.invoke(
-                cli.run,
-                [
-                    _MODEL_NATIONAL,
-                    "--save_netcdf=output.nc",
-                    # FIXME: should be CBC but a timeout error causes issues on OSX CI
-                    # (likely fixed by updating pyomo)
-                    "--override_dict={'config.solve.solver': 'glpk'}",
-                ],
-            )
-            assert result.exit_code == 0
-            assert os.path.isfile(os.path.join(tempdir, "output.nc"))
-
-    @pytest.mark.skip(
-        reason="SPORES mode will fail until the cost max group constraint can be reproduced"
-    )
-    def test_save_per_spore(self):
+    def test_save_per_spore(self, tmp_path):
         runner = CliRunner()
-
-        with runner.isolated_filesystem() as tempdir:
-            os.mkdir(os.path.join(tempdir, "output"))
-            print(os.listdir(tempdir))
-            result = runner.invoke(
-                cli.run,
-                [
-                    _MODEL_NATIONAL,
-                    "--save_netcdf=output.nc",
-                    "--scenario=spores",
-                    "--override_dict={'config.solve.spores_save_per_spore': True}",
-                ],
-            )
-            print(os.listdir(os.path.join(tempdir, "output")))
-            assert result.exit_code == 0
-            for i in ["0", "1", "2", "3"]:
-                assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
-            assert os.path.isfile(os.path.join(tempdir, "output.nc"))
+        tmpdir = tmp_path / "output"
+        result = runner.invoke(
+            cli.run,
+            [
+                _MODEL_NATIONAL,
+                f"--save_netcdf={tmpdir / 'output.nc'}",
+                "--scenario=spores",
+                f"--override_dict={{'config.solve.spores.save_per_spore_path': {tmpdir}}}",
+            ],
+        )
+        assert result.exit_code == 0
+        for i in ["0", "1", "2", "3"]:
+            assert (tmpdir / f"spore_{i}.nc").exists()
+        assert (tmpdir / "output.nc").exists()
 
     def test_incorrect_file_format(self):
         runner = CliRunner()

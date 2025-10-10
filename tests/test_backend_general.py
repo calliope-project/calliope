@@ -1,4 +1,5 @@
 import logging
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,16 @@ def built_model_cls_longnames(backend) -> calliope.Model:
     m.build(backend=backend)
     m.backend.verbose_strings()
     return m
+
+
+@pytest.fixture
+def unbuilt_backend(simple_supply, backend):
+    """Requesting a valid model backend must result in a backend instance."""
+    build_config = simple_supply.config.build.update({"backend": backend})
+    backend_obj = calliope.backend.get_model_backend(
+        build_config, simple_supply.inputs, simple_supply.math.build
+    )
+    return backend_obj
 
 
 @pytest.fixture
@@ -124,6 +135,31 @@ def solved_model_milp_cls(backend) -> calliope.Model:
     m.build(backend=backend)
     m.solve()
     return m
+
+
+class TestLoadInputs:
+    def test_load_inputs_expected(self, unbuilt_backend):
+        """A backend instance has access to the inputs used to build it."""
+        assert unbuilt_backend._dataset.equals(xr.Dataset())
+        unbuilt_backend._load_inputs()
+        assert all(
+            input in unbuilt_backend._dataset for input in ["flow_cap_max", "base_tech"]
+        )
+
+    @pytest.mark.parametrize(
+        ("group", "input"), [("parameters", "flow_cap_max"), ("lookups", "base_tech")]
+    )
+    def test_load_inputs_deactivated(self, unbuilt_backend, caplog, group, input):
+        """A backend instance has access to the inputs used to build it."""
+        caplog.set_level(logging.DEBUG, logger="calliope.backend.backend_model")
+        with patch.object(
+            unbuilt_backend,
+            "math",
+            unbuilt_backend.math.update({f"{group}.{input}.active": False}),
+        ):
+            unbuilt_backend._load_inputs()
+        assert input not in unbuilt_backend._dataset
+        assert f"parameters/lookups | Skipping {input}" in caplog.text
 
 
 class TestBackend:
@@ -603,6 +639,28 @@ class TestAdders:
 
         # We keep it in the dataset since it might be fillna'd by another param later.
         assert solved_model_func.backend.parameters["foo"].equals(xr.DataArray(np.nan))
+
+    def test_add_allnull_lookup_no_shape(self, solved_model_func):
+        """If lookup is Null, the component will still be added to the backend dataset in case it is filled later."""
+        solved_model_func.backend.add_lookup("foo", xr.DataArray(np.nan), {})
+
+        assert solved_model_func.backend.lookups.foo.equals(xr.DataArray(np.nan))
+
+    def test_add_allnull_lookup_with_shape(self, solved_model_func):
+        """If lookup is Null in all array elements, the component will still be added to the backend dataset in case it is filled by another parameter later."""
+        nan_array = solved_model_func.inputs.flow_cap_max.where(lambda x: x < 0)
+        solved_model_func.backend.add_lookup("foo", nan_array, {})
+
+        # We keep it in the dataset since it might be fillna'd by another param later.
+        assert solved_model_func.backend.lookups["foo"].equals(xr.DataArray(np.nan))
+
+    def test_add_lookup_update_math(self, solved_model_func):
+        """If lookup is Null in all array elements, the component will still be added to the backend dataset in case it is filled by another parameter later."""
+        solved_model_func.backend.add_lookup(
+            "foo", xr.DataArray("FOOBAR"), {"dtype": "string"}
+        )
+
+        assert solved_model_func.backend.math.lookups["foo"].dtype == "string"
 
     def test_add_allnull_var(self, solved_model_func, dummy_int):
         """If `where` string resolves to False in all array elements, the component won't be built."""
