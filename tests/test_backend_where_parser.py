@@ -15,7 +15,7 @@ BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps"]
 
 
 @pytest.fixture
-def var_expr_names():
+def results():
     return ["multi_dim_var", "multi_dim_expr", "no_dim_var"]
 
 
@@ -36,7 +36,7 @@ def input_names():
 
 @pytest.fixture
 def dim_names():
-    return ["techs", "nodes", "carriers", "costs", "timesteps"]
+    return ["techs", "nodes", "carriers", "costs", "timesteps", "dummy_dim"]
 
 
 @pytest.fixture
@@ -66,8 +66,8 @@ def param_lookup(input_names):
 
 
 @pytest.fixture
-def var_expr(var_expr_names):
-    return where_parser.data_var_parser(var_expr_names, where_parser.VarExprArrayParser)
+def result(results):
+    return where_parser.data_var_parser(results, where_parser.ResultArrayParser)
 
 
 @pytest.fixture
@@ -81,8 +81,8 @@ def bool_operand():
 
 
 @pytest.fixture
-def evaluatable_string(identifier, var_expr_names, input_names, dim_names):
-    valid_component_names = set(var_expr_names) | set(input_names) | set(dim_names)
+def evaluatable_string(identifier, results, input_names, dim_names):
+    valid_component_names = set(results) | set(input_names) | set(dim_names)
     return where_parser.evaluatable_string_parser(identifier, valid_component_names)
 
 
@@ -144,9 +144,9 @@ def comparison(evaluatable_string, number, bool_operand, arithmetic):
 
 
 @pytest.fixture
-def where(bool_operand, helper_function, param_lookup, var_expr, comparison, subset):
+def where(bool_operand, helper_function, param_lookup, result, comparison, subset):
     return where_parser.where_parser(
-        bool_operand, helper_function, comparison, subset, param_lookup, var_expr
+        bool_operand, helper_function, comparison, subset, param_lookup, result
     )
 
 
@@ -183,6 +183,37 @@ def eval_where_string(eval_kwargs, where):
         return parsed_[0].eval(**eval_kwargs)
 
     return _parse_where_string
+
+
+class TestDimensionParser:
+    @pytest.mark.parametrize(("dim_string"), ["nodes", "techs", "carriers"])
+    def test_dimension_lookup(
+        self, dimension, dim_string, eval_kwargs, dummy_model_data
+    ):
+        parsed_ = dimension.parse_string(dim_string, parse_all=True)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        assert evaluated_.equals(dummy_model_data.coords[dim_string])
+
+    @pytest.mark.parametrize(
+        "data_var_string", ["_foo", "__type__", "1foo", "[techs]", "tech"]
+    )
+    def test_dimension_lookup_fail_malformed_string(self, dimension, data_var_string):
+        with pytest.raises(pyparsing.ParseException) as excinfo:
+            dimension.parse_string(data_var_string, parse_all=True)
+        assert check_error_or_warning(excinfo, "Expected")
+
+    @pytest.mark.parametrize(
+        "data_var_string", ["config.foo", "all_inf", "no_dims", "multi_dim_expr"]
+    )
+    def test_dimension_lookup_fail_not_a_dimension(self, dimension, data_var_string):
+        with pytest.raises(pyparsing.ParseException) as excinfo:
+            dimension.parse_string(data_var_string, parse_all=True)
+        assert check_error_or_warning(excinfo, "Expected")
+
+    def test_dimension_lookup_returns_empty(self, dimension, eval_kwargs):
+        parsed_ = dimension.parse_string("dummy_dim", parse_all=True)
+        evaluated = parsed_[0].eval(**eval_kwargs)
+        assert evaluated.equals(xr.DataArray())
 
 
 class TestInputParser:
@@ -243,18 +274,18 @@ class TestInputParser:
         assert evaluated_.equals(xr.DataArray(False))
 
 
-class TestVarExprParser:
+class TestResultArrayParser:
     @pytest.mark.parametrize(
         ("data_var_string", "expected_similar"),
         [("multi_dim_var", "with_inf_as_bool"), ("multi_dim_expr", "all_true")],
     )
     def test_data_var_with_where_decision_variable_or_expr(
-        self, var_expr, dummy_model_data, data_var_string, expected_similar, eval_kwargs
+        self, result, dummy_model_data, data_var_string, expected_similar, eval_kwargs
     ):
         """Can't quite compare in the same way for decision variables / global expressions
         as with params, because there is a random element to the `definition_matrix` array
         """
-        parsed_ = var_expr.parse_string(data_var_string, parse_all=True)
+        parsed_ = result.parse_string(data_var_string, parse_all=True)
         evaluated = parsed_[0].eval(**eval_kwargs)
 
         # There's a chance that some values that *should* be True in evaluated are made False by a NaN value in `definition_matrix`,
@@ -264,10 +295,10 @@ class TestVarExprParser:
     @pytest.mark.parametrize(
         "data_var_string", ["multi_dim_var", "no_dim_var", "multi_dim_expr"]
     )
-    def test_var_expr_fail_not_parameter_where_false(
-        self, var_expr, data_var_string, eval_kwargs
+    def test_result_fail_not_parameter_where_false(
+        self, result, data_var_string, eval_kwargs
     ):
-        parsed_ = var_expr.parse_string(data_var_string, parse_all=True)
+        parsed_ = result.parse_string(data_var_string, parse_all=True)
         with pytest.raises(BackendError) as excinfo:
             parsed_[0].eval(apply_where=False, **eval_kwargs)
         assert check_error_or_warning(

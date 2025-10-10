@@ -103,7 +103,12 @@ class EvalToArrayStr(EvalString):
 
     @abstractmethod
     def as_array(self) -> xr.DataArray | list[xr.DataArray]:
-        """Evaluate and return expression as a DataArray or list."""
+        """Evaluate and return expression as a DataArray or list.
+
+        If the evaluated expression returns a simple string or number,
+        this value will be assigned as both the `name` and the data of the returned DataArray.
+        The purpose of this is to be able to access the string/number value whether we query the array name or its data.
+        """
 
     # Math strings evaluate to strings.
     @overload
@@ -141,6 +146,7 @@ class EvalToArrayStr(EvalString):
                 If `math_string` is desired, returns a valid LaTex math string.
                 If `array` is desired, returns xarray DataArray or a list of strings/numbers (if the expression represents a list).
         """
+        eval_kwargs.setdefault("as_values", False)
         self.eval_attrs = eval_kwargs
         evaluated: str | list[str | float] | xr.DataArray | list[xr.DataArray]
         if return_type == "array":
@@ -241,7 +247,7 @@ class EvalOperatorOperand(EvalToArrayStr):
 
     def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
         """Util function to apply where arrays to non-latex strings."""
-        where_array = self.eval_attrs.get("where_array", xr.DataArray(True))
+        where_array = self.eval_attrs["where_array"]
         try:
             evaluated = evaluated.where(where_array)
         except AttributeError:
@@ -838,7 +844,7 @@ class EvalUnslicedComponent(EvalToArrayStr):
         try:
             evaluated = backend_interface._dataset[self.name]
             if (
-                self.eval_attrs.get("as_values", False)
+                self.eval_attrs["as_values"]
                 and evaluated.attrs["obj_type"] == "parameters"
             ):
                 evaluated = backend_interface.get_parameter(
@@ -903,11 +909,10 @@ def helper_function_parser(
 
     Based partially on: # https://stackoverflow.com/questions/61807705/pyparsing-generic-python-function-args-and-kwargs
 
-    Args (pp.ParserElement):
-        Parser elements that can be arguments in the function (e.g., "number", "sliced_param_or_var").
-        NOTE: the order of inclusion in the args list matters. The parser will parse based on first matches.
-
-    Kwargs
+    Args:
+        *args (pp.ParserElement):
+            Parser elements that can be arguments in the function (e.g., "number", "sliced_param_or_var").
+            NOTE: the order of inclusion in the args list matters. The parser will parse based on first matches.
         generic_identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
@@ -1086,9 +1091,10 @@ def list_parser(*args: pp.ParserElement) -> pp.ParserElement:
 
     Lists are defined as anything wrapped in square brackets (`[]`).
 
-    Args (pp.ParserElement):
-        Parser elements that can be list elements (e.g., "number", "evaluatable_identifier", "unsliced_param_or_var").
-        These elements will be parsed in the order they are given.
+    Args:
+        *args (pp.ParserElement):
+            Parser elements that can be list elements (e.g., "number", "evaluatable_identifier", "unsliced_param_or_var").
+            These elements will be parsed in the order they are given.
 
     Returns:
         pp.ParserElement: Parser for valid lists of strings and/or numbers.

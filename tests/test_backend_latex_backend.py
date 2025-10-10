@@ -30,7 +30,7 @@ class TestLatexBackendModel:
         backend_model = request.getfixturevalue(backend_obj)
         backend_model.add_parameter("param", xr.DataArray(1), {})
         assert backend_model.parameters["param"] == xr.DataArray(1)
-        assert "param" in backend_model.valid_component_names["input_names"]
+        assert "param" in backend_model.math.where_components["input_names"]
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -51,7 +51,7 @@ class TestLatexBackendModel:
             backend_model.variables["var"].sum()
             <= dummy_model_data.with_inf_as_bool.sum()
         )
-        assert "var" in backend_model.valid_component_names["var_expr_names"]
+        assert "var" in backend_model.math.where_components["result_names"]
         assert "math_string" in backend_model.variables["var"].attrs
         assert (
             backend_model.variables["var"].attrs["math_repr"]
@@ -71,7 +71,7 @@ class TestLatexBackendModel:
         # some null values might be introduced by the foreach array, so we just check the upper bound
         assert not valid_latex_backend.variables["invalid_var"].sum()
         assert (
-            "invalid_var" in valid_latex_backend.valid_component_names["var_expr_names"]
+            "invalid_var" in valid_latex_backend.math.where_components["result_names"]
         )
         assert "math_string" not in valid_latex_backend.variables["invalid_var"].attrs
 
@@ -93,7 +93,7 @@ class TestLatexBackendModel:
             backend_model.global_expressions["expr"].sum()
             <= dummy_model_data.with_inf_as_bool.sum()
         )
-        assert "expr" in backend_model.valid_component_names["var_expr_names"]
+        assert "expr" in backend_model.math.where_components["result_names"]
         assert "math_string" in backend_model.global_expressions["expr"].attrs
 
     @pytest.mark.parametrize(
@@ -116,7 +116,7 @@ class TestLatexBackendModel:
             backend_model.global_expressions["var_init_expr"].sum()
             <= dummy_model_data.with_inf_as_bool.sum()
         )
-        assert "var_init_expr" in backend_model.valid_component_names["var_expr_names"]
+        assert "var_init_expr" in backend_model.math.where_components["result_names"]
         assert "math_string" in backend_model.global_expressions["var_init_expr"].attrs
 
     @pytest.mark.parametrize(
@@ -139,7 +139,7 @@ class TestLatexBackendModel:
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "constr" not in set().union(
-            *backend_model.valid_component_names.values()
+            *backend_model.math.where_components.values()
         )
         assert "math_string" in backend_model.constraints["constr"].attrs
 
@@ -164,7 +164,7 @@ class TestLatexBackendModel:
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "var_init_constr" not in set().union(
-            *backend_model.valid_component_names.values()
+            *backend_model.math.where_components.values()
         )
         assert "math_string" in backend_model.constraints["var_init_constr"].attrs
 
@@ -212,7 +212,7 @@ class TestLatexBackendModel:
         )
         assert dummy_latex_backend_model.objectives["obj"].isnull().all()
         assert "obj" not in set().union(
-            *dummy_latex_backend_model.valid_component_names.values()
+            *dummy_latex_backend_model.math.where_components.values()
         )
         assert len(dummy_latex_backend_model.objectives.data_vars) == 1
 
