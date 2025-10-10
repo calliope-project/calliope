@@ -1426,5 +1426,10 @@ checks:
 
   flow_in_for_supply_tech:
     where: base_tech==supply AND cost_flow_in
-    message: Use `cost_source_use` instead of `cost_flow_in` to set an inflow cost for `supply` technologies.
+    message: "`cost_flow_in` does not apply to `supply` technologies. Use `cost_source_use` instead."
+    errors: warn
+
+  flow_out_for_demand_tech:
+    where: base_tech==demand AND cost_flow_out
+    message: "`cost_flow_out` does not apply to `demand` technologies. Use `cost_flow_in` instead."
     errors: warn
