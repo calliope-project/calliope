@@ -1,7 +1,6 @@
 import importlib.resources
 import os
 import subprocess
-import tempfile
 from pathlib import Path
 
 import pytest  # noqa: F401
@@ -17,14 +16,13 @@ with importlib.resources.as_file(importlib.resources.files("calliope")) as f:
 
 
 class TestCLI:
-    def test_new(self):
+    def test_new(self, tmp_path):
         runner = CliRunner()
-        with tempfile.TemporaryDirectory() as tempdir:
-            new_path = os.path.join(tempdir, "test")
-            result = runner.invoke(cli.new, [new_path])
-            assert result.exit_code == 0
-            # Assert that `model.yaml` in the target dir exists
-            assert os.path.isfile(os.path.join(tempdir, "test", "model.yaml"))
+        tmpdir = tmp_path / "new_model"
+        result = runner.invoke(cli.new, [str(tmpdir)])
+        assert result.exit_code == 0, result.output
+        # Assert that `model.yaml` in the target dir exists
+        assert os.path.isfile(tmpdir / "model.yaml")
 
     def test_run_from_yaml(self, tmp_path):
         runner = CliRunner()
@@ -39,7 +37,7 @@ class TestCLI:
                 "--override_dict={'config.solve.solver': 'glpk'}",
             ],
         )
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result.output
         assert output.exists()
 
     def test_save_per_spore(self, tmp_path):
@@ -48,9 +46,9 @@ class TestCLI:
             cli.run,
             [
                 _MODEL_NATIONAL,
-                f"--save_netcdf={tmp_path / 'output.nc'}",
+                f"--save_netcdf='{tmp_path / 'output.nc'}'",
                 "--scenario=spores",
-                f"--override_dict={{'config.solve.spores.save_per_spore_path': {tmp_path}}}",
+                f"--override_dict={{config.solve.spores.save_per_spore_path: {tmp_path}}}",
             ],
         )
         assert result.exit_code == 0, result.output
@@ -99,7 +97,7 @@ class TestCLI:
         with runner.isolated_filesystem() as tempdir:
             model.to_netcdf(model_file)
             result = runner.invoke(cli.run, [model_file, f"--save_netcdf={out_file}"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result.output
             assert (Path(tempdir) / out_file).is_file()
 
     def test_run_save_lp(self):
@@ -107,7 +105,7 @@ class TestCLI:
 
         with runner.isolated_filesystem() as tempdir:
             result = runner.invoke(cli.run, [_MODEL_NATIONAL, "--save_lp=output.lp"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result.output
             assert os.path.isfile(os.path.join(tempdir, "output.lp"))
 
     def test_generate_runs_bash(self):
@@ -123,7 +121,7 @@ class TestCLI:
                     '--scenarios="run1;run2;run3;run4"',
                 ],
             )
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result.output
             assert os.path.isfile(os.path.join(tempdir, "test.sh"))
 
     def test_generate_runs_windows(self):
@@ -139,7 +137,7 @@ class TestCLI:
                     '--scenarios="run1;run2;run3;run4"',
                 ],
             )
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result.output
             assert os.path.isfile(os.path.join(tempdir, "test.bat"))
 
     def test_generate_runs_bsub(self):
@@ -157,7 +155,7 @@ class TestCLI:
                     "--cluster_time=100",
                 ],
             )
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result.output
             assert os.path.isfile(os.path.join(tempdir, "test.sh"))
             assert os.path.isfile(os.path.join(tempdir, "test.sh.array.sh"))
 
@@ -176,7 +174,7 @@ class TestCLI:
                     "--cluster_time=100",
                 ],
             )
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result.output
             assert os.path.isfile(os.path.join(tempdir, "test.sh"))
             assert os.path.isfile(os.path.join(tempdir, "test.sh.array.sh"))
 
@@ -207,7 +205,7 @@ class TestCLI:
                     "cold_fusion_cap_share;cold_fusion_prod_share",
                 ],
             )
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result.output
             assert os.path.isfile(out_file)
             scenarios = io.read_rich_yaml(out_file)
             assert "scenario_0" not in scenarios["scenarios"]
@@ -248,4 +246,4 @@ class TestCLI:
                 "--override_dict={techs.test_supply_elec.flow_cap_max: 1}",  # elec supply too low
             ],
         )
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result.output
