@@ -46,7 +46,7 @@ class TestCLI:
             cli.run,
             [
                 _MODEL_NATIONAL,
-                f"--save_netcdf='{tmp_path / 'output.nc'}'",
+                f"--save_netcdf={tmp_path / 'output.nc'}",
                 "--scenario=spores",
                 f"--override_dict={{config.solve.spores.save_per_spore_path: {tmp_path}}}",
             ],
