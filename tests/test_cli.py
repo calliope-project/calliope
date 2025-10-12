@@ -48,7 +48,7 @@ class TestCLI:
                 _MODEL_NATIONAL,
                 f"--save_netcdf={tmp_path / 'output.nc'}",
                 "--scenario=spores",
-                f"--override_dict={{config.solve.spores.save_per_spore_path: {tmp_path}}}",
+                f"--override_dict={{config.solve.spores.save_per_spore_path: '{tmp_path.absolute()}'}}",
             ],
         )
         assert result.exit_code == 0, result.output
