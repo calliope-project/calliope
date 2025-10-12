@@ -231,10 +231,7 @@ class InputArrayParser(EvalWhere):
             self.array_name, xr.DataArray()
         )
 
-        try:
-            data_var_string = var.attrs["math_repr"]
-        except (AttributeError, KeyError):
-            data_var_string = rf"\text{{{self.array_name}}}"
+        data_var_string = var.attrs["math_repr"]
         if self.eval_attrs["apply_where"]:
             data_var_string = rf"\exists ({data_var_string})"
         return data_var_string

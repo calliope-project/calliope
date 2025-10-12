@@ -209,16 +209,14 @@ class TestIO:
             with open(out_path) as f:
                 assert "variables(flow_cap)" in f.read()
 
-    def test_save_per_spore(self):
-        with tempfile.TemporaryDirectory() as tempdir:
-            os.mkdir(os.path.join(tempdir, "output"))
-            model = calliope.examples.national_scale(scenario="spores")
-            model.build()
-            model.solve(spores={"save_per_spore_path": os.path.join(tempdir, "output")})
+    def test_save_per_spore(self, tmp_path):
+        model = calliope.examples.national_scale(scenario="spores")
+        model.build()
+        model.solve(spores={"save_per_spore_path": tmp_path})
 
-            for i in ["0", "1", "2", "3"]:
-                assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
-            assert not os.path.isfile(os.path.join(tempdir, "output.nc"))
+        for i in ["0", "1", "2", "3"]:
+            assert os.path.isfile(tmp_path / f"spore_{i}.nc")
+        assert not os.path.isfile(tmp_path / "output.nc")
 
 
 class TestYaml:

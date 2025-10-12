@@ -44,20 +44,19 @@ class TestCLI:
 
     def test_save_per_spore(self, tmp_path):
         runner = CliRunner()
-        tmpdir = tmp_path / "output"
         result = runner.invoke(
             cli.run,
             [
                 _MODEL_NATIONAL,
-                f"--save_netcdf={tmpdir / 'output.nc'}",
+                f"--save_netcdf={(tmp_path / 'output.nc').as_posix()}",
                 "--scenario=spores",
-                f"--override_dict={{'config.solve.spores.save_per_spore_path': {tmpdir}}}",
+                f"--override_dict={{'config.solve.spores.save_per_spore_path': {tmp_path.as_posix()}}}",
             ],
         )
         assert result.exit_code == 0
         for i in ["0", "1", "2", "3"]:
-            assert (tmpdir / f"spore_{i}.nc").exists()
-        assert (tmpdir / "output.nc").exists()
+            assert (tmp_path / f"spore_{i}.nc").exists()
+        assert (tmp_path / "output.nc").exists()
 
     def test_incorrect_file_format(self):
         runner = CliRunner()
