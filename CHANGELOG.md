@@ -1,12 +1,18 @@
-## 0.7.0.dev8 (TBD)
+## 0.7.0.dev8
 
 ### User-facing changes
+
+|changed| Init config can be updated on re-init _and_ on loading a model from NetCDF, e.g. to apply new subsetting, resampling, clustering, math.
+
+|fixed| Reloading a clustered model from file was attempting to re-cluster (#824).
 
 |fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
 
 ### Internal changes
 
 |changed| Math conditionals removed where math component defaults will achieve the same result.
+
+|fixed| Remove `stderr` redirect at pyomo backend model solve stage to avoid random infinite recursion errors in CI tests (#833).
 
 ## 0.7.0.dev7 (2025-09-05)
 
