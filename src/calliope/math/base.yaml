@@ -767,18 +767,8 @@ constraints:
       - expression: >-
           sum(flow_out, over=techs) -
           sum(flow_in, over=techs) -
-          $flow_export + $unmet_demand_and_unused_supply == 0
-    sub_expressions:
-      flow_export:
-        - where: "any(carrier_export, over=techs)"
-          expression: sum(flow_export, over=techs)
-        - where: "NOT any(carrier_export, over=techs)"
-          expression: "0"
-      unmet_demand_and_unused_supply:
-        - where: "config.ensure_feasibility==True"
-          expression: unmet_demand + unused_supply
-        - where: "NOT config.ensure_feasibility==True"
-          expression: "0"
+          sum(flow_export, over=techs) +
+          (unmet_demand + unused_supply) == 0
 
   balance_demand:
     description: >-
@@ -1138,26 +1128,20 @@ objectives:
       Cost class weights can be defined in the indexed parameter
       `objective_cost_weights`.
     equations:
-      - where: "any(cost, over=[nodes, techs, costs])"
-        expression: >-
+      - expression: >-
           sum(
             sum(cost, over=[nodes, techs])
             * objective_cost_weights,
             over=costs
           ) + $unmet_demand
-      - where: "NOT any(cost, over=[nodes, techs, costs])"
-        expression: $unmet_demand
     sub_expressions:
       unmet_demand:
-        - where: "config.ensure_feasibility==True"
-          expression: >-
+        - expression: >-
             sum(
               sum(unmet_demand - unused_supply, over=[carriers, nodes])
               * timestep_weights,
               over=timesteps
             ) * bigM
-        - where: "NOT config.ensure_feasibility==True"
-          expression: "0"
     sense: minimise
     active: true # optional; defaults to true.
   # --8<-- [end:objective]
@@ -1207,10 +1191,7 @@ global_expressions:
       - expression: timestep_weights * ($cost_export + $cost_flow_out + $cost_flow_in)
     sub_expressions:
       cost_export:
-        - where: any(carrier_export, over=carriers) AND any(cost_export, over=carriers)
-          expression: sum(cost_export * flow_export, over=carriers)
-        - where: NOT (any(carrier_export, over=carriers) AND any(cost_export, over=carriers))
-          expression: "0"
+        - expression: sum(cost_export * flow_export, over=carriers)
       cost_flow_in:
         - where: "base_tech==supply"
           expression: cost_source_use * source_use
@@ -1341,13 +1322,7 @@ global_expressions:
     where: "cost_investment_annualised OR cost_operation_variable OR cost_operation_fixed"
     equations:
       - expression: >-
-          cost_investment_annualised + $cost_operation_sum + cost_operation_fixed
-    sub_expressions:
-      cost_operation_sum:
-        - where: "cost_operation_variable"
-          expression: sum(cost_operation_variable, over=timesteps)
-        - where: "NOT cost_operation_variable"
-          expression: "0"
+          cost_investment_annualised + sum(cost_operation_variable, over=timesteps) + cost_operation_fixed
     active: true # optional; defaults to true.
   # --8<-- [end:expression]
 
