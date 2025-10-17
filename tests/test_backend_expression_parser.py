@@ -355,7 +355,7 @@ class TestEquationParserElements:
         self, unsliced_param_with_obj_names, eval_kwargs, string_val
     ):
         parsed_ = unsliced_param_with_obj_names.parse_string(string_val, parse_all=True)
-        default = eval_kwargs["input_data"][string_val].attrs["default"]
+        default = eval_kwargs["math"].parameters[string_val].default
         assert (
             parsed_[0]
             .eval(**eval_kwargs)
@@ -907,7 +907,7 @@ class TestAsMathString:
             "where_array": None,
             "references": set(),
             "backend_interface": dummy_latex_backend_model,
-            "math": dummy_model_math,
+            "math": dummy_latex_backend_model.math,
             "input_data": dummy_latex_backend_model.inputs,
         }
 

@@ -84,7 +84,7 @@ parameters:
     description: >-
       Cost per unit of the decision variable `flow_cap` and per unit distance of a transmission link.
       Applied to transmission links only.
-    unit: $\frac{\{cost}}{\text{power}\times\text{distance}}$
+    unit: $\frac{\text{cost}}{\text{power}\times\text{distance}}$
 
   cost_purchase_per_distance:
     default: 0
@@ -92,14 +92,14 @@ parameters:
     description: >-
       Cost applied if the binary variable `purchased` is 1 or per unit of the integer variable `units`.
       Requires the parameter `cap_method` to be `integer`.
-    unit: $\frac{\{cost}}{\text{unit}\times\text{distance}}$
+    unit: $\frac{\text{cost}}{\text{unit}\times\text{distance}}$
 
   cost_flow_cap:
     default: 0
     title: Cost of flow capacity.
     description: >-
       Cost per unit of the decision variable `flow_cap`.
-    unit: $\frac{\{cost}}{\text{power}}$
+    unit: $\frac{\text{cost}}{\text{power}}$
 
   cost_export:
     default: 0
@@ -108,7 +108,7 @@ parameters:
     description: >-
       Cost per unit of `flow_export` in each timestep.
       Usually used in the negative sense, as a subsidy.
-    unit: $\frac{\{cost}}{\text{energy}}$
+    unit: $\frac{\text{cost}}{\text{energy}}$
 
   cost_interest_rate:
     default: 0
@@ -123,7 +123,7 @@ parameters:
     description: >-
       Annual costs applied per unit `flow_cap`.
       These costs are not subject to being recalculated relative to technology lifetime, only scaled to reflect the fraction of one year that the model represents (e.g., 7 days ~= 0.02 of a year).
-    unit: $\frac{\{cost}}{\text{power}}$
+    unit: $\frac{\text{cost}}{\text{power}}$
 
   cost_om_annual_investment_fraction:
     default: 0
@@ -137,8 +137,16 @@ parameters:
     resample_method: mean
     title: Carrier inflow cost.
     description: >-
-      Cost per unit of `flow_in` in each timestep. Also used as the cost per unit of `source_use` in `supply` technologies.
-    unit: $\frac{\{cost}}{\text{energy}}$
+      Cost per unit of `flow_in` in each timestep.
+    unit: $\frac{\text{cost}}{\text{energy}}$
+
+  cost_source_use:
+    default: 0
+    resample_method: mean
+    title: Resource use cost.
+    description: >-
+      Cost per unit of `source_use` in `supply` technologies.
+    unit: $\frac{\text{cost}}{\text{energy}}$
 
   cost_flow_out:
     default: 0
@@ -146,7 +154,7 @@ parameters:
     title: Carrier outflow cost
     description: >-
       Cost per unit of `flow_out` in each timestep.
-    unit: $\frac{\{cost}}{\text{energy}}$
+    unit: $\frac{\text{cost}}{\text{energy}}$
 
   cost_purchase:
     default: 0
@@ -154,7 +162,7 @@ parameters:
     description: >-
       Cost applied to the variable `purchased_units`.
       Requires the parameter `cap_method` to be `integer`.
-    unit: $\frac{\{cost}}{\text{unit}}$
+    unit: $\frac{\text{cost}}{\text{unit}}$
 
   cost_area_use:
     default: 0
@@ -168,14 +176,14 @@ parameters:
     title: Cost of source flow capacity.
     description: >-
       Cost per unit `source_cap`.
-    unit: $\frac{\{cost}}{\text{power}}$
+    unit: $\frac{\text{cost}}{\text{power}}$
 
   cost_storage_cap:
     default: 0
     title: Cost of storage capacity.
     description: >-
       Cost per unit `storage_cap`, i.e., the maximum available capacity of the storage technology's "reservoir".
-    unit: $\frac{\{cost}}{\text{energy}}$
+    unit: $\frac{\text{cost}}{\text{energy}}$
 
   cost_depreciation_rate:
     default: 1
@@ -759,18 +767,8 @@ constraints:
       - expression: >-
           sum(flow_out, over=techs) -
           sum(flow_in, over=techs) -
-          $flow_export + $unmet_demand_and_unused_supply == 0
-    sub_expressions:
-      flow_export:
-        - where: "any(carrier_export, over=techs)"
-          expression: sum(flow_export, over=techs)
-        - where: "NOT any(carrier_export, over=techs)"
-          expression: "0"
-      unmet_demand_and_unused_supply:
-        - where: "config.ensure_feasibility==True"
-          expression: unmet_demand + unused_supply
-        - where: "NOT config.ensure_feasibility==True"
-          expression: "0"
+          sum(flow_export, over=techs) +
+          (unmet_demand + unused_supply) == 0
 
   balance_demand:
     description: >-
@@ -1130,26 +1128,20 @@ objectives:
       Cost class weights can be defined in the indexed parameter
       `objective_cost_weights`.
     equations:
-      - where: "any(cost, over=[nodes, techs, costs])"
-        expression: >-
+      - expression: >-
           sum(
             sum(cost, over=[nodes, techs])
             * objective_cost_weights,
             over=costs
           ) + $unmet_demand
-      - where: "NOT any(cost, over=[nodes, techs, costs])"
-        expression: $unmet_demand
     sub_expressions:
       unmet_demand:
-        - where: "config.ensure_feasibility==True"
-          expression: >-
+        - expression: >-
             sum(
               sum(unmet_demand - unused_supply, over=[carriers, nodes])
               * timestep_weights,
               over=timesteps
             ) * bigM
-        - where: "NOT config.ensure_feasibility==True"
-          expression: "0"
     sense: minimise
     active: true # optional; defaults to true.
   # --8<-- [end:objective]
@@ -1194,18 +1186,15 @@ global_expressions:
     default: 0
     unit: $\frac{\text{cost}}{\text{hour}}$
     foreach: [nodes, techs, costs, timesteps]
-    where: "cost_export OR cost_flow_in OR cost_flow_out"
+    where: "cost_export OR cost_flow_in OR cost_flow_out OR cost_source_use"
     equations:
       - expression: timestep_weights * ($cost_export + $cost_flow_out + $cost_flow_in)
     sub_expressions:
       cost_export:
-        - where: any(carrier_export, over=carriers) AND any(cost_export, over=carriers)
-          expression: sum(cost_export * flow_export, over=carriers)
-        - where: NOT (any(carrier_export, over=carriers) AND any(cost_export, over=carriers))
-          expression: "0"
+        - expression: sum(cost_export * flow_export, over=carriers)
       cost_flow_in:
         - where: "base_tech==supply"
-          expression: cost_flow_in * source_use
+          expression: cost_source_use * source_use
         - where: "NOT base_tech==supply"
           expression: sum(cost_flow_in * flow_in, over=carriers)
       cost_flow_out:
@@ -1311,7 +1300,7 @@ global_expressions:
     default: 0
     unit: cost
     foreach: [nodes, techs, costs]
-    where: cost_investment AND (cost_om_annual OR cost_om_annual_investment_fraction)
+    where: (cost_om_annual AND flow_cap) OR (cost_investment AND cost_om_annual_investment_fraction)
     equations:
       - expression: >-
           $annualisation_weight * (
@@ -1333,13 +1322,7 @@ global_expressions:
     where: "cost_investment_annualised OR cost_operation_variable OR cost_operation_fixed"
     equations:
       - expression: >-
-          cost_investment_annualised + $cost_operation_sum + cost_operation_fixed
-    sub_expressions:
-      cost_operation_sum:
-        - where: "cost_operation_variable"
-          expression: sum(cost_operation_variable, over=timesteps)
-        - where: "NOT cost_operation_variable"
-          expression: "0"
+          cost_investment_annualised + sum(cost_operation_variable, over=timesteps) + cost_operation_fixed
     active: true # optional; defaults to true.
   # --8<-- [end:expression]
 
@@ -1414,4 +1397,14 @@ checks:
   lat_lons_out_of_range:
     where: latitude < -90 OR latitude > 90 OR longitude < -180 OR longitude > 180
     message: Node latitude/longitude must be specified in WGS84 / EPSG4326 format.
+    errors: warn
+
+  flow_in_for_supply_tech:
+    where: base_tech==supply AND cost_flow_in
+    message: "`cost_flow_in` does not apply to `supply` technologies. Use `cost_source_use` instead."
+    errors: warn
+
+  flow_out_for_demand_tech:
+    where: base_tech==demand AND cost_flow_out
+    message: "`cost_flow_out` does not apply to `demand` technologies. Use `cost_flow_in` instead."
     errors: warn
