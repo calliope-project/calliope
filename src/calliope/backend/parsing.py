@@ -9,6 +9,7 @@ import itertools
 import logging
 import operator
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import pyparsing as pp
@@ -16,7 +17,7 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.backend import expression_parser, helper_functions, where_parser
-from calliope.schemas import math_schema
+from calliope.schemas import config_schema, math_schema
 
 if TYPE_CHECKING:
     from calliope.backend import backend_model
@@ -34,6 +35,50 @@ MATH_DEFS = (
 T = TypeVar("T", bound=MATH_DEFS)
 
 LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class EvalAttrs:
+    """Attributes required for evaluating parsed expressions."""
+
+    backend_data: xr.Dataset = field(default_factory=xr.Dataset)
+    """Backend interface component dataset."""
+
+    equation_name: str = ""
+    """Name of the equation being evaluated."""
+
+    helper_functions: dict[str, Callable] = field(default_factory=dict)
+    """Helper functions available for evaluations."""
+
+    input_data: xr.Dataset = field(default_factory=xr.Dataset)
+    """Model input data."""
+
+    math: math_schema.CalliopeBuildMath = field(
+        default_factory=math_schema.CalliopeBuildMath
+    )
+    """Calliope math definitions."""
+
+    apply_where: bool = True
+    """Whether to apply the 'where' condition."""
+
+    as_values: bool = False
+    """If True, return with the array contents evaluated to base Python objects.
+    If False, return with the array contents as they are in the backend dataset."""
+
+    build_config: config_schema.Build = field(default_factory=config_schema.Build)
+    """Build configuration options."""
+
+    references: set[str] = field(default_factory=set)
+    """References to dimensions/lookups/parameters/variables/global expressions used in the expression."""
+
+    slice_dict: dict = field(default_factory=dict)
+    """Dictionary to look up array slice expressions if referenced in the evaluated string."""
+
+    sub_expression_dict: dict = field(default_factory=dict)
+    """Dictionary to look up sub-expressions if referenced in the evaluated string."""
+
+    where_array: xr.DataArray = field(default_factory=lambda: xr.DataArray(True))
+    """Boolean array defining where the expression should be applied."""
 
 
 class ParsedBackendEquation:
@@ -236,19 +281,19 @@ class ParsedBackendEquation:
                 If return_type == `array`: Boolean array defining on which index items a parsed component should be built.
                 If return_type == `math_string`: Valid LaTeX math string defining the "where" conditions using logic notation.
         """
+        eval_attrs = {
+            "equation_name": self.name,
+            "helper_functions": helper_functions._registry["where"],
+            "input_data": backend_interface.inputs,
+            "backend_data": backend_interface._dataset,
+            "math": backend_interface.math,
+            "build_config": backend_interface.config,
+        }
+        if references is not None:
+            eval_attrs["references"] = references
+
         evaluated_wheres = [
-            where[0].eval(
-                return_type,
-                equation_name=self.name,
-                helper_functions=helper_functions._registry["where"],
-                input_data=backend_interface.inputs,
-                backend_data=backend_interface._dataset,
-                math=backend_interface.math,
-                build_config=backend_interface.config,
-                references=references if references is not None else set(),
-                apply_where=True,
-            )
-            for where in self.where
+            where[0].eval(return_type, EvalAttrs(**eval_attrs)) for where in self.where
         ]
         if return_type == "math_string":
             return r"\land{}".join(f"({i})" for i in evaluated_wheres if i != "true")
@@ -326,18 +371,19 @@ class ParsedBackendEquation:
                 If return_type == `math_string`: Valid LaTeX math string defining the
                 "where" conditions using logic notation.
         """
-        evaluated = self.expression[0].eval(
-            return_type,
-            equation_name=self.name,
-            slice_dict=self.slices,
-            sub_expression_dict=self.sub_expressions,
-            backend_data=backend_interface._dataset,
-            math=backend_interface.math,
-            input_data=backend_interface.inputs,
-            where_array=where,
-            references=references if references is not None else set(),
-            helper_functions=helper_functions._registry["expression"],
-        )
+        eval_attrs = {
+            "equation_name": self.name,
+            "slice_dict": self.slices,
+            "sub_expression_dict": self.sub_expressions,
+            "backend_data": backend_interface._dataset,
+            "math": backend_interface.math,
+            "input_data": backend_interface.inputs,
+            "where_array": where,
+            "helper_functions": helper_functions._registry["expression"],
+        }
+        if references is not None:
+            eval_attrs["references"] = references
+        evaluated = self.expression[0].eval(return_type, EvalAttrs(**eval_attrs))
         if return_type == "array":
             self.raise_error_on_where_expr_mismatch(evaluated, where)
         return evaluated
@@ -412,7 +458,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         ],
         name: str,
         unparsed_data: T,
-        valid_component_names: dict[str, Iterable[str]],
+        parsing_components: dict[str, dict[str, set[str]]],
     ) -> None:
         """Parse an optimisation problem configuration.
 
@@ -425,13 +471,16 @@ class ParsedBackendComponent(ParsedBackendEquation):
             name (str): Name of the optimisation problem component
             unparsed_data (T): Unparsed math formulation. Expected structure depends on
                 the group to which the optimisation problem component belongs.
-            valid_component_names (dict[str, Iterable[str]]):
-                Dictionary of valid component names for different categories of model data.
+            parsing_components (dict[str, dict[str, Iterable[str]]]):
+                Dictionary of valid component names for different categories of model data to use in parsing `where` and `expression` strings.
         """
         self.name = f"{group}:{name}"
         self.group = group
         self._unparsed = unparsed_data
-        self._valid_component_names = valid_component_names
+        self._where_components = parsing_components["where"]
+        self._expression_components = set().union(
+            *parsing_components["expression"].values()
+        )
         self.where: list[pp.ParseResults] = []
         self.equations: list[ParsedBackendEquation] = []
         self.equation_expression_parser: Callable = self.PARSERS[group]
@@ -496,7 +545,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         """
         equations = self.generate_expression_list(
             expression_parser=self.equation_expression_parser(
-                set().union(*self._valid_component_names.values())
+                self._expression_components
             ),
             expression_list=self._unparsed.equations,
             expression_group="equations",
@@ -506,7 +555,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         sub_expression_dict = {
             c_name: self.generate_expression_list(
                 expression_parser=expression_parser.generate_sub_expression_parser(
-                    set().union(*self._valid_component_names.values())
+                    self._expression_components
                 ),
                 expression_list=c_list,
                 expression_group="sub_expressions",
@@ -517,7 +566,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         slice_dict = {
             idx_name: self.generate_expression_list(
                 expression_parser=expression_parser.generate_slice_parser(
-                    set().union(*self._valid_component_names.values())
+                    self._expression_components
                 ),
                 expression_list=idx_list,
                 expression_group="slices",
@@ -588,7 +637,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 they will be logged to `self._errors` to raise later.
         """
         parser = where_parser.generate_where_string_parser(
-            **self._valid_component_names, postprocessing=self.group == "postprocessed"
+            **self._where_components, postprocessing=self.group == "postprocessed"
         )
         self._tracker["expr_or_where"] = "where"
         return self._parse_string(parser, where_string)

@@ -1,5 +1,6 @@
 import operator
 import random
+from dataclasses import replace
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,7 @@ import pytest
 import xarray as xr
 
 from calliope import exceptions
-from calliope.backend import expression_parser, helper_functions
+from calliope.backend import expression_parser, helper_functions, parsing
 
 from .common.util import check_error_or_warning
 
@@ -166,18 +167,15 @@ def helper_function_one_parser_in_args(identifier, request):
 
 @pytest.fixture
 def eval_kwargs(dummy_pyomo_backend_model):
-    return {
-        "helper_functions": helper_functions._registry["expression"],
-        "slice_dict": {},
-        "sub_expression_dict": {},
-        "equation_name": "foobar",
-        "where_array": xr.DataArray(True),
-        "references": set(),
-        "backend_data": dummy_pyomo_backend_model._dataset,
-        "math": dummy_pyomo_backend_model.math,
-        "input_data": dummy_pyomo_backend_model.inputs,
-        "return_type": "array",
-    }
+    attrs = parsing.EvalAttrs(
+        helper_functions=helper_functions._registry["expression"],
+        equation_name="foobar",
+        backend_data=dummy_pyomo_backend_model._dataset,
+        math=dummy_pyomo_backend_model.math,
+        input_data=dummy_pyomo_backend_model.inputs,
+    )
+
+    return {"return_type": "array", "eval_attrs": attrs}
 
 
 @pytest.fixture
@@ -256,7 +254,7 @@ class TestEquationParserElements:
     )
     def test_numbers(self, number, string_val, expected):
         parsed_ = number.parse_string(string_val, parse_all=True)
-        assert parsed_[0].eval(return_type="array") == expected
+        assert parsed_[0].eval("array", parsing.EvalAttrs()) == expected
 
     @pytest.mark.parametrize(
         "string_val",
@@ -355,19 +353,19 @@ class TestEquationParserElements:
         self, unsliced_param_with_obj_names, eval_kwargs, string_val
     ):
         parsed_ = unsliced_param_with_obj_names.parse_string(string_val, parse_all=True)
-        default = eval_kwargs["math"].parameters[string_val].default
-        assert (
-            parsed_[0]
-            .eval(**eval_kwargs)
-            .equals(eval_kwargs["backend_data"][string_val].fillna(default))
-        )
+        default = eval_kwargs["eval_attrs"].math.parameters[string_val].default
+        expected = eval_kwargs["eval_attrs"].backend_data[string_val].fillna(default)
+        assert parsed_[0].eval(**eval_kwargs).equals(expected)
 
     def test_unsliced_param_references(
         self, unsliced_param_with_obj_names, eval_kwargs
     ):
-        references = eval_kwargs.pop("references")
+        references = eval_kwargs["eval_attrs"].references
         parsed_ = unsliced_param_with_obj_names.parse_string("with_inf", parse_all=True)
-        parsed_[0].eval(references=references, **eval_kwargs)
+        parsed_[0].eval(
+            eval_kwargs["return_type"],
+            replace(eval_kwargs["eval_attrs"], references=references),
+        )
         assert references == {"with_inf"}
 
     @pytest.mark.parametrize("string_val", ["Foo", "foobar"])
@@ -528,9 +526,14 @@ class TestEquationParserElements:
     def test_function_mistype(self, helper_function, eval_kwargs):
         parsed_ = helper_function.parse_string("dummy_func_1(1)", parse_all=True)
 
-        eval_kwargs["helper_functions"] = {"dummy_func_1": lambda **kwargs: lambda x: x}
         with pytest.raises(exceptions.BackendError) as excinfo:
-            parsed_[0].eval(**eval_kwargs)
+            parsed_[0].eval(
+                eval_kwargs["return_type"],
+                replace(
+                    eval_kwargs["eval_attrs"],
+                    helper_functions={"dummy_func_1": lambda **kwargs: lambda x: x},
+                ),
+            )
 
         assert check_error_or_warning(excinfo, "Helper function must be subclassed")
 
@@ -895,19 +898,15 @@ class TestEquationParserComparison:
 
 class TestAsMathString:
     @pytest.fixture
-    def latex_eval_kwargs(self, dummy_latex_backend_model, dummy_model_math):
-        return {
-            "helper_functions": helper_functions._registry["expression"],
-            "return_type": "math_string",
-            "index_slice_dict": {},
-            "component_dict": {},
-            "equation_name": "foobar",
-            "where_array": None,
-            "references": set(),
-            "backend_data": dummy_latex_backend_model._dataset,
-            "math": dummy_latex_backend_model.math,
-            "input_data": dummy_latex_backend_model.inputs,
-        }
+    def latex_eval_kwargs(self, dummy_latex_backend_model):
+        attrs = parsing.EvalAttrs(
+            helper_functions=helper_functions._registry["expression"],
+            equation_name="foobar",
+            backend_data=dummy_latex_backend_model._dataset,
+            math=dummy_latex_backend_model.math,
+            input_data=dummy_latex_backend_model.inputs,
+        )
+        return {"return_type": "math_string", "eval_attrs": attrs}
 
     @pytest.mark.parametrize(
         ("parser", "instring", "expected"),

@@ -8,7 +8,7 @@ import logging
 import re
 from abc import ABC
 from collections.abc import Iterable
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any, Literal, SupportsFloat, overload
 
@@ -295,11 +295,10 @@ class PyomoBackendModel(backend_model.BackendModel):
             warmstart = False
 
         with redirect_stdout(LogWriter(self._solve_logger, "debug", strip=True)):  # type: ignore
-            with redirect_stderr(LogWriter(self._solve_logger, "error", strip=True)):  # type: ignore
-                # Ignore most of gurobipy's logging, as it's output is
-                # already captured through STDOUT
-                logging.getLogger("gurobipy").setLevel(logging.ERROR)
-                results = opt.solve(self._instance, tee=True, **solve_kwargs)
+            # Ignore most of gurobipy's logging, as it's output is
+            # already captured through STDOUT
+            logging.getLogger("gurobipy").setLevel(logging.ERROR)
+            results = opt.solve(self._instance, tee=True, **solve_kwargs)
 
         termination = results.solver[0].termination_condition
 
@@ -555,8 +554,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         Args:
             mask (bool | np.bool_): If True, add constraint, otherwise return np.nan
             expr (Any): Equation expression.
-
-        Kwargs:
             name (str): Name of constraint
 
         Returns:
@@ -589,8 +586,6 @@ class PyomoBackendModel(backend_model.BackendModel):
             mask (Union[bool, np.bool_]): If True, add variable, otherwise return np.nan.
             ub (Any): Upper bound to apply to the variable.
             lb (Any): Lower bound to apply to the variable.
-
-        Kwargs:
             domain_type (Literal["RealSet", "IntegerSet"]):
                 Domain over which variables are valid (real = continuous, integer = integer/binary)
             name (str): Name of variable.
@@ -656,7 +651,6 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         Args:
             val (ObjConstraint): constraint object to be evaluated
-        Kwargs:
             eval_body (bool, optional):
                 If True, attempt to evaluate the constraint object `body`, which will evaluate the
                 linear expression contained in the constraint body and produce a numeric value.

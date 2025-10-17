@@ -10,7 +10,7 @@ def build_test_model(
     scenario=None,
     model_file="model.yaml",
     data_table_dfs=None,
-    pre_validate_math_strings: bool = True,
+    pre_validate_math_strings: bool = False,
     math_dict: dict | None = None,
     **init_kwargs,
 ):

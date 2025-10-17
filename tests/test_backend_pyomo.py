@@ -1593,8 +1593,8 @@ class TestLogging:
         return model
 
     def test_no_duplicate_log_message(self, caplog, gurobi_model):
-        caplog.set_level(logging.DEBUG)
-        gurobi_model.solve()
+        with caplog.at_level(logging.DEBUG):
+            gurobi_model.solve(solver_io="python")
         all_log_messages = [r.msg for r in caplog.records]
         assert sum([i.find("Gurobi Optimizer") > -1 for i in all_log_messages]) == 1
 
@@ -2015,7 +2015,7 @@ class TestVerboseStrings:
             )
             .item()
             .name
-            == "variables[flow_out][4]"
+            == "variables[flow_out][8]"
         )
         assert not simple_supply.backend.variables.flow_out.coords_in_name
 

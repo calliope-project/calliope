@@ -17,11 +17,10 @@ import pandas as pd
 import xarray as xr
 
 from calliope.exceptions import BackendError
-from calliope.schemas.math_schema import CalliopeBuildMath
 from calliope.util import DTYPE_OPTIONS
 
 if TYPE_CHECKING:
-    pass
+    from calliope.backend.expression_parser import EvalAttrs
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
 ] = {"where": {}, "expression": {}}
@@ -31,23 +30,14 @@ class ParsingHelperFunction(ABC):
     """Abstract base class for helper function parsing."""
 
     def __init__(
-        self,
-        return_type: Literal["array", "math_string"],
-        *,
-        equation_name: str,
-        input_data: xr.Dataset,
-        math: "CalliopeBuildMath",
-        **kwargs,
+        self, return_type: Literal["array", "math_string"], attrs: "EvalAttrs"
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
 
         The abstract properties and methods defined here must be defined by all helper functions.
-
         """
-        self._equation_name = equation_name
-        self._input_data = input_data
-        self._math = math
         self._return_type = return_type
+        self._attrs = attrs
 
     @property
     @abstractmethod
@@ -164,7 +154,7 @@ class ParsingHelperFunction(ABC):
                 [
                     dim_name
                     for i in iterators.split(",")
-                    for dim_name, dim_math in self._math.dimensions.root.items()
+                    for dim_name, dim_math in self._attrs.math.dimensions.root.items()
                     if dim_math.iterator == i
                 ]
             )
@@ -184,7 +174,7 @@ class ParsingHelperFunction(ABC):
         iterator = self._dim_iterator(dim)
         return rf"\text{{{iterator}}} \in \text{{{dim}}}"
 
-    def _listify(
+    def _to_str_list(
         self, vals: list[str | xr.DataArray] | str | xr.DataArray | list[xr.DataArray]
     ) -> list[str]:
         """Force a string to a list of length one if not already provided as a list.
@@ -200,7 +190,7 @@ class ParsingHelperFunction(ABC):
         return [str(i.name) if isinstance(i, xr.DataArray) else i for i in vals]
 
     def _dim_iterator(self, dim: str) -> str:
-        return self._math.dimensions[dim].iterator
+        return self._attrs.math.dimensions[dim].iterator
 
 
 class WhereAny(ParsingHelperFunction):
@@ -215,7 +205,7 @@ class WhereAny(ParsingHelperFunction):
     def as_math_string(  # noqa: D102, override
         self, array: str, *, over: str | list[str | xr.DataArray]
     ) -> str:
-        over_list = self._listify(over)
+        over_list = self._to_str_list(over)
         overstring = r" \\ ".join(self._instr(i) for i in over_list)
         substack_overstring = rf"\substack{{{overstring}}}"
         # Using bigvee for "collective-or"
@@ -242,7 +232,7 @@ class WhereAny(ParsingHelperFunction):
                 "Input to `any` must be a boolean array. "
                 f"Received {input_component.name} of dtype {input_component.dtype}"
             )
-        available_dims = set(input_component.dims).intersection(self._listify(over))
+        available_dims = set(input_component.dims).intersection(self._to_str_list(over))
 
         return input_component.any(dim=available_dims, keep_attrs=True)
 
@@ -277,9 +267,7 @@ class Defined(ParsingHelperFunction):
         Args:
             within (str): the model dimension to check.
             how (Literal[all, any]): Whether to return True for `any` match of nested members or for `all` nested members.
-
-        Kwargs:
-            dims (dict[str, str]):
+            **dims (str):
                 **key**: dimension whose members will be searched for as being defined under the primary dimension (`within`).
                 Must be one of the core model dimensions: [nodes, techs, carriers]
                 **value**: subset of the dimension members to find.
@@ -322,10 +310,10 @@ class Defined(ParsingHelperFunction):
         """
         dim_names = list(dims.keys())
         dims_with_list_vals = {
-            dim: self._listify(vals) if dim == "techs" else self._listify(vals)
+            dim: self._to_str_list(vals) if dim == "techs" else self._to_str_list(vals)
             for dim, vals in dims.items()
         }
-        definition_matrix = self._input_data.definition_matrix
+        definition_matrix = self._attrs.input_data.definition_matrix
         dim_within_da = definition_matrix.any(
             self._dims_to_remove(dim_names, str(within.name))
         )
@@ -348,7 +336,7 @@ class Defined(ParsingHelperFunction):
         Returns:
             set: Undefined dimensions to remove from the definition matrix.
         """
-        definition_matrix = self._input_data.definition_matrix
+        definition_matrix = self._attrs.input_data.definition_matrix
         missing_dims = set([*dim_names, within]).difference(definition_matrix.dims)
         if missing_dims:
             raise ValueError(
@@ -367,7 +355,7 @@ class Defined(ParsingHelperFunction):
         elif how == "any":
             # Using vee for "collective-or"
             tex_how = "vee"
-        vals = self._listify(vals)
+        vals = self._to_str_list(vals)
         within_iterator = self._dim_iterator(within)
         dim_iterator = self._dim_iterator(dim)
         selection = rf"\text{{{dim_iterator}}} \in \text{{[{','.join(vals)}]}}"
@@ -385,7 +373,7 @@ class Sum(ParsingHelperFunction):
     def as_math_string(  # noqa: D102, override
         self, array: str, *, over: str | list[str | xr.DataArray]
     ) -> str:
-        over_list = self._listify(over)
+        over_list = self._to_str_list(over)
         overstring = r" \\ ".join(self._instr(i) for i in over_list)
         substack_overstring = rf"\substack{{{overstring}}}"
         return rf"\sum\limits_{{{substack_overstring}}} ({array})"
@@ -407,7 +395,7 @@ class Sum(ParsingHelperFunction):
                 NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN,
                 the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
-        filtered_over = set(self._listify(over)).intersection(array.dims)
+        filtered_over = set(self._to_str_list(over)).intersection(array.dims)
         return array.sum(filtered_over, min_count=1, skipna=True)
 
 
@@ -434,15 +422,11 @@ class ReduceCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        sum_helper = Sum(
-            return_type=self._return_type,
-            equation_name=self._equation_name,
-            input_data=self._input_data,
-            math=self._math,
-        )
+        sum_helper = Sum(self._return_type, self._attrs)
 
         return sum_helper(
-            array.where(self._input_data[f"carrier_{flow_direction}"]), over="carriers"
+            array.where(self._attrs.input_data[f"carrier_{flow_direction}"]),
+            over="carriers",
         )
 
 
@@ -469,9 +453,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
 
         Args:
             array (xr.DataArray): Array on which to apply vectorised indexing.
-
-        Kwargs:
-            lookup_arrays (dict[str, xr.DataArray]):
+            **lookup_arrays (xr.DataArray):
                 key: dimension on which to apply vectorised indexing
                 value: array whose values are either NaN or values from the dimension given in the key.
 
@@ -524,10 +506,12 @@ class SelectFromLookupArrays(ParsingHelperFunction):
         # Turn string lookup values to numeric ones.
         # We stack the dimensions to handle multidimensional lookups
         for index_dim, index in lookup_arrays.items():
-            stacked_lookup = self._input_data[index.name].stack({dim: dims})
+            stacked_lookup = self._attrs.input_data[index.name].stack({dim: dims})
             ix = array.indexes[index_dim].get_indexer(stacked_lookup)
             if (ix == -1).all():
-                received_lookup = self._input_data[index.name].to_series().dropna()
+                received_lookup = (
+                    self._attrs.input_data[index.name].to_series().dropna()
+                )
                 raise IndexError(
                     f"Trying to select items on the dimension {index_dim} from the {index.name} lookup array, but no matches found. Received: {received_lookup}"
                 )
@@ -588,7 +572,7 @@ class GetValAtIndex(ParsingHelperFunction):
                 timesteps  <U16 '2000-01-01 02:00'
         """
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
-        return self._input_data.coords[dim][int(idx)]
+        return self._attrs.input_data.coords[dim][int(idx)]
 
     # For as_array
     @overload
@@ -878,13 +862,8 @@ class GroupDatetime(ParsingHelperFunction):
                         - expression: "group_datetime(flow_in, timesteps, month) <= source_use_max_monthly"
             ```
         """
-        dtype = DTYPE_OPTIONS[self._math.dimensions[group.name].dtype]
-        group_sum_helper = GroupSum(
-            return_type=self._return_type,
-            equation_name=self._equation_name,
-            input_data=self._input_data,
-            math=self._math,
-        )
+        dtype = DTYPE_OPTIONS[self._attrs.math.dimensions[group.name].dtype]
+        group_sum_helper = GroupSum(self._return_type, self._attrs)
         array = group_sum_helper(
             array, getattr(array[over.name].dt, group.name).astype(dtype), group
         )

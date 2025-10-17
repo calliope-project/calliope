@@ -264,7 +264,7 @@ def _yaml_load(src: str):
             raise ValueError(f"Could not parse {src_name} as YAML")
         return result
     except ruamel_yaml.YAMLError:
-        logger.error(f"Parser error when reading YAML from {src_name}.")
+        logger.error(f"Parser error when reading YAML from {src_name}: {src}")
         raise
 
 

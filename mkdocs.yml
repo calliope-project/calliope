@@ -10,6 +10,7 @@ hooks:
   - docs/hooks/generate_math_docs.py
   - docs/hooks/generate_plots.py
   - docs/hooks/add_notebooks.py
+  - docs/hooks/clean_search.py
 extra:
   min_python_version: "3.10"
   max_python_version: "3.12"

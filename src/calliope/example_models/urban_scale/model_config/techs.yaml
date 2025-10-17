@@ -49,7 +49,7 @@ techs:
       data: 15
       index: monetary
       dims: costs
-    cost_flow_in:
+    cost_source_use:
       data: 0.1 # 10p/kWh electricity price #ppt
       index: monetary
       dims: costs
@@ -66,7 +66,7 @@ techs:
       data: 1
       index: monetary
       dims: costs
-    cost_flow_in:
+    cost_source_use:
       data: 0.025 # 2.5p/kWh gas price #ppt
       index: monetary
       dims: costs
