@@ -237,6 +237,7 @@ class TestGetters:
         assert variable.attrs["references"] == {
             "flow_in_max",
             "flow_out_max",
+            "cost_operation_fixed",
             "cost_investment_flow_cap",
             "symmetric_transmission",
         }

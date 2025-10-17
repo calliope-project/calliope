@@ -60,14 +60,11 @@ constraints:
   system_balance:
     equations:
       - expression: >
-          sum(flow_out, over=techs) - sum(flow_in, over=techs) - $flow_export
-          + $unmet_demand_and_unused_supply + $fuel_distributor == 0
-    sub_expressions:
-      fuel_distributor:
-        - where: fuel_distributor
-          expression: fuel_distributor
-        - where: NOT fuel_distributor
-          expression: "0"
+          sum(flow_out, over=techs) -
+          sum(flow_in, over=techs) -
+          sum(flow_export, over=techs) +
+          (unmet_demand + unused_supply) +
+          fuel_distributor == 0
 
   restrict_total_imports_and_exports:
     description: >
@@ -133,27 +130,12 @@ objectives:
   # `restrict_total_imports_and_exports`) is enabled.
   min_cost_optimisation:
     equations:
-      - expression: $cost_sum + $unmet_demand + $cost_fuel_distribution_sum
-    sub_expressions:
-      cost_sum:
-        - where: "any(cost, over=[nodes, techs, costs])"
-          expression: >
-            sum(sum(cost, over=[nodes, techs]) * objective_cost_weights, over=costs)
-        - where: "NOT any(cost, over=[nodes, techs, costs])"
-          expression: "0"
-      unmet_demand:
-        - where: "config.ensure_feasibility==True"
-          expression: >
-            sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])
-            * timestep_weights, over=timesteps) * bigM
-        - where: "NOT config.ensure_feasibility==True"
-          expression: "0"
-      cost_fuel_distribution_sum:
-        - where: "cost_var_fuel_distribution"
-          expression: >
-            sum(sum(cost_var_fuel_distribution, over=[nodes, carriers, timesteps])
-            * objective_cost_weights, over=costs)
-        - where: >
-            NOT any(cost_var_fuel_distribution,
-            over=[nodes, carriers, costs, timesteps])
-          expression: "0"
+      - expression: >-
+          sum(
+            (
+              sum(cost, over=[nodes, techs]) +
+              sum(cost_var_fuel_distribution, over=[nodes, carriers, timesteps])
+            ) *
+            objective_cost_weights,
+            over=costs
+          ) + $unmet_demand

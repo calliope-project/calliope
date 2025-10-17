@@ -12,6 +12,8 @@
 
 ### Internal changes
 
+|changed| Math conditionals removed where math component defaults will achieve the same result.
+
 |fixed| Remove `stderr` redirect at pyomo backend model solve stage to avoid random infinite recursion errors in CI tests (#833).
 
 ## 0.7.0.dev7 (2025-09-05)
