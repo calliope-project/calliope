@@ -78,6 +78,7 @@ global_expressions:
   cost_investment_source_cap.active: false
   cost_investment_area_use.active: false
   cost_investment_purchase.active: false
+  cost_operation_fixed.active: false
   cost:
     where: "cost_operation_variable"
     equations:

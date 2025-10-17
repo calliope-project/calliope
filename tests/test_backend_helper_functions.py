@@ -4,7 +4,7 @@ import pytest
 import xarray as xr
 
 from calliope import exceptions
-from calliope.backend import helper_functions
+from calliope.backend import helper_functions, parsing
 
 from .common.util import check_error_or_warning
 
@@ -62,7 +62,7 @@ def expression_where(expression, parsing_kwargs):
 @pytest.fixture(scope="class")
 def expression_group_sum(expression, parsing_kwargs):
     func = expression["group_sum"](**parsing_kwargs)
-    func._math = func._math.update(
+    func._attrs.math = func._attrs.math.update(
         {"dimensions": {"new_dim": {"iterator": "nd", "dtype": "string"}}}
     )
     return func
@@ -71,7 +71,7 @@ def expression_group_sum(expression, parsing_kwargs):
 @pytest.fixture(scope="class")
 def expression_group_datetime(expression, parsing_kwargs):
     func = expression["group_datetime"](**parsing_kwargs)
-    func._math = func._math.update(
+    func._attrs.math = func._attrs.math.update(
         {
             "dimensions": {
                 "date": {"iterator": "d", "dtype": "string"},
@@ -91,12 +91,10 @@ def expression_sum_next_n(expression, parsing_kwargs):
 class TestAsArray:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data, dummy_model_math):
-        return {
-            "input_data": dummy_model_data,
-            "equation_name": "foo",
-            "return_type": "array",
-            "math": dummy_model_math,
-        }
+        attrs = parsing.EvalAttrs(
+            input_data=dummy_model_data, equation_name="foo", math=dummy_model_math
+        )
+        return {"return_type": "array", "attrs": attrs}
 
     @pytest.fixture
     def is_defined_any(self, dummy_model_data):
@@ -509,12 +507,10 @@ class TestAsArray:
 class TestAsMathString:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data, dummy_model_math):
-        return {
-            "input_data": dummy_model_data,
-            "return_type": "math_string",
-            "equation_name": "foo",
-            "math": dummy_model_math,
-        }
+        attrs = parsing.EvalAttrs(
+            input_data=dummy_model_data, equation_name="foo", math=dummy_model_math
+        )
+        return {"return_type": "math_string", "attrs": attrs}
 
     def test_any_not_exists(self, where_any):
         summed_string = where_any("foo", over="techs")

@@ -17,11 +17,10 @@ import pandas as pd
 import xarray as xr
 
 from calliope.exceptions import BackendError
-from calliope.schemas.math_schema import CalliopeBuildMath
 from calliope.util import DTYPE_OPTIONS
 
 if TYPE_CHECKING:
-    from calliope.backend.backend_model import BackendModel
+    from calliope.backend.expression_parser import EvalAttrs
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
 ] = {"where": {}, "expression": {}}
@@ -31,25 +30,14 @@ class ParsingHelperFunction(ABC):
     """Abstract base class for helper function parsing."""
 
     def __init__(
-        self,
-        return_type: Literal["array", "math_string"],
-        *,
-        equation_name: str,
-        input_data: xr.Dataset,
-        math: "CalliopeBuildMath",
-        backend_interface: type["BackendModel"] | None = None,
-        **kwargs,
+        self, return_type: Literal["array", "math_string"], attrs: "EvalAttrs"
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
 
         The abstract properties and methods defined here must be defined by all helper functions.
-
         """
-        self._equation_name = equation_name
-        self._input_data = input_data
-        self._backend_interface = backend_interface
-        self._math = math
         self._return_type = return_type
+        self._attrs = attrs
 
     @property
     @abstractmethod
@@ -166,7 +154,7 @@ class ParsingHelperFunction(ABC):
                 [
                     dim_name
                     for i in iterators.split(",")
-                    for dim_name, dim_math in self._math.dimensions.root.items()
+                    for dim_name, dim_math in self._attrs.math.dimensions.root.items()
                     if dim_math.iterator == i
                 ]
             )
@@ -202,7 +190,7 @@ class ParsingHelperFunction(ABC):
         return [str(i.name) if isinstance(i, xr.DataArray) else i for i in vals]
 
     def _dim_iterator(self, dim: str) -> str:
-        return self._math.dimensions[dim].iterator
+        return self._attrs.math.dimensions[dim].iterator
 
 
 class WhereAny(ParsingHelperFunction):
@@ -325,7 +313,7 @@ class Defined(ParsingHelperFunction):
             dim: self._to_str_list(vals) if dim == "techs" else self._to_str_list(vals)
             for dim, vals in dims.items()
         }
-        definition_matrix = self._input_data.definition_matrix
+        definition_matrix = self._attrs.input_data.definition_matrix
         dim_within_da = definition_matrix.any(
             self._dims_to_remove(dim_names, str(within.name))
         )
@@ -348,7 +336,7 @@ class Defined(ParsingHelperFunction):
         Returns:
             set: Undefined dimensions to remove from the definition matrix.
         """
-        definition_matrix = self._input_data.definition_matrix
+        definition_matrix = self._attrs.input_data.definition_matrix
         missing_dims = set([*dim_names, within]).difference(definition_matrix.dims)
         if missing_dims:
             raise ValueError(
@@ -434,15 +422,11 @@ class ReduceCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        sum_helper = Sum(
-            return_type=self._return_type,
-            equation_name=self._equation_name,
-            input_data=self._input_data,
-            math=self._math,
-        )
+        sum_helper = Sum(self._return_type, self._attrs)
 
         return sum_helper(
-            array.where(self._input_data[f"carrier_{flow_direction}"]), over="carriers"
+            array.where(self._attrs.input_data[f"carrier_{flow_direction}"]),
+            over="carriers",
         )
 
 
@@ -522,10 +506,12 @@ class SelectFromLookupArrays(ParsingHelperFunction):
         # Turn string lookup values to numeric ones.
         # We stack the dimensions to handle multidimensional lookups
         for index_dim, index in lookup_arrays.items():
-            stacked_lookup = self._input_data[index.name].stack({dim: dims})
+            stacked_lookup = self._attrs.input_data[index.name].stack({dim: dims})
             ix = array.indexes[index_dim].get_indexer(stacked_lookup)
             if (ix == -1).all():
-                received_lookup = self._input_data[index.name].to_series().dropna()
+                received_lookup = (
+                    self._attrs.input_data[index.name].to_series().dropna()
+                )
                 raise IndexError(
                     f"Trying to select items on the dimension {index_dim} from the {index.name} lookup array, but no matches found. Received: {received_lookup}"
                 )
@@ -586,7 +572,7 @@ class GetValAtIndex(ParsingHelperFunction):
                 timesteps  <U16 '2000-01-01 02:00'
         """
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
-        return self._input_data.coords[dim][int(idx)]
+        return self._attrs.input_data.coords[dim][int(idx)]
 
     # For as_array
     @overload
@@ -704,9 +690,6 @@ class Where(ParsingHelperFunction):
                         - expression: sum(where(flow_cap, node_grouping), over=nodes) <= node_group_max
             ```
         """
-        if self._backend_interface is not None:
-            condition = self._input_data[condition.name]
-
         return array.where(condition.fillna(False).astype(bool))
 
 
@@ -784,9 +767,6 @@ class GroupSum(ParsingHelperFunction):
         """
         # We can't apply typical xarray rolling window functionality
         grouped: dict[str | int, xr.DataArray] = {}
-
-        if self._backend_interface is not None:
-            groupby = self._input_data[groupby.name]
 
         grouping_dims = groupby.dims
         groups = array.stack(_stacked=grouping_dims).groupby(
@@ -882,13 +862,8 @@ class GroupDatetime(ParsingHelperFunction):
                         - expression: "group_datetime(flow_in, timesteps, month) <= source_use_max_monthly"
             ```
         """
-        dtype = DTYPE_OPTIONS[self._math.dimensions[group.name].dtype]
-        group_sum_helper = GroupSum(
-            return_type=self._return_type,
-            equation_name=self._equation_name,
-            input_data=self._input_data,
-            math=self._math,
-        )
+        dtype = DTYPE_OPTIONS[self._attrs.math.dimensions[group.name].dtype]
+        group_sum_helper = GroupSum(self._return_type, self._attrs)
         array = group_sum_helper(
             array, getattr(array[over.name].dt, group.name).astype(dtype), group
         )

@@ -108,6 +108,9 @@ class TestCalliopeBuildMath:
         base_math_raw["lookups"]["foo"] = math_schema.Lookup().model_dump()
         base_math_raw["parameters"]["foo"]["active"] = False
         base_math_raw["lookups"]["foo"]["active"] = False
+
+        base_math_raw["lookups"]["bar"] = math_schema.Lookup().model_dump()
+        base_math_raw["lookups"]["bar"]["active"] = False
         # Simulate variable -> parameter (common case)
         base_math_raw["parameters"]["flow_cap"] = math_schema.Parameter().model_dump()
         base_math_raw["variables"]["flow_cap"]["active"] = False
@@ -155,17 +158,13 @@ class TestCalliopeBuildMath:
 
     def test_find_duplicate_error(self, base_math_validated):
         """Finding duplicate parameters should return an error."""
-        m = base_math_validated
 
-        # Brute force a duplicate addition
-        foo_active = m.parameters.root["foo"].model_copy(update={"active": True})
-        new_param_root = dict(m.parameters.root)
-        new_param_root["foo"] = foo_active
-        new_params = m.parameters.model_copy(update={"root": new_param_root})
-        m_dupe = m.model_copy(update={"parameters": new_params})
+        base_math_validated.lookups._active["foo"] = base_math_validated.parameters[
+            "foo"
+        ]
 
         with pytest.raises(ValueError, match=r"found in multiple"):
-            m_dupe.find("foo")
+            base_math_validated.find("foo")
 
     @pytest.mark.parametrize(
         ("to_search", "subset"),
@@ -197,48 +196,62 @@ class TestCalliopeBuildMath:
         assert ("foo" in base_math_validated[group]._active) == is_active
 
     def test_where_components_keys(self, base_math_validated):
-        """The _where_components property should return the expected keys."""
-        expected_keys = {"dimension_names", "input_names", "result_names"}
-        assert set(base_math_validated.where_components) == expected_keys
+        """The where components field should return the expected keys."""
+        expected_keys = {"dimensions", "inputs", "results"}
+        assert set(base_math_validated.parsing_components["where"]) == expected_keys
 
     def test_where_components_dim_activated(self, base_math_validated):
-        """A dimension that has been activated should be in the _where_components property."""
-        assert "techs" in base_math_validated.where_components["dimension_names"]
+        """A dimension that has been activated should be in the where components field."""
+        assert "techs" in base_math_validated.parsing_components["where"]["dimensions"]
 
     def test_where_components_dim_deactivated(self, base_math_validated):
-        """A dimension that has been deactivated should not be in the _where_components property."""
+        """A dimension that has been deactivated should not be in the where components field."""
         assert (
-            "datesteps" not in base_math_validated.where_components["dimension_names"]
+            "datesteps"
+            not in base_math_validated.parsing_components["where"]["dimensions"]
         )
 
     def test_where_components_input_activated(self, base_math_validated):
-        """An input that has been activated should be in the _where_components property."""
-        assert "flow_cap" in base_math_validated.where_components["input_names"]
+        """An input that has been activated should be in the where components field."""
+        assert "flow_cap" in base_math_validated.parsing_components["where"]["inputs"]
 
-    def test_where_components_input_deactivated(self, base_math_validated):
-        """An input that has been deactivated should _also_ be in the _where_components property."""
-        assert "foo" in base_math_validated.where_components["input_names"]
+    def test_where_components_input_deactivated_there(self, base_math_validated):
+        """An input that has been deactivated should only be in the where components inputs field if it hasn't been activated elsewhere."""
+        assert "bar" in base_math_validated.parsing_components["where"]["inputs"]
+
+    def test_where_components_input_deactivated_not_there(self, base_math_validated):
+        """An input that has been deactivated should only be in the where components inputs field if it hasn't been activated elsewhere (foo is active in "variables")."""
+        assert "foo" not in base_math_validated.parsing_components["where"]["inputs"]
 
     def test_where_components_result_activated(self, base_math_validated):
-        """A result that has been activated should _also_ be in the _where_components property."""
-        assert "foo" in base_math_validated.where_components["result_names"]
+        """A result that has been activated should _also_ be in the where components field."""
+        assert "foo" in base_math_validated.parsing_components["where"]["results"]
 
     def test_where_components_result_deactivated(self, base_math_validated):
-        """A result that has been deactivated should _also_ be in the _where_components property if it isn't named as an input."""
-        assert "flow_in_inc_eff" in base_math_validated.where_components["result_names"]
+        """A result that has been deactivated should _also_ be in the where components field if it isn't named as an input."""
+        assert (
+            "flow_in_inc_eff"
+            in base_math_validated.parsing_components["where"]["results"]
+        )
 
     def test_where_components_result_deactivated_but_mentioned_in_inputs(
         self, base_math_validated
     ):
-        """A result that has been deactivated should _not_ be in the _where_components property if it has been named as an input."""
-        assert "flow_cap" not in base_math_validated.where_components["result_names"]
+        """A result that has been deactivated should _not_ be in the where components field if it has been named as an input."""
+        assert (
+            "flow_cap" not in base_math_validated.parsing_components["where"]["results"]
+        )
 
     @pytest.mark.parametrize("component", ["techs", "foo", "flow_cap"])
     def test_expression_components_activated(self, base_math_validated, component):
-        """An expression that has been activated _somewhere_ should be in the _expression_components property."""
-        assert component in base_math_validated.expression_components
+        """An expression that has been activated _somewhere_ should be in the expression components field."""
+        assert component in set().union(
+            *base_math_validated.parsing_components["expression"].values()
+        )
 
     @pytest.mark.parametrize("component", ["flow_in_inc_eff", "datesteps"])
     def test_expression_components_deactivated(self, base_math_validated, component):
-        """An expression that has been deactivated _everywhere_ should not be in the _expression_components property."""
-        assert component not in base_math_validated.expression_components
+        """An expression that has been deactivated _everywhere_ should not be in the expression components field."""
+        assert component not in set().union(
+            *base_math_validated.parsing_components["expression"].values()
+        )

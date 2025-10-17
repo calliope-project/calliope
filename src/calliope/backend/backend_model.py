@@ -291,21 +291,20 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         data_checks = self.math.checks
         check_results = {"raise": [], "warn": []}
         parser_ = parsing.where_parser.generate_where_string_parser(
-            **self.math.where_components
+            **self.math.parsing_components["where"]
         )
         eval_kwargs = {
-            "backend_interface": self,
+            "backend_data": self._dataset,
             "math": self.math,
             "input_data": self.inputs,
             "build_config": self.config,
             "helper_functions": helper_functions._registry["where"],
-            "apply_where": True,
-            "references": set(),
         }
         for name, check in data_checks.root.items():
             if check.active:
                 parsed_ = parser_.parse_string(check.where, parse_all=True)
-                evaluated = parsed_[0].eval("array", equation_name=name, **eval_kwargs)
+                eval_attrs = parsing.EvalAttrs(equation_name=name, **eval_kwargs)
+                evaluated = parsed_[0].eval("array", eval_attrs)
                 if (
                     evaluated.any()
                     and (evaluated & self.inputs.definition_matrix).any()
@@ -377,11 +376,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         else:
             self._raise_error_on_preexistence(name, component_type)
             parsed_component = parsing.ParsedBackendComponent(
-                component_type,
-                name,
-                component_def,
-                self.math.where_components,
-                self.math.expression_components,
+                component_type, name, component_def, self.math.parsing_components
             )
 
             top_level_where = parsed_component.generate_top_level_where_array(
@@ -705,8 +700,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                     "piecewise_constraints",
                     name,
                     math_schema.GlobalExpression.model_validate(dummy_expression_dict),
-                    self.math.where_components,
-                    self.math.expression_components,
+                    self.math.parsing_components,
                 )
                 eq = parsed_component.parse_equations()
                 expression_da = eq[0].evaluate_expression(

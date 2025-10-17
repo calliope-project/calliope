@@ -2,9 +2,9 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for Calliope mathematical definition."""
 
-from abc import abstractmethod
 from collections.abc import Iterable
-from typing import Literal
+from functools import cached_property
+from typing import ClassVar, Literal
 
 from pydantic import Field, model_validator
 from typing_extensions import Self
@@ -53,10 +53,8 @@ class MathComponent(CalliopeBaseModel):
     active: bool = True
     """If False, this component will be ignored during the build phase."""
 
-    @property
-    @abstractmethod
-    def _group(self) -> COMPONENTS_T:
-        """Return the component group this component belongs to."""
+    _group: ClassVar[COMPONENTS_T]
+    """Return the component group this component belongs to."""
 
 
 class Dimension(MathComponent):
@@ -69,9 +67,12 @@ class Dimension(MathComponent):
     iterator: str = "NEEDS_ITERATOR"
     """The name of the iterator to use in the LaTeX math formulation for this dimension."""
 
+    _group: ClassVar[COMPONENTS_T] = "dimensions"
+
     @property
-    def _group(self) -> COMPONENTS_T:  # noqa: D102
-        return "dimensions"
+    def default(self) -> float:
+        """Dummy variable to align with lookups and dims."""
+        return float("nan")
 
 
 class Parameter(MathComponent):
@@ -89,9 +90,7 @@ class Parameter(MathComponent):
         """Dummy variable to align with lookups and dims."""
         return "float"
 
-    @property
-    def _group(self) -> COMPONENTS_T:  # noqa: D102
-        return "parameters"
+    _group: ClassVar[COMPONENTS_T] = "parameters"
 
 
 class Lookup(MathComponent):
@@ -111,9 +110,7 @@ class Lookup(MathComponent):
     then the lookup will be converted to a boolean array with the dimensions ['techs', 'carriers'].
     """
 
-    @property
-    def _group(self) -> COMPONENTS_T:  # noqa: D102
-        return "lookups"
+    _group: ClassVar[COMPONENTS_T] = "lookups"
 
 
 class MathIndexedComponent(MathComponent):
@@ -157,18 +154,11 @@ class MathEquationComponent(MathComponent):
             raise ValueError("Must have equations defined if component is active.")
         return self
 
-    @property
-    @abstractmethod
-    def _group(self) -> COMPONENTS_T:  # noqa: D102
-        """To be implemented by subclasses."""
-
 
 class Constraint(MathIndexedComponent, MathEquationComponent):
     """Schema for named constraints."""
 
-    @property
-    def _group(self) -> COMPONENTS_T:  # noqa: D102
-        return "constraints"
+    _group: ClassVar[COMPONENTS_T] = "constraints"
 
 
 class PiecewiseConstraint(MathIndexedComponent):
@@ -202,9 +192,7 @@ class PiecewiseConstraint(MathIndexedComponent):
         """Dummy property to satisfy type hinting."""
         return SubExpressions()
 
-    @property
-    def _group(self) -> COMPONENTS_T:  # noqa: D102
-        return "piecewise_constraints"
+    _group: ClassVar[COMPONENTS_T] = "piecewise_constraints"
 
 
 class GlobalExpression(MathIndexedComponent, MathEquationComponent):
@@ -231,9 +219,7 @@ class GlobalExpression(MathIndexedComponent, MathEquationComponent):
     order: int = 0
     """Order in which to apply this global expression relative to all others, if different to its definition order."""
 
-    @property
-    def _group(self) -> COMPONENTS_T:  # noqa: D102
-        return "global_expressions"
+    _group: ClassVar[COMPONENTS_T] = "global_expressions"
 
 
 class Bounds(CalliopeBaseModel):
@@ -280,9 +266,7 @@ class Variable(MathIndexedComponent):
         """Dummy property to satisfy type hinting."""
         return SubExpressions()
 
-    @property
-    def _group(self) -> COMPONENTS_T:  # noqa: D102
-        return "variables"
+    _group: ClassVar[COMPONENTS_T] = "variables"
 
 
 class Objective(MathEquationComponent):
@@ -306,9 +290,7 @@ class Objective(MathEquationComponent):
         """Dummy property to satisfy type hinting."""
         return "True"
 
-    @property
-    def _group(self) -> COMPONENTS_T:  # noqa: D102
-        return "objectives"
+    _group: ClassVar[COMPONENTS_T] = "objectives"
 
 
 class Check(CalliopeBaseModel):
@@ -327,8 +309,8 @@ class Check(CalliopeBaseModel):
 class MathDictModel(CalliopeDictModel):
     """Math dict model with computed field to return only active components."""
 
-    @property
-    def _active(self) -> dict[AttrStr, MathComponent]:
+    @cached_property
+    def _active(self) -> dict[str, MathComponent]:
         """Return only active components."""
         return {k: v for k, v in self.root.items() if v.active}
 
@@ -438,54 +420,36 @@ class CalliopeBuildMath(CalliopeBaseModel):
 
         return self
 
-    @property
-    def where_components(
-        self,
-    ) -> dict[Literal["dimension_names", "input_names", "result_names"], set[str]]:
+    @cached_property
+    def parsing_components(self) -> dict[str, dict[str, set[str]]]:
         """Return a set of valid component names in the model to use in `where` string parsing.
 
         Returns:
             dict[Literal["dimension_names", "input_names", "result_names"], set[str]]:
                 Set of valid names grouped by location in the math in which they are defined.
         """
-        names: dict[
-            Literal["dimension_names", "input_names", "result_names"], set[str]
-        ] = {
-            "dimension_names": set(self.dimensions._active),
-            "input_names": set(self.parameters._active).union(self.lookups._active),
-            "result_names": set(self.variables._active).union(
-                self.global_expressions._active
-            ),
+        parsing_components = {
+            "dimensions": ["dimensions"],
+            "inputs": ["lookups", "parameters"],
+            "results": ["variables", "global_expressions"],
         }
-        all_input_names = set(self.parameters.root).union(self.lookups.root)
-        all_result_names = set(self.variables.root).union(self.global_expressions.root)
-        inputs_to_add_back = all_input_names - names["input_names"]
-        results_to_add_back = all_result_names - names["result_names"] - all_input_names
-        names["input_names"].update(inputs_to_add_back)
-        names["result_names"].update(results_to_add_back)
-        return names
 
-    @property
-    def expression_components(self) -> set[str]:
-        """Return a set of valid component names in the math to use in `expression` string parsing.
+        def _names():
+            return {
+                k: set().union(*[getattr(self, i)._active for i in v])
+                for k, v in parsing_components.items()
+            }
 
-        Returns:
-            set: Set of valid names consisting of all _active_ components.
-        """
-        names: set = set().union(
-            *[
-                self[i]._active
-                for i in [
-                    "dimensions",
-                    "parameters",
-                    "lookups",
-                    "variables",
-                    "global_expressions",
-                ]
-            ]
-        )
+        where_names = _names()
+        all_active = where_names["results"].union(where_names["inputs"])
+        for component in ["inputs", "results"]:
+            all_names = set().union(
+                *(getattr(self, k).root for k in parsing_components[component])
+            )
+            where_names[component] |= all_names - all_active
+        all_components = {"expression": _names(), "where": where_names}
 
-        return names
+        return all_components
 
     def find(
         self, component: str, subset: Iterable[COMPONENTS_T] | None = None
