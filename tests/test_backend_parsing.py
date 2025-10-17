@@ -24,21 +24,21 @@ def string_to_def(yaml_string, schema: math_schema.CalliopeBaseModel):
 
 
 @pytest.fixture
-def valid_component_names_dict(dummy_model_data):
+def where_components(dummy_model_data):
     return {
         "dimension_names": list(dummy_model_data.coords.keys()),
         "input_names": list(dummy_model_data.data_vars.keys()),
-        "var_expr_names": ["foo", "bar", "baz", "foobar"],
+        "result_names": ["foo", "bar", "baz", "foobar"],
     }
 
 
 @pytest.fixture
-def valid_component_names(valid_component_names_dict):
-    return set().union(*valid_component_names_dict.values())
+def expression_components(where_components):
+    return set().union(*where_components.values())
 
 
 @pytest.fixture
-def component_obj(valid_component_names_dict):
+def component_obj(where_components, expression_components):
     setup_string = """
     foreach: [A, A1]
     where: "True"
@@ -47,7 +47,7 @@ def component_obj(valid_component_names_dict):
     """
     variable_data = string_to_def(setup_string, math_schema.Constraint)
     return parsing.ParsedBackendComponent(
-        "constraints", "foo", variable_data, valid_component_names_dict
+        "constraints", "foo", variable_data, where_components, expression_components
     )
 
 
@@ -58,28 +58,28 @@ def exists_array(component_obj, dummy_model_data):
 
 
 @pytest.fixture
-def expression_string_parser(valid_component_names):
-    return expression_parser.generate_equation_parser(valid_component_names)
+def expression_string_parser(expression_components):
+    return expression_parser.generate_equation_parser(expression_components)
 
 
 @pytest.fixture
-def arithmetic_string_parser(valid_component_names):
-    return expression_parser.generate_arithmetic_parser(valid_component_names)
+def arithmetic_string_parser(expression_components):
+    return expression_parser.generate_arithmetic_parser(expression_components)
 
 
 @pytest.fixture
-def slice_parser(valid_component_names):
-    return expression_parser.generate_slice_parser(valid_component_names)
+def slice_parser(expression_components):
+    return expression_parser.generate_slice_parser(expression_components)
 
 
 @pytest.fixture
-def sub_expression_parser(valid_component_names):
-    return expression_parser.generate_sub_expression_parser(valid_component_names)
+def sub_expression_parser(expression_components):
+    return expression_parser.generate_sub_expression_parser(expression_components)
 
 
 @pytest.fixture
-def where_string_parser(valid_component_names_dict):
-    return where_parser.generate_where_string_parser(**valid_component_names_dict)
+def where_string_parser(where_components):
+    return where_parser.generate_where_string_parser(**where_components)
 
 
 @pytest.fixture
@@ -157,7 +157,7 @@ def parsed_slice_dict(component_obj, slice_parser):
 
 
 @pytest.fixture
-def obj_with_sub_expressions_and_slices(valid_component_names_dict):
+def obj_with_sub_expressions_and_slices(where_components, expression_components):
     def _obj_with_sub_expressions_and_slices(equation_string):
         if isinstance(equation_string, str):
             equation_string = f"[{{'expression': '{equation_string}'}}]"
@@ -205,7 +205,8 @@ def obj_with_sub_expressions_and_slices(valid_component_names_dict):
             "constraints",
             "my_constraint",
             string_to_def(string_, math_schema.Constraint),
-            {**valid_component_names_dict, **new_component_names},
+            {**where_components, **new_component_names},
+            expression_components,
         )
 
     return _obj_with_sub_expressions_and_slices
@@ -268,7 +269,7 @@ def dummy_backend_interface(dummy_model_data, dummy_model_math, default_config):
 
 
 @pytest.fixture
-def evaluatable_component_obj(valid_component_names_dict):
+def evaluatable_component_obj(where_components, expression_components):
     def _evaluatable_component_obj(equation_expressions):
         setup_string = f"""
         foreach: [techs, nodes]
@@ -283,15 +284,20 @@ def evaluatable_component_obj(valid_component_names_dict):
         sub_expression_dict = string_to_def(setup_string, math_schema.Constraint)
 
         class DummyParsedBackendComponent(parsing.ParsedBackendComponent):
-            def __init__(self, dict_, valid_component_names):
+            def __init__(self, dict_, where_components, expression_components):
                 parsing.ParsedBackendComponent.__init__(
-                    self, "constraints", "foo", dict_, valid_component_names
+                    self,
+                    "constraints",
+                    "foo",
+                    dict_,
+                    where_components,
+                    expression_components,
                 )
                 self.parse_top_level_where()
                 self.equations = self.parse_equations()
 
         return DummyParsedBackendComponent(
-            sub_expression_dict, valid_component_names_dict
+            sub_expression_dict, where_components, expression_components
         )
 
     return _evaluatable_component_obj
@@ -1017,7 +1023,7 @@ class TestParsedBackendEquation:
 
 class TestParsedConstraint:
     @pytest.fixture
-    def constraint_obj(self, valid_component_names_dict):
+    def constraint_obj(self, where_components, expression_components):
         constr = math_schema.Constraint.model_validate(
             {
                 "foreach": ["techs"],
@@ -1032,7 +1038,7 @@ class TestParsedConstraint:
             }
         )
         parsed_ = parsing.ParsedBackendComponent(
-            "constraints", "foo", constr, valid_component_names_dict
+            "constraints", "foo", constr, where_components, expression_components
         )
         parsed_.equations = parsed_.parse_equations(["only_techs"])
         parsed_.parse_top_level_where()
@@ -1073,13 +1079,13 @@ class TestParsedConstraint:
 
 class TestParsedVariable:
     @pytest.fixture
-    def variable_obj(self, valid_component_names_dict):
+    def variable_obj(self, where_components, expression_components):
         var = math_schema.Variable.model_validate(
             {"foreach": ["techs"], "where": "False", "bounds": {"min": 0, "max": 10}}
         )
 
         return parsing.ParsedBackendComponent(
-            "variables", "foo", var, valid_component_names_dict
+            "variables", "foo", var, where_components, expression_components
         )
 
     def test_parse_variable_dict_sets(self, variable_obj):
@@ -1099,7 +1105,7 @@ class TestParsedVariable:
 
 class TestParsedObjective:
     @pytest.fixture
-    def objective_obj(self, valid_component_names_dict):
+    def objective_obj(self, where_components, expression_components):
         obj = math_schema.Objective.model_validate(
             {
                 "equations": [
@@ -1114,7 +1120,7 @@ class TestParsedObjective:
         )
 
         parsed_ = parsing.ParsedBackendComponent(
-            "objectives", "foo", obj, valid_component_names_dict
+            "objectives", "foo", obj, where_components, expression_components
         )
         parsed_.equations = parsed_.parse_equations(["only_techs", "bar"])
         return parsed_

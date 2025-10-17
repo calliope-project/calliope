@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope.backend import expression_parser
 from calliope.schemas import config_schema, math_schema
-from calliope.util import DTYPE_OPTIONS, tools
+from calliope.util import tools
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -38,15 +38,35 @@ class EvalAttrs(TypedDict):
     references: NotRequired[set]
     build_config: config_schema.Build
 
+    # `Used only if calling on an expression parser within a where string.
+    where_array: xr.DataArray
+
 
 class EvalWhere(expression_parser.EvalToArrayStr):
     """Update type reference for `eval_attrs` to match `where` evaluation kwargs."""
 
-    eval_attrs: EvalAttrs = {}
+    eval_attrs: EvalAttrs
 
     def _add_references(self, name: str) -> None:
         """Add name of array to the set of references used in the `where` string."""
         self.eval_attrs["references"].add(name)
+
+    # Math strings evaluate to strings.
+    @overload
+    def eval(self, return_type: Literal["math_string"], **eval_kwargs) -> str: ...
+
+    # Arrays evaluate to arrays
+    @overload
+    def eval(
+        self, return_type: Literal["array"], **eval_kwargs
+    ) -> xr.DataArray | list[xr.DataArray]: ...
+
+    def eval(  # noqa: D102, override
+        self, return_type: expression_parser.RETURN_T, **eval_kwargs
+    ) -> str | xr.DataArray | list[xr.DataArray]:
+        eval_kwargs.setdefault("where_array", xr.DataArray(True))
+        eval_kwargs.setdefault("apply_where", True)
+        return super().eval(return_type, **eval_kwargs)
 
 
 class EvalNot(EvalWhere, expression_parser.EvalSignOp):
@@ -138,7 +158,7 @@ class ConfigOptionParser(EvalWhere):
             return xr.DataArray(config_val)
 
 
-class VarExprArrayParser(EvalWhere):
+class ResultArrayParser(EvalWhere):
     """Variable/Expression array processing."""
 
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
@@ -158,7 +178,7 @@ class VarExprArrayParser(EvalWhere):
 
     def __repr__(self):
         """Programming / official string representation."""
-        return f"VAR_EXPR:{self.array_name}"
+        return f"RESULT:{self.array_name}"
 
     def as_math_string(self) -> str:  # noqa: D102, override
         self._add_references(self.array_name)
@@ -172,7 +192,7 @@ class VarExprArrayParser(EvalWhere):
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         self._add_references(self.array_name)
         da = self.eval_attrs["backend_interface"]._dataset[self.array_name]
-        if self.eval_attrs.get("apply_where", True):
+        if self.eval_attrs["apply_where"]:
             da = da.notnull()
         else:
             raise self.error_msg(
@@ -211,21 +231,18 @@ class InputArrayParser(EvalWhere):
             self.array_name, xr.DataArray()
         )
 
-        try:
-            data_var_string = var.attrs["math_repr"]
-        except (AttributeError, KeyError):
-            data_var_string = rf"\text{{{self.array_name}}}"
-        if self.eval_attrs.get("apply_where", True):
+        data_var_string = var.attrs["math_repr"]
+        if self.eval_attrs["apply_where"]:
             data_var_string = rf"\exists ({data_var_string})"
         return data_var_string
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         self._add_references(self.array_name)
         da = self.eval_attrs["input_data"].get(self.array_name, xr.DataArray(False))
-        if self.eval_attrs.get("apply_where", True) and da.dtype.kind != "b":
+        if self.eval_attrs["apply_where"] and da.dtype.kind != "b":
             da = da.notnull() & (da != np.inf) & (da != -np.inf)
         elif da.isnull().any() and pd.notnull(
-            default := self.eval_attrs["math"].find(self.array_name)[1]["default"]
+            default := self.eval_attrs["math"].find(self.array_name).default
         ):
             da = da.fillna(default)
         return da
@@ -257,13 +274,8 @@ class DimensionArrayParser(EvalWhere):
         return self.array_name
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        if (name := self.array_name) in self.eval_attrs["input_data"]:
-            da = self.eval_attrs["input_data"][name]
-        else:
-            # We want the where string to evaluate successfully even if a dimension hasn't been defined.
-            da = xr.DataArray().astype(
-                DTYPE_OPTIONS[self.eval_attrs["math"].dimensions[name].dtype]
-            )
+        # We want the where string to evaluate successfully even if a dimension hasn't been defined.
+        da = self.eval_attrs["input_data"].get(self.array_name, xr.DataArray())
         return da
 
 
@@ -516,7 +528,9 @@ def subset_parser(
 def where_parser(*args: pp.ParserElement) -> pp.ParserElement:
     """Parser for strings which use AND/OR/NOT operators to combine other parser elements.
 
-    Args (pp.ParserElement): parsers that can be included in the where string; will be matched in the order provided.
+    Args:
+        *args (pp.ParserElement):
+            parsers that can be included in the where string; will be matched in the order provided.
 
     Returns:
         pp.ParserElement: where parser.
@@ -536,14 +550,14 @@ def where_parser(*args: pp.ParserElement) -> pp.ParserElement:
 
 
 def generate_where_string_parser(
-    dimension_names: Iterable, input_names: Iterable, var_expr_names: Iterable
+    dimension_names: Iterable, input_names: Iterable, result_names: Iterable
 ) -> pp.ParserElement:
     """Creates and executes the where parser.
 
     Args:
         dimension_names (Iterable): List of valid dimension names.
         input_names (Iterable): List of valid input names.
-        var_expr_names (Iterable): List of valid variable/global expression names.
+        result_names (Iterable): List of valid variable/global expression names.
 
     Returns:
         pp.ParseResults: evaluatable to a bool/boolean array.
@@ -551,12 +565,11 @@ def generate_where_string_parser(
     number, generic_identifier = expression_parser.setup_base_parser_elements()
     dimensions = data_var_parser(dimension_names, DimensionArrayParser)
     inputs = data_var_parser(input_names, InputArrayParser)
-    var_exprs = data_var_parser(var_expr_names, VarExprArrayParser)
+    results = data_var_parser(result_names, ResultArrayParser)
     config_option = config_option_parser(generic_identifier)
     bool_operand = bool_parser()
     unique_evaluatable_string = evaluatable_string_parser(
-        generic_identifier,
-        set(dimension_names).union(input_names).union(var_expr_names),
+        generic_identifier, set().union(dimension_names, input_names, result_names)
     )
     general_evaluatable_string = evaluatable_string_parser(generic_identifier, [])
     id_list = expression_parser.list_parser(
@@ -599,10 +612,10 @@ def generate_where_string_parser(
         id_list,
         dimensions,
         inputs,
-        var_exprs,
+        results,
         config_option,
         generic_identifier=generic_identifier,
     )
     return where_parser(
-        bool_operand, helper_function, comparison, subset, inputs, var_exprs
+        bool_operand, helper_function, comparison, subset, inputs, results
     )

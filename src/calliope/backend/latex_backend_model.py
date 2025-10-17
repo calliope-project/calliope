@@ -381,7 +381,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 math_schema.GlobalExpression.model_validate(
                     {"equations": [{"expression": val_name}]}
                 ),
-                self.valid_component_names,
+                self.math.where_components,
+                self.math.expression_components,
             )
             eq = parsed_val.parse_equations()
             math_parts[val] = eq[0].evaluate_expression(
@@ -666,7 +667,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             }
         )
         parsed_bounds = parsing.ParsedBackendComponent(
-            "constraints", name, bound_dict, self.valid_component_names
+            "constraints",
+            name,
+            bound_dict,
+            self.math.where_components,
+            self.math.expression_components,
         )
         equations = parsed_bounds.parse_equations()
         return tuple(

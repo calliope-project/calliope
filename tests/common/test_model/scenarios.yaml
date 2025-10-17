@@ -456,6 +456,10 @@ overrides:
           data: 0.1
           index: monetary
           dims: costs
+        cost_source_use:
+          data: 0.1
+          index: monetary
+          dims: costs
 
   demand_elec_max:
     data_tables:

@@ -410,7 +410,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
         ],
         name: str,
         unparsed_data: T,
-        valid_component_names: dict[str, Iterable[str]],
+        where_components: dict[str, Iterable[str]],
+        expression_components: Iterable[str],
     ) -> None:
         """Parse an optimisation problem configuration.
 
@@ -423,12 +424,15 @@ class ParsedBackendComponent(ParsedBackendEquation):
             name (str): Name of the optimisation problem component
             unparsed_data (T): Unparsed math formulation. Expected structure depends on
                 the group to which the optimisation problem component belongs.
-            valid_component_names (dict[str, Iterable[str]]):
-                Dictionary of valid component names for different categories of model data.
+            where_components (dict[str, Iterable[str]]):
+                Dictionary of valid component names for different categories of model data to use in parsing `where` strings.
+            expression_components (dict[str, Iterable[str]]):
+                Valid component names for different categories of model data to use in parsing `expression` strings.
         """
         self.name = f"{group}:{name}"
         self._unparsed = unparsed_data
-        self._valid_component_names = valid_component_names
+        self._where_components = where_components
+        self._expression_components = expression_components
         self.where: list[pp.ParseResults] = []
         self.equations: list[ParsedBackendEquation] = []
         self.equation_expression_parser: Callable = self.PARSERS[group]
@@ -493,7 +497,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         """
         equations = self.generate_expression_list(
             expression_parser=self.equation_expression_parser(
-                set().union(*self._valid_component_names.values())
+                self._expression_components
             ),
             expression_list=self._unparsed.equations,
             expression_group="equations",
@@ -503,7 +507,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         sub_expression_dict = {
             c_name: self.generate_expression_list(
                 expression_parser=expression_parser.generate_sub_expression_parser(
-                    set().union(*self._valid_component_names.values())
+                    self._expression_components
                 ),
                 expression_list=c_list,
                 expression_group="sub_expressions",
@@ -514,7 +518,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         slice_dict = {
             idx_name: self.generate_expression_list(
                 expression_parser=expression_parser.generate_slice_parser(
-                    set().union(*self._valid_component_names.values())
+                    self._expression_components
                 ),
                 expression_list=idx_list,
                 expression_group="slices",
@@ -584,9 +588,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             pp.ParseResults: Parsed string. If any parsing errors are caught,
                 they will be logged to `self._errors` to raise later.
         """
-        parser = where_parser.generate_where_string_parser(
-            **self._valid_component_names
-        )
+        parser = where_parser.generate_where_string_parser(**self._where_components)
         self._tracker["expr_or_where"] = "where"
         return self._parse_string(parser, where_string)
 

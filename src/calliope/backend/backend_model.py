@@ -150,7 +150,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
         if values.isnull().all():
             self.log("lookups", name, "Component not added; no data found in array.")
-            values = values.astype(float)
+            values = xr.DataArray(np.nan, attrs=values.attrs)
 
         self._add_to_dataset(name, values, "lookups", definition.model_dump())
 
@@ -291,7 +291,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         data_checks = self.math.checks
         check_results = {"raise": [], "warn": []}
         parser_ = parsing.where_parser.generate_where_string_parser(
-            **self.valid_component_names
+            **self.math.where_components
         )
         eval_kwargs = {
             "backend_interface": self,
@@ -377,7 +377,11 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         else:
             self._raise_error_on_preexistence(name, component_type)
             parsed_component = parsing.ParsedBackendComponent(
-                component_type, name, component_def, self.valid_component_names
+                component_type,
+                name,
+                component_def,
+                self.math.where_components,
+                self.math.expression_components,
             )
 
             top_level_where = parsed_component.generate_top_level_where_array(
@@ -480,10 +484,14 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             model_data (xr.Dataset): Input model data.
         """
         for name, data in self.inputs.data_vars.items():
-            if data.obj_type == "parameters":
+            if data.obj_type == "parameters" and self.math.parameters[name].active:
                 self.add_parameter(name, data, self.math.parameters[name])
-            elif data.obj_type == "lookups":
+            elif data.obj_type == "lookups" and self.math.lookups[name].active:
                 self.add_lookup(name, data, self.math.lookups[name])
+            else:
+                LOGGER.debug(
+                    f"Optimisation Model | parameters/lookups | Skipping {name} as not defined / deactivated in math."
+                )
 
         LOGGER.info("Optimisation Model | parameters/lookups | Generated.")
 
@@ -605,7 +613,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             BackendError: if `key` already exists in the backend model
                 (either with the same or different type as `obj_type`).
         """
-        if key in self._dataset.keys() and self.math.find(key)[1].active:
+        if key in self._dataset.keys() and self.math.find(key).active:
             if key in getattr(self, obj_type):
                 raise BackendError(
                     f"Trying to add already existing `{key}` to backend model {obj_type}."
@@ -652,36 +660,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         """Slice of backend dataset to show only built objectives."""
         return self._dataset.filter_by_attrs(obj_type="objectives")
 
-    @property
-    def valid_component_names(self) -> dict[str, set[str]]:
-        """Return a set of valid component names in the model data.
-
-        Returns:
-            set: set of valid names.
-        """
-
-        def _active_names(group) -> set[str]:
-            return set(k for k, v in self.math[group].root.items() if v.active)
-
-        names = {
-            "dimension_names": _active_names("dimensions"),
-            "input_names": _active_names("parameters").union(_active_names("lookups")),
-            "var_expr_names": _active_names("variables").union(
-                _active_names("global_expressions")
-            ),
-        }
-        all_input_names = set(self.math.parameters.root).union(self.math.lookups.root)
-        all_var_expr_names = set(self.math.variables.root).union(
-            self.math.global_expressions.root
-        )
-        inputs_to_add_back = all_input_names - names["input_names"]
-        var_exprs_to_add_back = (
-            all_var_expr_names - names["var_expr_names"] - all_input_names
-        )
-        names["input_names"].update(inputs_to_add_back)
-        names["var_expr_names"].update(var_exprs_to_add_back)
-        return names
-
 
 class BackendModel(BackendModelGenerator, Generic[T]):
     """Calliope's backend model functionality."""
@@ -727,7 +705,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                     "piecewise_constraints",
                     name,
                     math_schema.GlobalExpression.model_validate(dummy_expression_dict),
-                    self.valid_component_names,
+                    self.math.where_components,
+                    self.math.expression_components,
                 )
                 eq = parsed_component.parse_equations()
                 expression_da = eq[0].evaluate_expression(
@@ -1006,7 +985,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 The original and new values and a flag for whether the original are mutable object that need updating with a backend-specific method.
         """
         new_values = xr.DataArray(new_values)
-        obj_type, math = self.math.find(name, subset={"parameters", "lookups"})
+        math = self.math.find(name, subset={"parameters", "lookups"})
+        obj_type = math._group
         obj_type_singular = obj_type.removesuffix("s")
         dataset_da = getattr(self, f"get_{obj_type_singular}")(name)
         input_da = self.inputs[name]

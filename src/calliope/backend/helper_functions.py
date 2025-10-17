@@ -186,7 +186,7 @@ class ParsingHelperFunction(ABC):
         iterator = self._dim_iterator(dim)
         return rf"\text{{{iterator}}} \in \text{{{dim}}}"
 
-    def _listify(
+    def _to_str_list(
         self, vals: list[str | xr.DataArray] | str | xr.DataArray | list[xr.DataArray]
     ) -> list[str]:
         """Force a string to a list of length one if not already provided as a list.
@@ -217,7 +217,7 @@ class WhereAny(ParsingHelperFunction):
     def as_math_string(  # noqa: D102, override
         self, array: str, *, over: str | list[str | xr.DataArray]
     ) -> str:
-        over_list = self._listify(over)
+        over_list = self._to_str_list(over)
         overstring = r" \\ ".join(self._instr(i) for i in over_list)
         substack_overstring = rf"\substack{{{overstring}}}"
         # Using bigvee for "collective-or"
@@ -244,7 +244,7 @@ class WhereAny(ParsingHelperFunction):
                 "Input to `any` must be a boolean array. "
                 f"Received {input_component.name} of dtype {input_component.dtype}"
             )
-        available_dims = set(input_component.dims).intersection(self._listify(over))
+        available_dims = set(input_component.dims).intersection(self._to_str_list(over))
 
         return input_component.any(dim=available_dims, keep_attrs=True)
 
@@ -279,9 +279,7 @@ class Defined(ParsingHelperFunction):
         Args:
             within (str): the model dimension to check.
             how (Literal[all, any]): Whether to return True for `any` match of nested members or for `all` nested members.
-
-        Kwargs:
-            dims (dict[str, str]):
+            **dims (str):
                 **key**: dimension whose members will be searched for as being defined under the primary dimension (`within`).
                 Must be one of the core model dimensions: [nodes, techs, carriers]
                 **value**: subset of the dimension members to find.
@@ -324,7 +322,7 @@ class Defined(ParsingHelperFunction):
         """
         dim_names = list(dims.keys())
         dims_with_list_vals = {
-            dim: self._listify(vals) if dim == "techs" else self._listify(vals)
+            dim: self._to_str_list(vals) if dim == "techs" else self._to_str_list(vals)
             for dim, vals in dims.items()
         }
         definition_matrix = self._input_data.definition_matrix
@@ -369,7 +367,7 @@ class Defined(ParsingHelperFunction):
         elif how == "any":
             # Using vee for "collective-or"
             tex_how = "vee"
-        vals = self._listify(vals)
+        vals = self._to_str_list(vals)
         within_iterator = self._dim_iterator(within)
         dim_iterator = self._dim_iterator(dim)
         selection = rf"\text{{{dim_iterator}}} \in \text{{[{','.join(vals)}]}}"
@@ -387,7 +385,7 @@ class Sum(ParsingHelperFunction):
     def as_math_string(  # noqa: D102, override
         self, array: str, *, over: str | list[str | xr.DataArray]
     ) -> str:
-        over_list = self._listify(over)
+        over_list = self._to_str_list(over)
         overstring = r" \\ ".join(self._instr(i) for i in over_list)
         substack_overstring = rf"\substack{{{overstring}}}"
         return rf"\sum\limits_{{{substack_overstring}}} ({array})"
@@ -409,7 +407,7 @@ class Sum(ParsingHelperFunction):
                 NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN,
                 the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
-        filtered_over = set(self._listify(over)).intersection(array.dims)
+        filtered_over = set(self._to_str_list(over)).intersection(array.dims)
         return array.sum(filtered_over, min_count=1, skipna=True)
 
 
@@ -471,9 +469,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
 
         Args:
             array (xr.DataArray): Array on which to apply vectorised indexing.
-
-        Kwargs:
-            lookup_arrays (dict[str, xr.DataArray]):
+            **lookup_arrays (xr.DataArray):
                 key: dimension on which to apply vectorised indexing
                 value: array whose values are either NaN or values from the dimension given in the key.
 

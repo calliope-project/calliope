@@ -2,6 +2,7 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for Calliope mathematical definition."""
 
+from abc import abstractmethod
 from collections.abc import Iterable
 from typing import Literal
 
@@ -52,6 +53,11 @@ class MathComponent(CalliopeBaseModel):
     active: bool = True
     """If False, this component will be ignored during the build phase."""
 
+    @property
+    @abstractmethod
+    def _group(self) -> COMPONENTS_T:
+        """Return the component group this component belongs to."""
+
 
 class Dimension(MathComponent):
     """Schema for named dimension."""
@@ -62,6 +68,10 @@ class Dimension(MathComponent):
     """If True, the order of the dimension items is meaningful (e.g. chronological time)."""
     iterator: str = "NEEDS_ITERATOR"
     """The name of the iterator to use in the LaTeX math formulation for this dimension."""
+
+    @property
+    def _group(self) -> COMPONENTS_T:  # noqa: D102
+        return "dimensions"
 
 
 class Parameter(MathComponent):
@@ -78,6 +88,10 @@ class Parameter(MathComponent):
     def dtype(self) -> Literal["float"]:
         """Dummy variable to align with lookups and dims."""
         return "float"
+
+    @property
+    def _group(self) -> COMPONENTS_T:  # noqa: D102
+        return "parameters"
 
 
 class Lookup(MathComponent):
@@ -96,6 +110,10 @@ class Lookup(MathComponent):
     For instance, if the lookup starts out indexed over `techs` with values of `[electricity, gas]` and `pivot_values_to_dim: carriers`,
     then the lookup will be converted to a boolean array with the dimensions ['techs', 'carriers'].
     """
+
+    @property
+    def _group(self) -> COMPONENTS_T:  # noqa: D102
+        return "lookups"
 
 
 class MathIndexedComponent(MathComponent):
@@ -139,9 +157,18 @@ class MathEquationComponent(MathComponent):
             raise ValueError("Must have equations defined if component is active.")
         return self
 
+    @property
+    @abstractmethod
+    def _group(self) -> COMPONENTS_T:  # noqa: D102
+        """To be implemented by subclasses."""
+
 
 class Constraint(MathIndexedComponent, MathEquationComponent):
     """Schema for named constraints."""
+
+    @property
+    def _group(self) -> COMPONENTS_T:  # noqa: D102
+        return "constraints"
 
 
 class PiecewiseConstraint(MathIndexedComponent):
@@ -175,6 +202,10 @@ class PiecewiseConstraint(MathIndexedComponent):
         """Dummy property to satisfy type hinting."""
         return SubExpressions()
 
+    @property
+    def _group(self) -> COMPONENTS_T:  # noqa: D102
+        return "piecewise_constraints"
+
 
 class GlobalExpression(MathIndexedComponent, MathEquationComponent):
     """Schema for named global expressions.
@@ -200,6 +231,10 @@ class GlobalExpression(MathIndexedComponent, MathEquationComponent):
     order: int = 0
     """Order in which to apply this global expression relative to all others, if different to its definition order."""
 
+    @property
+    def _group(self) -> COMPONENTS_T:  # noqa: D102
+        return "global_expressions"
+
 
 class Bounds(CalliopeBaseModel):
     """Bounds of decision variables.
@@ -214,7 +249,7 @@ class Bounds(CalliopeBaseModel):
     """Decision variable lower bound, either as a reference to an input parameter or as a number."""
 
 
-class Variable(MathIndexedComponent, MathComponent):
+class Variable(MathIndexedComponent):
     """Schema for optimisation problem variables.
 
     A decision variable must be referenced in at least one constraint or in the
@@ -245,6 +280,10 @@ class Variable(MathIndexedComponent, MathComponent):
         """Dummy property to satisfy type hinting."""
         return SubExpressions()
 
+    @property
+    def _group(self) -> COMPONENTS_T:  # noqa: D102
+        return "variables"
+
 
 class Objective(MathEquationComponent):
     """Schema for optimisation problem objectives.
@@ -267,6 +306,10 @@ class Objective(MathEquationComponent):
         """Dummy property to satisfy type hinting."""
         return "True"
 
+    @property
+    def _group(self) -> COMPONENTS_T:  # noqa: D102
+        return "objectives"
+
 
 class Check(CalliopeBaseModel):
     """Schema for input data checks."""
@@ -281,55 +324,64 @@ class Check(CalliopeBaseModel):
     """If False, this check will be ignored during the build phase."""
 
 
-class Dimensions(CalliopeDictModel):
+class MathDictModel(CalliopeDictModel):
+    """Math dict model with computed field to return only active components."""
+
+    @property
+    def _active(self) -> dict[AttrStr, MathComponent]:
+        """Return only active components."""
+        return {k: v for k, v in self.root.items() if v.active}
+
+
+class Dimensions(MathDictModel):
     """Calliope model dimensions dictionary."""
 
     root: dict[AttrStr, Dimension] = Field(default_factory=dict)
 
 
-class Parameters(CalliopeDictModel):
+class Parameters(MathDictModel):
     """Calliope model parameters dictionary."""
 
     root: dict[AttrStr, Parameter] = Field(default_factory=dict)
 
 
-class Lookups(CalliopeDictModel):
+class Lookups(MathDictModel):
     """Calliope model lookup dictionary."""
 
     root: dict[AttrStr, Lookup] = Field(default_factory=dict)
 
 
-class Variables(CalliopeDictModel):
+class Variables(MathDictModel):
     """Calliope model variables dictionary."""
 
     root: dict[AttrStr, Variable] = Field(default_factory=dict)
 
 
-class GlobalExpressions(CalliopeDictModel):
+class GlobalExpressions(MathDictModel):
     """Calliope model global_expressions dictionary."""
 
     root: dict[AttrStr, GlobalExpression] = Field(default_factory=dict)
 
 
-class Constraints(CalliopeDictModel):
+class Constraints(MathDictModel):
     """Calliope model constraints dictionary."""
 
     root: dict[AttrStr, Constraint] = Field(default_factory=dict)
 
 
-class PiecewiseConstraints(CalliopeDictModel):
+class PiecewiseConstraints(MathDictModel):
     """Calliope model piecewise_constraints dictionary."""
 
     root: dict[AttrStr, PiecewiseConstraint] = Field(default_factory=dict)
 
 
-class Objectives(CalliopeDictModel):
+class Objectives(MathDictModel):
     """Calliope model objectives dictionary."""
 
     root: dict[AttrStr, Objective] = Field(default_factory=dict)
 
 
-class Checks(CalliopeDictModel):
+class Checks(MathDictModel):
     """Calliope math checks dictionary."""
 
     root: dict[AttrStr, Check] = Field(default_factory=dict)
@@ -369,11 +421,7 @@ class CalliopeBuildMath(CalliopeBaseModel):
         """Ensure all component names are unique."""
         groups = sorted(
             (
-                {
-                    name
-                    for name, values in getattr(self, field).root.items()
-                    if values.active
-                }
+                {name for name in getattr(self, field)._active}
                 for field in type(self).model_fields
             ),
             key=len,
@@ -390,30 +438,69 @@ class CalliopeBuildMath(CalliopeBaseModel):
 
         return self
 
-    def find(
-        self, component: str, subset: Iterable[COMPONENTS_T] | None = None
-    ) -> tuple[str, MathComponent]:
-        """Find a component in the math schema."""
-        fields = (
-            set(subset)
-            if subset is not None
-            else set(type(self).model_fields) - {"checks"}
+    @property
+    def where_components(
+        self,
+    ) -> dict[Literal["dimension_names", "input_names", "result_names"], set[str]]:
+        """Return a set of valid component names in the model to use in `where` string parsing.
+
+        Returns:
+            dict[Literal["dimension_names", "input_names", "result_names"], set[str]]:
+                Set of valid names grouped by location in the math in which they are defined.
+        """
+        names: dict[
+            Literal["dimension_names", "input_names", "result_names"], set[str]
+        ] = {
+            "dimension_names": set(self.dimensions._active),
+            "input_names": set(self.parameters._active).union(self.lookups._active),
+            "result_names": set(self.variables._active).union(
+                self.global_expressions._active
+            ),
+        }
+        all_input_names = set(self.parameters.root).union(self.lookups.root)
+        all_result_names = set(self.variables.root).union(self.global_expressions.root)
+        inputs_to_add_back = all_input_names - names["input_names"]
+        results_to_add_back = all_result_names - names["result_names"] - all_input_names
+        names["input_names"].update(inputs_to_add_back)
+        names["result_names"].update(results_to_add_back)
+        return names
+
+    @property
+    def expression_components(self) -> set[str]:
+        """Return a set of valid component names in the math to use in `expression` string parsing.
+
+        Returns:
+            set: Set of valid names consisting of all _active_ components.
+        """
+        names: set = set().union(
+            *[
+                self[i]._active
+                for i in [
+                    "dimensions",
+                    "parameters",
+                    "lookups",
+                    "variables",
+                    "global_expressions",
+                ]
+            ]
         )
 
-        found = {
-            f
-            for f in fields
-            if (values := getattr(self, f).root.get(component)) is not None
-            and values.active
-        }
+        return names
+
+    def find(
+        self, component: str, subset: Iterable[COMPONENTS_T] | None = None
+    ) -> MathComponent:
+        """Find a component in the math schema."""
+        fields: Iterable = subset or (set(type(self).model_fields) - {"checks"})
+
+        found = {f for f in fields if component in getattr(self, f)._active}
         if not found:
             raise KeyError(f"Component name `{component}` not found in math schema.")
         if len(found) > 1:
             raise ValueError(
                 f"Component name `{component}` found in multiple places: {found}."
             )
-        field = found.pop()
-        return field, getattr(self, field).root[component]
+        return getattr(self, found.pop())[component]
 
 
 class CalliopeInputMath(CalliopeDictModel):

@@ -103,8 +103,13 @@ def resample(
 
     for var_name, var_data in data_ts.data_vars.items():
         resampler = var_data.resample(**resample_kwargs)
-        var_math = math.find(var_name, subset=["parameters", "lookups"])[1]
-        resample_method = var_math["resample_method"]
+        try:
+            var_math = math.find(var_name, subset=["parameters", "lookups"])
+            resample_method = var_math["resample_method"]
+        except KeyError as e:
+            raise exceptions.ModelError(
+                f"No resampling method defined in math configuration for timeseries input data `{var_name}`."
+            ) from e
 
         if resample_method == "sum":
             method_kwargs = {"min_count": 1}

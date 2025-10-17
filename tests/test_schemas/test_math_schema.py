@@ -1,4 +1,5 @@
 import re
+from unittest.mock import patch
 
 import pytest
 
@@ -35,6 +36,7 @@ class TestGlobalExpressions:
         assert validated_math.global_expressions["expr3"].order == 3
 
 
+@patch("calliope.schemas.math_schema.MathEquationComponent.__abstractmethods__", set())
 class TestMathEquationComponent:
     """Test the equation component schema."""
 
@@ -78,7 +80,7 @@ class TestMathEquationComponent:
             math_schema.MathEquationComponent.model_validate(dummy_empty_equation)
 
     def test_inactive_empty_pass(self, dummy_empty_equation):
-        """Inactive components should silently succed even if equations are empty."""
+        """Inactive components should silently succeed even if equations are empty."""
         dummy_empty_equation |= {"active": False}
         math_schema.MathEquationComponent.model_validate(dummy_empty_equation)
 
@@ -128,25 +130,28 @@ class TestCalliopeBuildMath:
         ):
             math_schema.CalliopeBuildMath.model_validate(base_math_raw)
 
-    @pytest.mark.parametrize(
-        ("to_search", "component"),
-        [
-            ("foo", "variables"),
-            ("flow_out", "variables"),
-            ("flow_cap", "parameters"),
-            ("bigM", "parameters"),
-            ("timesteps", "dimensions"),
-            ("cap_method", "lookups"),
-            ("force_zero_area_use", "constraints"),
-            ("min_cost_optimisation", "objectives"),
-            ("cost_operation_variable", "global_expressions"),
-        ],
-    )
-    def test_find(self, to_search, component, base_math_validated):
+    search_group_args = [
+        ("foo", "variables"),
+        ("flow_out", "variables"),
+        ("flow_cap", "parameters"),
+        ("bigM", "parameters"),
+        ("timesteps", "dimensions"),
+        ("cap_method", "lookups"),
+        ("force_zero_area_use", "constraints"),
+        ("min_cost_optimisation", "objectives"),
+        ("cost_operation_variable", "global_expressions"),
+    ]
+
+    @pytest.mark.parametrize(("to_search", "group"), search_group_args)
+    def test_find(self, to_search, group, base_math_validated):
         """Component searches should return the expected data."""
-        location, data = base_math_validated.find(to_search)
-        assert location == component
-        assert data == base_math_validated[location][to_search]
+        data = base_math_validated.find(to_search)
+        assert data == base_math_validated[group][to_search]
+
+    @pytest.mark.parametrize(("to_search", "group"), search_group_args)
+    def test_group(self, to_search, group, base_math_validated):
+        """Component searches should return the expected data."""
+        base_math_validated[group][to_search]._group == group
 
     def test_find_duplicate_error(self, base_math_validated):
         """Finding duplicate parameters should return an error."""
@@ -182,3 +187,58 @@ class TestCalliopeBuildMath:
             KeyError, match=f"Component name `{to_search}` not found in math schema"
         ):
             base_math_validated.find(to_search, subset)
+
+    @pytest.mark.parametrize(
+        ("group", "is_active"),
+        [("variables", True), ("parameters", False), ("lookups", False)],
+    )
+    def test_in_active_dict(self, base_math_validated, group, is_active):
+        """The _active property should return only active components."""
+        assert ("foo" in base_math_validated[group]._active) == is_active
+
+    def test_where_components_keys(self, base_math_validated):
+        """The _where_components property should return the expected keys."""
+        expected_keys = {"dimension_names", "input_names", "result_names"}
+        assert set(base_math_validated.where_components) == expected_keys
+
+    def test_where_components_dim_activated(self, base_math_validated):
+        """A dimension that has been activated should be in the _where_components property."""
+        assert "techs" in base_math_validated.where_components["dimension_names"]
+
+    def test_where_components_dim_deactivated(self, base_math_validated):
+        """A dimension that has been deactivated should not be in the _where_components property."""
+        assert (
+            "datesteps" not in base_math_validated.where_components["dimension_names"]
+        )
+
+    def test_where_components_input_activated(self, base_math_validated):
+        """An input that has been activated should be in the _where_components property."""
+        assert "flow_cap" in base_math_validated.where_components["input_names"]
+
+    def test_where_components_input_deactivated(self, base_math_validated):
+        """An input that has been deactivated should _also_ be in the _where_components property."""
+        assert "foo" in base_math_validated.where_components["input_names"]
+
+    def test_where_components_result_activated(self, base_math_validated):
+        """A result that has been activated should _also_ be in the _where_components property."""
+        assert "foo" in base_math_validated.where_components["result_names"]
+
+    def test_where_components_result_deactivated(self, base_math_validated):
+        """A result that has been deactivated should _also_ be in the _where_components property if it isn't named as an input."""
+        assert "flow_in_inc_eff" in base_math_validated.where_components["result_names"]
+
+    def test_where_components_result_deactivated_but_mentioned_in_inputs(
+        self, base_math_validated
+    ):
+        """A result that has been deactivated should _not_ be in the _where_components property if it has been named as an input."""
+        assert "flow_cap" not in base_math_validated.where_components["result_names"]
+
+    @pytest.mark.parametrize("component", ["techs", "foo", "flow_cap"])
+    def test_expression_components_activated(self, base_math_validated, component):
+        """An expression that has been activated _somewhere_ should be in the _expression_components property."""
+        assert component in base_math_validated.expression_components
+
+    @pytest.mark.parametrize("component", ["flow_in_inc_eff", "datesteps"])
+    def test_expression_components_deactivated(self, base_math_validated, component):
+        """An expression that has been deactivated _everywhere_ should not be in the _expression_components property."""
+        assert component not in base_math_validated.expression_components
