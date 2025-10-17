@@ -304,7 +304,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         if pe.TerminationCondition.to_solver_status(termination) == pe.SolverStatus.ok:
             self._instance.load_solution(results.solution[0])
-            results = self.load_results()
+            results = self.load_results(solve_config.postprocessing_active)
         else:
             self._solve_logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):

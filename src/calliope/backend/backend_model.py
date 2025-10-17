@@ -1223,7 +1223,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 otherwise an empty dataset.
         """
 
-    def load_results(self) -> xr.Dataset:
+    def load_results(self, postprocess: bool) -> xr.Dataset:
         """Load and evaluate model results after a successful run.
 
         Evaluates backend decision variables, global expressions, parameters (if not in
@@ -1269,7 +1269,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             attrs=self._dataset.attrs,
         ).astype(float)
 
-        results = self.add_postprocessed_arrays(results)
+        if postprocess:
+            results = self.add_postprocessed_arrays(results)
         cleaned_results = xr.Dataset(
             {
                 k: _drop_attrs(v)
