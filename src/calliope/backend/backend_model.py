@@ -396,13 +396,20 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 parsed_component = None
         else:
             self._raise_error_on_preexistence(name, component_type)
-            valid_names = self.valid_component_names
+
             if component_type == "postprocessed":
-                valid_names["var_expr_names"] = valid_names["var_expr_names"] | set(
+                parsing_components = self.math.parsing_components.copy()
+
+                parsing_components["where"]["postprocessed"] = set(
                     self.math.postprocessed.root
                 )
+                parsing_components["expression"]["postprocessed"] = set(
+                    self.math.postprocessed._active
+                )
+            else:
+                parsing_components = self.math.parsing_components
             parsed_component = parsing.ParsedBackendComponent(
-                component_type, name, component_def, self.math.parsing_components
+                component_type, name, component_def, parsing_components
             )
 
             top_level_where = parsed_component.generate_top_level_where_array(

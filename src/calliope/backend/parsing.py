@@ -636,9 +636,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             pp.ParseResults: Parsed string. If any parsing errors are caught,
                 they will be logged to `self._errors` to raise later.
         """
-        parser = where_parser.generate_where_string_parser(
-            **self._where_components, postprocessing=self.group == "postprocessed"
-        )
+        parser = where_parser.generate_where_string_parser(**self._where_components)
         self._tracker["expr_or_where"] = "where"
         return self._parse_string(parser, where_string)
 

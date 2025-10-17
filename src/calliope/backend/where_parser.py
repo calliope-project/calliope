@@ -501,8 +501,7 @@ def generate_where_string_parser(
     dimensions: Iterable,
     inputs: Iterable,
     results: Iterable,
-    *,
-    postprocessing: bool = False,
+    postprocessed: Iterable | None = None,
 ) -> pp.ParserElement:
     """Creates and executes the where parser.
 
@@ -510,17 +509,16 @@ def generate_where_string_parser(
         dimensions (Iterable): List of valid dimension names.
         inputs (Iterable): List of valid input names.
         results (Iterable): List of valid variable/global expression names.
-        postprocessing (bool, optional):
-            If True, variable/global expression names will be allowed in the comparison parsing grammar.
-            Defaults to False.
+        postprocessed (Iterable | None): List of valid postprocessed expression names. Defaults to None.
 
     Returns:
         pp.ParseResults: evaluatable to a bool/boolean array.
     """
+    postprocessed = postprocessed if postprocessed is not None else set()
     number, generic_identifier = expression_parser.setup_base_parser_elements()
     dimensions_parser = data_var_parser(dimensions, DimensionArrayParser)
     inputs_parser = data_var_parser(inputs, InputArrayParser)
-    results_parser = data_var_parser(results, ResultArrayParser)
+    results_parser = data_var_parser(results | postprocessed, ResultArrayParser)
     config_option = config_option_parser(generic_identifier)
     bool_operand = bool_parser()
     unique_evaluatable_string = evaluatable_string_parser(
@@ -550,7 +548,7 @@ def generate_where_string_parser(
         inputs_parser,
         config_option,
     ]
-    if postprocessing:
+    if postprocessed:
         arithmetic_elements.append(results_parser)
 
     comparison_arithmetic = expression_parser.arithmetic_parser(
