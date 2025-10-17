@@ -440,6 +440,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
     PARSERS: dict[str, Callable] = {
         "constraints": expression_parser.generate_equation_parser,
         "global_expressions": expression_parser.generate_arithmetic_parser,
+        "postprocessed": expression_parser.generate_arithmetic_parser,
         "objectives": expression_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
         "piecewise_constraints": expression_parser.generate_arithmetic_parser,
@@ -450,6 +451,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         group: Literal[
             "variables",
             "global_expressions",
+            "postprocessed",
             "constraints",
             "piecewise_constraints",
             "objectives",
@@ -473,6 +475,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 Dictionary of valid component names for different categories of model data to use in parsing `where` and `expression` strings.
         """
         self.name = f"{group}:{name}"
+        self.group = group
         self._unparsed = unparsed_data
         self._where_components = parsing_components["where"]
         self._expression_components = set().union(

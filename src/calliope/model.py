@@ -375,7 +375,9 @@ class Model(ModelStructure):
 
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
-            results = postprocess.postprocess_model_results(results, self)
+            results = self._apply_zero_threshold(
+                results, self.config.solve.zero_threshold
+            )
 
         self.math = self.math.update({"build": self.backend.math.model_dump()})
         self.runtime = self.runtime.update(
@@ -871,3 +873,28 @@ class Model(ModelStructure):
         )
 
         self.backend.update_input("spores_score", new_score)
+
+    @staticmethod
+    def _apply_zero_threshold(results: xr.Dataset, zero_threshold: float) -> xr.Dataset:
+        """Remove unreasonably small values in-place.
+
+        Used to avoid floating point errors caused by solver output.
+        Reasonable value = 1e-12.
+        """
+        if zero_threshold != 0:
+            for name in list(results.data_vars):
+                # If there are any values in the data variable which fall below the
+                # threshold, note the data variable name and set those values to zero
+                results[name] = xr.where(
+                    np.abs(results[name]) < zero_threshold, 0, results[name]
+                )
+
+            LOGGER.info(
+                "Postprocessing: applied zero threshold %s to model results.",
+                zero_threshold,
+            )
+        else:
+            LOGGER.info(
+                "Postprocessing: skipping zero threshold application (threshold equals 0)."
+            )
+        return results

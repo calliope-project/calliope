@@ -37,7 +37,9 @@ if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
 
 T = TypeVar("T")
-ALL_COMPONENTS_T = Literal["parameters", "lookups", ORDERED_COMPONENTS_T]
+ALL_COMPONENTS_T = Literal[
+    "parameters", "lookups", ORDERED_COMPONENTS_T, "postprocessed"
+]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -96,7 +98,6 @@ class SelectiveWrappingMeta(ABCMeta):
 class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
     """Helper class for backends."""
 
-    LID_COMPONENTS: tuple[ALL_COMPONENTS_T, ...] = typing.get_args(ALL_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = [
         "description",
         "unit",
@@ -335,12 +336,32 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 )
             LOGGER.info(f"Optimisation Model | {components} | Generated.")
 
+    def _add_postprocessed(
+        self, name: str, definition: math_schema.PostprocessArray
+    ) -> None:
+        """Add a postprocessed array to the model.
+
+        Args:
+            name (str): Name of the postprocessed array.
+            definition (math_schema.PostprocessArray): Definition of the postprocessed array.
+        """
+
+        def _expression_setter(
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
+        ) -> xr.DataArray:
+            expr = element.evaluate_expression(self, where=where, references=references)
+            to_fill = expr.where(where)
+
+            return to_fill
+
+        self._add_component(name, definition, _expression_setter, "postprocessed")
+
     def _add_component(
         self,
         name: str,
         component_def: Tp,
         component_setter: Callable,
-        component_type: ORDERED_COMPONENTS_T,
+        component_type: Literal[ORDERED_COMPONENTS_T, "postprocessed"],
         break_early: bool = True,
     ) -> parsing.ParsedBackendComponent | None:
         """Generalised function to add a optimisation problem component array to the model.
@@ -375,8 +396,20 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 parsed_component = None
         else:
             self._raise_error_on_preexistence(name, component_type)
+
+            if component_type == "postprocessed":
+                parsing_components = self.math.parsing_components.copy()
+
+                parsing_components["where"]["postprocessed"] = set(
+                    self.math.postprocessed.root
+                )
+                parsing_components["expression"]["postprocessed"] = set(
+                    self.math.postprocessed._active
+                )
+            else:
+                parsing_components = self.math.parsing_components
             parsed_component = parsing.ParsedBackendComponent(
-                component_type, name, component_def, self.math.parsing_components
+                component_type, name, component_def, parsing_components
             )
 
             top_level_where = parsed_component.generate_top_level_where_array(
@@ -494,6 +527,63 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
     def _clean_arrays(*args) -> None:
         """Preemptively delete of objects with large memory footprints."""
         del args
+
+    @contextmanager
+    def _postprocess(self, temp_dataset: xr.Dataset):
+        """Context manager to temporarily replace _dataset and optionally extend some_set.
+
+        Args:
+            temp_dataset: The temporary xarray Dataset to use
+            extend_set_with: Optional iterable of items to temporarily add to some_set
+
+        Yields:
+            The temporary dataset
+
+        Example:
+            with self.temporary_dataset(other_dataset, extend_set_with={'extra1', 'extra2'}):
+                # Work with the temporary dataset and extended set
+                result = self.some_method()
+            # Both original dataset and set are automatically restored
+        """
+        original_dataset = self._dataset
+        methods_to_mock = ["_create_obj_list", "delete_component"]
+        original_methods = {k: getattr(self, k) for k in methods_to_mock}
+        try:
+            self._dataset = temp_dataset
+            for method in methods_to_mock:
+                setattr(self, method, lambda *args, **kwargs: None)
+            yield None
+        finally:
+            # Always restore the original attributes, even if an exception occurs
+            self._dataset = original_dataset
+            for method in methods_to_mock:
+                setattr(self, method, original_methods[method])
+
+    def add_postprocessed_arrays(self, results: xr.Dataset) -> xr.Dataset:
+        """Add postprocessed arrays to the results dataset.
+
+        Args:
+            results (xr.Dataset): The results dataset to add postprocessed arrays to.
+
+        Returns:
+            xr.Dataset: The updated results dataset with postprocessed arrays.
+        """
+        postprocessed_math = self.math.postprocessed.root
+        ordered_items = sorted(
+            postprocessed_math.items(), key=lambda item: item[1].order
+        )
+
+        with self._postprocess(self.inputs.assign(results)):
+            for name, definition in ordered_items:
+                start = time.time()
+                self._add_postprocessed(name, definition)
+                end = time.time() - start
+                LOGGER.debug(
+                    f"Optimisation Model | postprocess:{name} | Built in {end:.4f}s"
+                )
+            LOGGER.info("Optimisation Model | postprocess | Generated.")
+            updated_results = results.assign(self.postprocessed)
+        return updated_results
 
     def _add_to_dataset(
         self,
@@ -654,6 +744,11 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
     def objectives(self):
         """Slice of backend dataset to show only built objectives."""
         return self._dataset.filter_by_attrs(obj_type="objectives")
+
+    @property
+    def postprocessed(self):
+        """Slice of backend dataset to show only built postprocessed arrays."""
+        return self._dataset.filter_by_attrs(obj_type="postprocessed")
 
 
 class BackendModel(BackendModelGenerator, Generic[T]):
@@ -1135,7 +1230,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 otherwise an empty dataset.
         """
 
-    def load_results(self) -> xr.Dataset:
+    def load_results(self, postprocess: bool) -> xr.Dataset:
         """Load and evaluate model results after a successful run.
 
         Evaluates backend decision variables, global expressions, parameters (if not in
@@ -1152,23 +1247,18 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             return da
 
         all_variables = {
-            name_: _drop_attrs(self.get_variable(name_, as_backend_objs=False))
-            for name_, var in self.variables.items()
-            if var.notnull().any()
+            name_: self.get_variable(name_, as_backend_objs=False)
+            for name_ in self.variables.keys()
         }
         all_global_expressions = {
-            name_: _drop_attrs(
-                self.get_global_expression(name_, as_backend_objs=False, eval_body=True)
+            name_: self.get_global_expression(
+                name_, as_backend_objs=False, eval_body=True
             )
-            for name_, expr in self.global_expressions.items()
-            if expr.notnull().any()
+            for name_ in self.global_expressions.keys()
         }
         all_objectives = {
-            name_: _drop_attrs(
-                self.get_objective(name_, as_backend_objs=False, eval_body=True)
-            )
-            for name_, expr in self.objectives.items()
-            if expr.notnull().any()
+            name_: self.get_objective(name_, as_backend_objs=False, eval_body=True)
+            for name_ in self.objectives.keys()
         }
 
         all_shadow_prices = {
@@ -1186,7 +1276,17 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             attrs=self._dataset.attrs,
         ).astype(float)
 
-        return results
+        if postprocess:
+            results = self.add_postprocessed_arrays(results)
+        cleaned_results = xr.Dataset(
+            {
+                k: _drop_attrs(v)
+                for k, v in results.data_vars.items()
+                if v.notnull().any()
+            },
+            attrs=self._dataset.attrs,
+        )
+        return cleaned_results
 
     def _find_all_references(self, initial_references: set) -> set:
         """Find all nested references to optimisation problem components from an initial set of references.

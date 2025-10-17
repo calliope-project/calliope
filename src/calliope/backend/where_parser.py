@@ -145,11 +145,6 @@ class ResultArrayParser(expression_parser.EvalArrayOrMath):
         da = self.eval_attrs.backend_data[self.array_name]
         if self.eval_attrs.apply_where:
             da = da.notnull()
-        else:
-            raise self.error_msg(
-                f"where string | Cannot compare variable/global expression array contents with expected values. "
-                f"Received `{self.array_name}`."
-            )
         return da
 
 
@@ -503,7 +498,10 @@ def where_parser(*args: pp.ParserElement) -> pp.ParserElement:
 
 
 def generate_where_string_parser(
-    dimensions: Iterable, inputs: Iterable, results: Iterable
+    dimensions: Iterable,
+    inputs: Iterable,
+    results: Iterable,
+    postprocessed: Iterable | None = None,
 ) -> pp.ParserElement:
     """Creates and executes the where parser.
 
@@ -511,14 +509,16 @@ def generate_where_string_parser(
         dimensions (Iterable): List of valid dimension names.
         inputs (Iterable): List of valid input names.
         results (Iterable): List of valid variable/global expression names.
+        postprocessed (Iterable | None): List of valid postprocessed expression names. Defaults to None.
 
     Returns:
         pp.ParseResults: evaluatable to a bool/boolean array.
     """
+    postprocessed = postprocessed if postprocessed is not None else set()
     number, generic_identifier = expression_parser.setup_base_parser_elements()
     dimensions_parser = data_var_parser(dimensions, DimensionArrayParser)
     inputs_parser = data_var_parser(inputs, InputArrayParser)
-    results_parser = data_var_parser(results, ResultArrayParser)
+    results_parser = data_var_parser(results | postprocessed, ResultArrayParser)
     config_option = config_option_parser(generic_identifier)
     bool_operand = bool_parser()
     unique_evaluatable_string = evaluatable_string_parser(
@@ -540,14 +540,19 @@ def generate_where_string_parser(
         arithmetic,
         generic_identifier=generic_identifier,
     )
-    comparison_arithmetic = expression_parser.arithmetic_parser(
+    arithmetic_elements = [
         comparison_helper_function,
         subset,
         number,
         dimensions_parser,
         inputs_parser,
         config_option,
-        arithmetic=arithmetic,
+    ]
+    if postprocessed:
+        arithmetic_elements.append(results_parser)
+
+    comparison_arithmetic = expression_parser.arithmetic_parser(
+        *arithmetic_elements, arithmetic=arithmetic
     )
     comparison = comparison_parser(
         lhs=[comparison_arithmetic],
