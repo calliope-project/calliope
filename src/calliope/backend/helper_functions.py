@@ -17,11 +17,10 @@ import pandas as pd
 import xarray as xr
 
 from calliope.exceptions import BackendError
-from calliope.schemas.math_schema import CalliopeBuildMath
 from calliope.util import DTYPE_OPTIONS
 
 if TYPE_CHECKING:
-    from calliope.backend.backend_model import BackendModel
+    from calliope.backend.expression_parser import EvalAttrs
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
 ] = {"where": {}, "expression": {}}
@@ -31,25 +30,14 @@ class ParsingHelperFunction(ABC):
     """Abstract base class for helper function parsing."""
 
     def __init__(
-        self,
-        return_type: Literal["array", "math_string"],
-        *,
-        equation_name: str,
-        input_data: xr.Dataset,
-        math: "CalliopeBuildMath",
-        backend_interface: type["BackendModel"] | None = None,
-        **kwargs,
+        self, return_type: Literal["array", "math_string"], attrs: "EvalAttrs"
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
 
         The abstract properties and methods defined here must be defined by all helper functions.
-
         """
-        self._equation_name = equation_name
-        self._input_data = input_data
-        self._backend_interface = backend_interface
-        self._math = math
         self._return_type = return_type
+        self._attrs = attrs
 
     @property
     @abstractmethod
@@ -156,8 +144,6 @@ class ParsingHelperFunction(ABC):
         Returns:
             list[str]: List of dimensions over which the math component is iterating.
 
-        Note:
-            the iterator -> dimension conversion is very simple (appends an `s`) so it won't work with math components that have already have `_update_iterator` applied.
         """
 
         def __extract_dims(matched) -> str:
@@ -168,7 +154,7 @@ class ParsingHelperFunction(ABC):
                 [
                     dim_name
                     for i in iterators.split(",")
-                    for dim_name, dim_math in self._math.dimensions.root.items()
+                    for dim_name, dim_math in self._attrs.math.dimensions.root.items()
                     if dim_math.iterator == i
                 ]
             )
@@ -188,7 +174,9 @@ class ParsingHelperFunction(ABC):
         iterator = self._dim_iterator(dim)
         return rf"\text{{{iterator}}} \in \text{{{dim}}}"
 
-    def _listify(self, vals: list[str] | str) -> list[str]:
+    def _to_str_list(
+        self, vals: list[str | xr.DataArray] | str | xr.DataArray | list[xr.DataArray]
+    ) -> list[str]:
         """Force a string to a list of length one if not already provided as a list.
 
         Args:
@@ -199,10 +187,10 @@ class ParsingHelperFunction(ABC):
         """
         if not isinstance(vals, list):
             vals = [vals]
-        return vals
+        return [str(i.name) if isinstance(i, xr.DataArray) else i for i in vals]
 
     def _dim_iterator(self, dim: str) -> str:
-        return self._math.dimensions[dim].iterator
+        return self._attrs.math.dimensions[dim].iterator
 
 
 class WhereAny(ParsingHelperFunction):
@@ -214,16 +202,18 @@ class WhereAny(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def as_math_string(self, array: str, *, over: str | list[str]) -> str:  # noqa: D102, override
-        if isinstance(over, str):
-            overstring = self._instr(over)
-        else:
-            foreach_string = r" \\ ".join(self._instr(i) for i in over)
-            overstring = rf"\substack{{{foreach_string}}}"
+    def as_math_string(  # noqa: D102, override
+        self, array: str, *, over: str | list[str | xr.DataArray]
+    ) -> str:
+        over_list = self._to_str_list(over)
+        overstring = r" \\ ".join(self._instr(i) for i in over_list)
+        substack_overstring = rf"\substack{{{overstring}}}"
         # Using bigvee for "collective-or"
-        return rf"\bigvee\limits_{{{overstring}}} ({array})"
+        return rf"\bigvee\limits_{{{substack_overstring}}} ({array})"
 
-    def as_array(self, input_component: str, *, over: str | list[str]) -> xr.DataArray:
+    def as_array(
+        self, input_component: xr.DataArray, *, over: xr.DataArray | list[xr.DataArray]
+    ) -> xr.DataArray:
         """Reduce the boolean where array of a model input by applying `any` over some dimension(s).
 
         If the component exists in the model, returns a boolean array with dimensions reduced
@@ -237,26 +227,14 @@ class WhereAny(ParsingHelperFunction):
         Returns:
             xr.DataArray: resulting array.
         """
-        if input_component in self._input_data.data_vars:
-            component_da = self._input_data[input_component]
-            bool_component_da = (
-                component_da.notnull()
-                & (component_da != np.inf)
-                & (component_da != -np.inf)
+        if input_component.dtype.kind != "b":
+            raise BackendError(
+                "Input to `any` must be a boolean array. "
+                f"Received {input_component.name} of dtype {input_component.dtype}"
             )
-        elif (
-            self._backend_interface is not None
-            and input_component in self._backend_interface._dataset
-        ):
-            bool_component_da = self._backend_interface._dataset[
-                input_component
-            ].notnull()
-        else:
-            bool_component_da = xr.DataArray(False)
-        over = self._listify(over)
-        available_dims = set(bool_component_da.dims).intersection(over)
+        available_dims = set(input_component.dims).intersection(self._to_str_list(over))
 
-        return bool_component_da.any(dim=available_dims, keep_attrs=True)
+        return input_component.any(dim=available_dims, keep_attrs=True)
 
 
 class Defined(ParsingHelperFunction):
@@ -267,17 +245,19 @@ class Defined(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def as_math_string(self, *, within: str, how: Literal["all", "any"], **dims) -> str:  # noqa: D102, override
+    def as_math_string(  # noqa: D102, override
+        self, *, within: xr.DataArray, how: Literal["all", "any"], **dims
+    ) -> str:
         substrings = []
         for name, vals in dims.items():
-            substrings.append(self._latex_substring(how, name, vals, within))
+            substrings.append(self._latex_substring(how, name, vals, str(within.name)))
         if len(substrings) == 1:
             return substrings[0]
         else:
             return rf"\bigwedge({', '.join(substrings)})"
 
     def as_array(
-        self, *, within: str, how: Literal["all", "any"], **dims: str
+        self, *, within: xr.DataArray, how: Literal["all", "any"], **dims: str
     ) -> xr.DataArray:
         """Find whether members of a model dimension are defined inside another.
 
@@ -287,9 +267,7 @@ class Defined(ParsingHelperFunction):
         Args:
             within (str): the model dimension to check.
             how (Literal[all, any]): Whether to return True for `any` match of nested members or for `all` nested members.
-
-        Kwargs:
-            dims (dict[str, str]):
+            **dims (str):
                 **key**: dimension whose members will be searched for as being defined under the primary dimension (`within`).
                 Must be one of the core model dimensions: [nodes, techs, carriers]
                 **value**: subset of the dimension members to find.
@@ -332,11 +310,13 @@ class Defined(ParsingHelperFunction):
         """
         dim_names = list(dims.keys())
         dims_with_list_vals = {
-            dim: self._listify(vals) if dim == "techs" else self._listify(vals)
+            dim: self._to_str_list(vals) if dim == "techs" else self._to_str_list(vals)
             for dim, vals in dims.items()
         }
-        definition_matrix = self._input_data.definition_matrix
-        dim_within_da = definition_matrix.any(self._dims_to_remove(dim_names, within))
+        definition_matrix = self._attrs.input_data.definition_matrix
+        dim_within_da = definition_matrix.any(
+            self._dims_to_remove(dim_names, str(within.name))
+        )
         within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
 
         return within_da
@@ -356,7 +336,7 @@ class Defined(ParsingHelperFunction):
         Returns:
             set: Undefined dimensions to remove from the definition matrix.
         """
-        definition_matrix = self._input_data.definition_matrix
+        definition_matrix = self._attrs.input_data.definition_matrix
         missing_dims = set([*dim_names, within]).difference(definition_matrix.dims)
         if missing_dims:
             raise ValueError(
@@ -375,7 +355,7 @@ class Defined(ParsingHelperFunction):
         elif how == "any":
             # Using vee for "collective-or"
             tex_how = "vee"
-        vals = self._listify(vals)
+        vals = self._to_str_list(vals)
         within_iterator = self._dim_iterator(within)
         dim_iterator = self._dim_iterator(dim)
         selection = rf"\text{{{dim_iterator}}} \in \text{{[{','.join(vals)}]}}"
@@ -388,22 +368,26 @@ class Sum(ParsingHelperFunction):
 
     NAME = "sum"
     #:
-    ALLOWED_IN = ["expression"]
+    ALLOWED_IN = ["expression", "where"]
 
-    def as_math_string(self, array: str, *, over: str | list[str]) -> str:  # noqa: D102, override
-        if isinstance(over, str):
-            overstring = self._instr(over)
-        else:
-            foreach_string = r" \\ ".join(self._instr(i) for i in over)
-            overstring = rf"\substack{{{foreach_string}}}"
-        return rf"\sum\limits_{{{overstring}}} ({array})"
+    def as_math_string(  # noqa: D102, override
+        self, array: str, *, over: str | list[str | xr.DataArray]
+    ) -> str:
+        over_list = self._to_str_list(over)
+        overstring = r" \\ ".join(self._instr(i) for i in over_list)
+        substack_overstring = rf"\substack{{{overstring}}}"
+        return rf"\sum\limits_{{{substack_overstring}}} ({array})"
 
-    def as_array(self, array: xr.DataArray, *, over: str | list[str]) -> xr.DataArray:
+    def as_array(
+        self, array: xr.DataArray, *, over: xr.DataArray | list[xr.DataArray]
+    ) -> xr.DataArray:
         """Sum an expression array over the given dimension(s).
 
         Args:
             array (xr.DataArray): expression array
-            over (str | list[str]): dimension(s) over which to apply `sum`.
+            over (xr.DataArray | list[xr.DataArray]):
+                Dimension(s) over which to apply `sum`.
+                Array names will be extracted from the DataArray objects.
 
         Returns:
             xr.DataArray:
@@ -411,7 +395,7 @@ class Sum(ParsingHelperFunction):
                 NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN,
                 the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
-        filtered_over = set(self._listify(over)).intersection(array.dims)
+        filtered_over = set(self._to_str_list(over)).intersection(array.dims)
         return array.sum(filtered_over, min_count=1, skipna=True)
 
 
@@ -438,15 +422,11 @@ class ReduceCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        sum_helper = Sum(
-            return_type=self._return_type,
-            equation_name=self._equation_name,
-            input_data=self._input_data,
-            math=self._math,
-        )
+        sum_helper = Sum(self._return_type, self._attrs)
 
         return sum_helper(
-            array.where(self._input_data[f"carrier_{flow_direction}"]), over="carriers"
+            array.where(self._attrs.input_data[f"carrier_{flow_direction}"]),
+            over="carriers",
         )
 
 
@@ -473,9 +453,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
 
         Args:
             array (xr.DataArray): Array on which to apply vectorised indexing.
-
-        Kwargs:
-            lookup_arrays (dict[str, xr.DataArray]):
+            **lookup_arrays (xr.DataArray):
                 key: dimension on which to apply vectorised indexing
                 value: array whose values are either NaN or values from the dimension given in the key.
 
@@ -528,10 +506,12 @@ class SelectFromLookupArrays(ParsingHelperFunction):
         # Turn string lookup values to numeric ones.
         # We stack the dimensions to handle multidimensional lookups
         for index_dim, index in lookup_arrays.items():
-            stacked_lookup = self._input_data[index.name].stack({dim: dims})
+            stacked_lookup = self._attrs.input_data[index.name].stack({dim: dims})
             ix = array.indexes[index_dim].get_indexer(stacked_lookup)
             if (ix == -1).all():
-                received_lookup = self._input_data[index.name].to_series().dropna()
+                received_lookup = (
+                    self._attrs.input_data[index.name].to_series().dropna()
+                )
                 raise IndexError(
                     f"Trying to select items on the dimension {index_dim} from the {index.name} lookup array, but no matches found. Received: {received_lookup}"
                 )
@@ -592,7 +572,7 @@ class GetValAtIndex(ParsingHelperFunction):
                 timesteps  <U16 '2000-01-01 02:00'
         """
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
-        return self._input_data.coords[dim][int(idx)]
+        return self._attrs.input_data.coords[dim][int(idx)]
 
     # For as_array
     @overload
@@ -659,47 +639,6 @@ class Roll(ParsingHelperFunction):
         return array.roll(roll_kwargs_int)
 
 
-class DefaultIfEmpty(ParsingHelperFunction):
-    """Fill empty (NaN) items in arrays."""
-
-    #:
-    NAME = "default_if_empty"
-    #:
-    ALLOWED_IN = ["expression"]
-
-    def as_math_string(self, var: str, default: float | int) -> str:  # noqa: D102, override
-        return rf"({var}\vee{{}}{default})"
-
-    def as_array(self, var: xr.DataArray, default: float | int) -> xr.DataArray:
-        """Get an array with filled NaNs if present in the model, or a single default value if not.
-
-        This function is useful for avoiding excessive sub expressions where it is a choice between an expression or a single numeric value.
-
-        Args:
-            var (xr.DataArray): array of backend expression objects or an un-indexed "string" object array with the var name (if not present in the model).
-            default (float | int): Numeric value with which to fill / replace `var`.
-
-        Returns:
-            xr.DataArray:
-                If var is an array of backend expression objects, NaNs will be filled with `default`.
-                If var is an unindexed array with a single string value, an unindexed array with the default value.
-
-        Examples:
-            ```
-            >>> default_if_empty(flow_cap, 0)
-            [out] <xarray.DataArray (techs: 2)>
-                  array(['ac_transmission:node1', 'ac_transmission:node2'], dtype=object)
-            >>> default_if_empty(flow_export, 0)
-            [out] <xarray.DataArray ()>
-                  array(0, dtype=np.int)
-            ```
-        """
-        if var.attrs.get("obj_type", "") == "string":
-            return xr.DataArray(default)
-        else:
-            return var.fillna(default)
-
-
 class Where(ParsingHelperFunction):
     """Apply `where` array _within_ an expression string."""
 
@@ -751,9 +690,6 @@ class Where(ParsingHelperFunction):
                         - expression: sum(where(flow_cap, node_grouping), over=nodes) <= node_group_max
             ```
         """
-        if self._backend_interface is not None:
-            condition = self._input_data[condition.name]
-
         return array.where(condition.fillna(False).astype(bool))
 
 
@@ -776,7 +712,7 @@ class GroupSum(ParsingHelperFunction):
         return rf"\sum\limits_{{{overstring}}} ({array})"
 
     def as_array(
-        self, array: xr.DataArray, groupby: xr.DataArray, group_dim: str
+        self, array: xr.DataArray, groupby: xr.DataArray, group_dim: xr.DataArray
     ) -> xr.DataArray:
         """Sum an array over the given groupings.
 
@@ -832,9 +768,6 @@ class GroupSum(ParsingHelperFunction):
         # We can't apply typical xarray rolling window functionality
         grouped: dict[str | int, xr.DataArray] = {}
 
-        if self._backend_interface is not None:
-            groupby = self._input_data[groupby.name]
-
         grouping_dims = groupby.dims
         groups = array.stack(_stacked=grouping_dims).groupby(
             groupby.stack(_stacked=grouping_dims)
@@ -843,7 +776,7 @@ class GroupSum(ParsingHelperFunction):
             grouped[group_name] = array_subset.sum("_stacked", min_count=1, skipna=True)
 
         array = xr.concat(
-            grouped.values(), dim=pd.Index(grouped.keys(), name=group_dim)
+            grouped.values(), dim=pd.Index(grouped.keys(), name=group_dim.name)
         )
         return array
 
@@ -864,13 +797,15 @@ class GroupDatetime(ParsingHelperFunction):
 
         return rf"\sum\limits_{{{overstring}}} ({array})"
 
-    def as_array(self, array: xr.DataArray, over: str, group: str) -> xr.DataArray:
+    def as_array(
+        self, array: xr.DataArray, over: xr.DataArray, group: xr.DataArray
+    ) -> xr.DataArray:
         """Sum an expression array over the given dimension(s).
 
         Args:
             array (xr.DataArray): expression array
-            over (str): dimension name over which to group
-            group (str): datetime grouper.
+            over (xr.DataArray): dimension name over which to group
+            group (xr.DataArray): datetime grouper.
                 Any xarray/pandas datetime grouper options
                 datetime grouper options include 'date', 'dayofweek', 'month', etc.
 
@@ -927,15 +862,10 @@ class GroupDatetime(ParsingHelperFunction):
                         - expression: "group_datetime(flow_in, timesteps, month) <= source_use_max_monthly"
             ```
         """
-        dtype = DTYPE_OPTIONS[self._math.dimensions[group].dtype]
-        group_sum_helper = GroupSum(
-            return_type=self._return_type,
-            equation_name=self._equation_name,
-            input_data=self._input_data,
-            math=self._math,
-        )
+        dtype = DTYPE_OPTIONS[self._attrs.math.dimensions[group.name].dtype]
+        group_sum_helper = GroupSum(self._return_type, self._attrs)
         array = group_sum_helper(
-            array, getattr(array[over].dt, group).astype(dtype), group
+            array, getattr(array[over.name].dt, group.name).astype(dtype), group
         )
 
         return array
@@ -961,7 +891,7 @@ class SumNextN(ParsingHelperFunction):
 
         return rf"\sum\limits_{{\text{{{new_iterator}}}={over_singular}}}^{{{over_singular}+{N}}} ({updated_iterator_array})"
 
-    def as_array(self, array: xr.DataArray, over: str, N: int) -> xr.DataArray:
+    def as_array(self, array: xr.DataArray, over: xr.DataArray, N: int) -> xr.DataArray:
         """Sum values from current up to N from current on the dimension `over`.
 
         Works best for ordered arrays (datetime, integer).
@@ -1005,11 +935,11 @@ class SumNextN(ParsingHelperFunction):
         """
         # We cannot use the xarray rolling window method as it doesn't like operating on Python objects, which our optimisation problem components are.
         results: list[xr.DataArray] = []
-        for i in range(len(self._input_data.coords[over])):
+        for i in range(len(over)):
             results.append(
-                array.isel(**{over: slice(i, i + int(N))}).sum(over, min_count=1)
+                array.isel(**{str(over.name): slice(i, i + int(N))}).sum(
+                    str(over.name), min_count=1
+                )
             )
-        final_array = xr.concat(
-            results, dim=self._input_data.coords[over]
-        ).broadcast_like(array)
+        final_array = xr.concat(results, dim=over).broadcast_like(array)
         return final_array

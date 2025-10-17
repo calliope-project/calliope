@@ -2,6 +2,11 @@
 
 ### User-facing changes
 
+|new| Dimensions can now be referenced in math `where` and `expression` strings and arithmetic can be used when making comparisons and using helper functions in `where` strings (#733).
+
+|removed| Duplication of math attributes in array attributes.
+For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available from `model.math.build.parameters.flow_cap_max.default`.
+
 |changed| Init config can be updated on re-init _and_ on loading a model from NetCDF, e.g. to apply new subsetting, resampling, clustering, math.
 
 |fixed| Reloading a clustered model from file was attempting to re-cluster (#824).

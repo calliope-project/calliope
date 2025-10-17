@@ -78,7 +78,7 @@ class ModelDTypeUpdater(ABC):
         prefix = f"{id_} | " if id_ else ""
         for var_name, var_data in ds.items():
             try:
-                src, math_def = self.math.find(
+                math_def = self.math.find(
                     var_name, subset=["lookups", "parameters", "dimensions"]
                 )
             except KeyError:
@@ -91,7 +91,7 @@ class ModelDTypeUpdater(ABC):
             dtype_str = math_def.dtype  # type: ignore
             dtype = DTYPE_OPTIONS[dtype_str]
             LOGGER.debug(
-                f"{prefix}{src} | Updating values of `{var_name}` to {dtype_str} type"
+                f"{prefix}{math_def._group} | Updating values of `{var_name}` to {dtype_str} type"
             )
             match dtype_str:
                 case "string":

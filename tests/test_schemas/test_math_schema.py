@@ -1,4 +1,5 @@
 import re
+from unittest.mock import patch
 
 import pytest
 
@@ -35,6 +36,7 @@ class TestGlobalExpressions:
         assert validated_math.global_expressions["expr3"].order == 3
 
 
+@patch("calliope.schemas.math_schema.MathEquationComponent.__abstractmethods__", set())
 class TestMathEquationComponent:
     """Test the equation component schema."""
 
@@ -78,7 +80,7 @@ class TestMathEquationComponent:
             math_schema.MathEquationComponent.model_validate(dummy_empty_equation)
 
     def test_inactive_empty_pass(self, dummy_empty_equation):
-        """Inactive components should silently succed even if equations are empty."""
+        """Inactive components should silently succeed even if equations are empty."""
         dummy_empty_equation |= {"active": False}
         math_schema.MathEquationComponent.model_validate(dummy_empty_equation)
 
@@ -106,6 +108,9 @@ class TestCalliopeBuildMath:
         base_math_raw["lookups"]["foo"] = math_schema.Lookup().model_dump()
         base_math_raw["parameters"]["foo"]["active"] = False
         base_math_raw["lookups"]["foo"]["active"] = False
+
+        base_math_raw["lookups"]["bar"] = math_schema.Lookup().model_dump()
+        base_math_raw["lookups"]["bar"]["active"] = False
         # Simulate variable -> parameter (common case)
         base_math_raw["parameters"]["flow_cap"] = math_schema.Parameter().model_dump()
         base_math_raw["variables"]["flow_cap"]["active"] = False
@@ -128,39 +133,38 @@ class TestCalliopeBuildMath:
         ):
             math_schema.CalliopeBuildMath.model_validate(base_math_raw)
 
-    @pytest.mark.parametrize(
-        ("to_search", "component"),
-        [
-            ("foo", "variables"),
-            ("flow_out", "variables"),
-            ("flow_cap", "parameters"),
-            ("bigM", "parameters"),
-            ("timesteps", "dimensions"),
-            ("cap_method", "lookups"),
-            ("force_zero_area_use", "constraints"),
-            ("min_cost_optimisation", "objectives"),
-            ("cost_operation_variable", "global_expressions"),
-        ],
-    )
-    def test_find(self, to_search, component, base_math_validated):
+    search_group_args = [
+        ("foo", "variables"),
+        ("flow_out", "variables"),
+        ("flow_cap", "parameters"),
+        ("bigM", "parameters"),
+        ("timesteps", "dimensions"),
+        ("cap_method", "lookups"),
+        ("force_zero_area_use", "constraints"),
+        ("min_cost_optimisation", "objectives"),
+        ("cost_operation_variable", "global_expressions"),
+    ]
+
+    @pytest.mark.parametrize(("to_search", "group"), search_group_args)
+    def test_find(self, to_search, group, base_math_validated):
         """Component searches should return the expected data."""
-        location, data = base_math_validated.find(to_search)
-        assert location == component
-        assert data == base_math_validated[location][to_search]
+        data = base_math_validated.find(to_search)
+        assert data == base_math_validated[group][to_search]
+
+    @pytest.mark.parametrize(("to_search", "group"), search_group_args)
+    def test_group(self, to_search, group, base_math_validated):
+        """Component searches should return the expected data."""
+        base_math_validated[group][to_search]._group == group
 
     def test_find_duplicate_error(self, base_math_validated):
         """Finding duplicate parameters should return an error."""
-        m = base_math_validated
 
-        # Brute force a duplicate addition
-        foo_active = m.parameters.root["foo"].model_copy(update={"active": True})
-        new_param_root = dict(m.parameters.root)
-        new_param_root["foo"] = foo_active
-        new_params = m.parameters.model_copy(update={"root": new_param_root})
-        m_dupe = m.model_copy(update={"parameters": new_params})
+        base_math_validated.lookups._active["foo"] = base_math_validated.parameters[
+            "foo"
+        ]
 
         with pytest.raises(ValueError, match=r"found in multiple"):
-            m_dupe.find("foo")
+            base_math_validated.find("foo")
 
     @pytest.mark.parametrize(
         ("to_search", "subset"),
@@ -182,3 +186,72 @@ class TestCalliopeBuildMath:
             KeyError, match=f"Component name `{to_search}` not found in math schema"
         ):
             base_math_validated.find(to_search, subset)
+
+    @pytest.mark.parametrize(
+        ("group", "is_active"),
+        [("variables", True), ("parameters", False), ("lookups", False)],
+    )
+    def test_in_active_dict(self, base_math_validated, group, is_active):
+        """The _active property should return only active components."""
+        assert ("foo" in base_math_validated[group]._active) == is_active
+
+    def test_where_components_keys(self, base_math_validated):
+        """The where components field should return the expected keys."""
+        expected_keys = {"dimensions", "inputs", "results"}
+        assert set(base_math_validated.parsing_components["where"]) == expected_keys
+
+    def test_where_components_dim_activated(self, base_math_validated):
+        """A dimension that has been activated should be in the where components field."""
+        assert "techs" in base_math_validated.parsing_components["where"]["dimensions"]
+
+    def test_where_components_dim_deactivated(self, base_math_validated):
+        """A dimension that has been deactivated should not be in the where components field."""
+        assert (
+            "datesteps"
+            not in base_math_validated.parsing_components["where"]["dimensions"]
+        )
+
+    def test_where_components_input_activated(self, base_math_validated):
+        """An input that has been activated should be in the where components field."""
+        assert "flow_cap" in base_math_validated.parsing_components["where"]["inputs"]
+
+    def test_where_components_input_deactivated_there(self, base_math_validated):
+        """An input that has been deactivated should only be in the where components inputs field if it hasn't been activated elsewhere."""
+        assert "bar" in base_math_validated.parsing_components["where"]["inputs"]
+
+    def test_where_components_input_deactivated_not_there(self, base_math_validated):
+        """An input that has been deactivated should only be in the where components inputs field if it hasn't been activated elsewhere (foo is active in "variables")."""
+        assert "foo" not in base_math_validated.parsing_components["where"]["inputs"]
+
+    def test_where_components_result_activated(self, base_math_validated):
+        """A result that has been activated should _also_ be in the where components field."""
+        assert "foo" in base_math_validated.parsing_components["where"]["results"]
+
+    def test_where_components_result_deactivated(self, base_math_validated):
+        """A result that has been deactivated should _also_ be in the where components field if it isn't named as an input."""
+        assert (
+            "flow_in_inc_eff"
+            in base_math_validated.parsing_components["where"]["results"]
+        )
+
+    def test_where_components_result_deactivated_but_mentioned_in_inputs(
+        self, base_math_validated
+    ):
+        """A result that has been deactivated should _not_ be in the where components field if it has been named as an input."""
+        assert (
+            "flow_cap" not in base_math_validated.parsing_components["where"]["results"]
+        )
+
+    @pytest.mark.parametrize("component", ["techs", "foo", "flow_cap"])
+    def test_expression_components_activated(self, base_math_validated, component):
+        """An expression that has been activated _somewhere_ should be in the expression components field."""
+        assert component in set().union(
+            *base_math_validated.parsing_components["expression"].values()
+        )
+
+    @pytest.mark.parametrize("component", ["flow_in_inc_eff", "datesteps"])
+    def test_expression_components_deactivated(self, base_math_validated, component):
+        """An expression that has been deactivated _everywhere_ should not be in the expression components field."""
+        assert component not in set().union(
+            *base_math_validated.parsing_components["expression"].values()
+        )

@@ -1,5 +1,4 @@
 import os
-import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -126,11 +125,9 @@ class TestIO:
             f"Cannot serialise a sequence of values stored in a model attribute unless all values are strings, found: {attrs['foo']}",
         )
 
-    def test_save_csv_dir_mustnt_exist(self, model):
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir)
-            with pytest.raises(FileExistsError):
-                model.to_csv(out_path)
+    def test_save_csv_dir_mustnt_exist(self, tmp_path, model):
+        with pytest.raises(FileExistsError):
+            model.to_csv(tmp_path)
 
     def test_save_csv_dir_can_exist_if_overwrite_true(
         self, model: calliope.Model, model_csv_dir
@@ -155,18 +152,14 @@ class TestIO:
         ) as f:
             assert "demand_power" not in f.read()
 
-    def test_save_csv_no_dropna(self, model):
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, "out_dir")
-            model.to_csv(out_path, dropna=False)
-
-            with open(
-                os.path.join(out_path, "inputs_flow_cap_max_systemwide.csv")
-            ) as f:
-                assert "demand_power" in f.read()
+    def test_save_csv_no_dropna(self, tmp_path, model):
+        tmpdir = tmp_path / "csvs"
+        model.to_csv(tmpdir, dropna=False)
+        output_file = tmpdir / "inputs_flow_cap_max_systemwide.csv"
+        assert "demand_power" in output_file.read_text()
 
     @pytest.mark.xfail(reason="Not reimplemented the 'check feasibility' objective")
-    def test_save_csv_not_optimal(self):
+    def test_save_csv_not_optimal(self, tmp_path):
         model = calliope.examples.national_scale(
             scenario="check_feasibility",
             override_dict={"config.build.cyclic_storage": False},
@@ -175,10 +168,9 @@ class TestIO:
         model.build()
         model.solve()
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, "out_dir")
-            with pytest.warns(exceptions.ModelWarning):
-                model.to_csv(out_path, dropna=False)
+        out_path = tmp_path / "out_dir"
+        with pytest.warns(exceptions.ModelWarning):
+            model.to_csv(out_path, dropna=False)
 
     def test_config_reload(self, model_from_file, model):
         assert model_from_file.config.model_dump() == model.config.model_dump()
@@ -187,8 +179,8 @@ class TestIO:
     def test_filtered_dataset_as_property(self, model_from_file, attr):
         assert hasattr(model_from_file, attr)
 
-    def test_save_read_solve_save_netcdf(self, model, tmpdir_factory):
-        out_path = tmpdir_factory.mktemp("model_dir").join("model.nc")
+    def test_save_read_solve_save_netcdf(self, tmp_path, model):
+        out_path = tmp_path / "model.nc"
         model.to_netcdf(out_path)
         model_from_disk = calliope.read_netcdf(out_path)
 
@@ -196,35 +188,24 @@ class TestIO:
         model_from_disk.build()
         model_from_disk.solve(force=True)
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, "model.nc")
-            model_from_disk.to_netcdf(out_path)
-            assert os.path.isfile(out_path)
+        model_from_disk.to_netcdf(out_path)
+        assert out_path.exists()
+        assert out_path.is_file()
 
-    def test_save_lp(self, model):
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, "model.lp")
-            model.backend.to_lp(out_path)
+    def test_save_lp(self, tmp_path, model):
+        out_path = tmp_path / "model.lp"
+        model.backend.to_lp(out_path)
 
-            with open(out_path) as f:
-                assert "variables(flow_cap)" in f.read()
+        assert "variables(flow_cap)" in out_path.read_text()
 
-    @pytest.mark.skip(
-        reason="SPORES mode will fail until the cost max group constraint can be reproduced"
-    )
-    def test_save_per_spore(self):
-        with tempfile.TemporaryDirectory() as tempdir:
-            os.mkdir(os.path.join(tempdir, "output"))
-            model = calliope.examples.national_scale(scenario="spores")
-            model.build()
-            model.solve(
-                spores_save_per_spore=True,
-                save_per_spore_path=os.path.join(tempdir, "output/spore_{}.nc"),
-            )
+    def test_save_per_spore(self, tmp_path):
+        model = calliope.examples.national_scale(scenario="spores")
+        model.build()
+        model.solve(spores={"save_per_spore_path": tmp_path})
 
-            for i in ["0", "1", "2", "3"]:
-                assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
-            assert not os.path.isfile(os.path.join(tempdir, "output.nc"))
+        for i in ["0", "1", "2", "3"]:
+            assert os.path.isfile(tmp_path / f"spore_{i}.nc")
+        assert not os.path.isfile(tmp_path / "output.nc")
 
 
 class TestYaml:
@@ -402,18 +383,18 @@ import:
         reloaded = calliope.io.read_rich_yaml(yaml_text)
         assert reloaded == expected_dict
 
-    def test_to_yaml_complex(self, yaml_text):
+    def test_to_yaml_complex(self, tmp_path, yaml_text):
         """Saving to a file/string should handle special cases."""
         yaml_dict = calliope.io.read_rich_yaml(yaml_text)
         yaml_dict.set_key("numpy.some_int", np.int32(10))
         yaml_dict.set_key("numpy.some_float", np.float64(0.5))
         yaml_dict.a_list = [0, 1, 2]
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_file = Path(tempdir) / "test.yaml"
-            calliope.io.to_yaml(yaml_dict, path=out_file)
 
-            result = out_file.read_text()
+        out_file = tmp_path / "test.yaml"
+        calliope.io.to_yaml(yaml_dict, path=out_file)
 
-            assert "some_int: 10" in result
-            assert "some_float: 0.5" in result
-            assert "a_list:\n- 0\n- 1\n- 2" in result
+        result = out_file.read_text()
+
+        assert "some_int: 10" in result
+        assert "some_float: 0.5" in result
+        assert "a_list:\n- 0\n- 1\n- 2" in result

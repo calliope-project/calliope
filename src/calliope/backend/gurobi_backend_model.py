@@ -78,6 +78,11 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         self._add_to_dataset(name, values, "parameters", definition.model_dump())
 
+        if name not in self.math["parameters"]:
+            self.math = self.math.update(
+                {f"parameters.{name}": definition.model_dump()}
+            )
+
     def add_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.Constraint
     ) -> None:
@@ -144,7 +149,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         to_set = self.objectives[name]
-        sense = self.OBJECTIVE_SENSE_DICT[to_set.attrs["sense"]]
+        sense = self.OBJECTIVE_SENSE_DICT[self.math.objectives[name].sense]
         self._instance.setObjective(to_set.item(), sense=sense)
         self._instance.update()
         self.objective = name

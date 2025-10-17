@@ -106,16 +106,21 @@ def _validate_math_string_parsing(math_model: CalliopeBuildMath) -> None:
     Evaluation issues will be raised only on adding a component to the backend.
     """
     validation_errors: dict = dict()
-    valid_component_names = set(
-        math_model.variables.root
-        | math_model.parameters.root
-        | math_model.global_expressions.root
-    )
+    names: dict = {
+        "dimensions": set(math_model.dimensions.root),
+        "inputs": set(math_model.parameters.root).union(math_model.lookups.root),
+        "results": set(math_model.variables.root).union(
+            math_model.global_expressions.root
+        ),
+    }
+
     for component_group in typing.get_args(ORDERED_COMPONENTS_T):
         for name, dict_ in math_model[component_group].root.items():
-            parsed = parsing.ParsedBackendComponent(component_group, name, dict_)
+            parsed = parsing.ParsedBackendComponent(
+                component_group, name, dict_, {"where": names, "expression": names}
+            )
             parsed.parse_top_level_where(errors="ignore")
-            parsed.parse_equations(valid_component_names, errors="ignore")
+            parsed.parse_equations(errors="ignore")
             if not parsed._is_valid:
                 validation_errors[f"{component_group}:{name}"] = parsed._errors
 
