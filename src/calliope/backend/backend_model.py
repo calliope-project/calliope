@@ -146,6 +146,9 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
         self._add_to_dataset(name, values, "lookups", definition.model_dump())
 
+        if name not in self.math["lookups"]:
+            self.math = self.math.update({f"lookups.{name}": definition.model_dump()})
+
     @abstractmethod
     def add_parameter(
         self, name: str, values: xr.DataArray, definition: math_schema.Parameter
@@ -597,7 +600,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             **self.math.parsing_components["where"]
         )
         eval_kwargs = {
-            "backend_dataset": self._dataset,
+            "backend_data": self._dataset,
             "math": self.math,
             "input_data": self.inputs,
             "build_config": self.config,

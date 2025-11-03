@@ -547,7 +547,7 @@ class TestParsedComponent:
 
             eval_attrs = parsing.EvalAttrs(
                 sub_expression_dict=component_sub_dict,
-                backend_dataset=dummy_backend_interface._dataset,
+                backend_data=dummy_backend_interface._dataset,
                 where_array=xr.DataArray(True),
             )
             comparison_expr = constraint_eq.expression[0].eval("array", eval_attrs)

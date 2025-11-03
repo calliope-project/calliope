@@ -168,7 +168,7 @@ def dummy_build_config():
 def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config, dummy_model_math):
     attrs = parsing.EvalAttrs(
         input_data=dummy_pyomo_backend_model.inputs,
-        backend_dataset=dummy_pyomo_backend_model._dataset,
+        backend_data=dummy_pyomo_backend_model._dataset,
         math=dummy_model_math,
         helper_functions=helper_functions._registry["where"],
         equation_name="foo",
@@ -704,7 +704,7 @@ class TestAsMathString:
         eval_kwargs["return_type"] = "math_string"
         eval_kwargs["eval_attrs"] = replace(
             eval_kwargs["eval_attrs"],
-            backend_dataset=dummy_latex_backend_model._dataset,
+            backend_data=dummy_latex_backend_model._dataset,
             math=dummy_model_math,
         )
         return eval_kwargs

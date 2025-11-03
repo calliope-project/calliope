@@ -344,6 +344,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             name, values, "parameters", definition.model_dump(), extra_attrs=attrs
         )
 
+        if name not in self.math["parameters"]:
+            self.math = self.math.update(
+                {f"parameters.{name}": definition.model_dump()}
+            )
+
     def add_lookup(  # noqa: D102, override
         self, name: str, values: xr.DataArray, definition: math_schema.Lookup
     ) -> None:
