@@ -1342,26 +1342,27 @@ postprocessed:
     where: flow_out AND flow_cap>0
     equations:
       - expression: >-
-          sum(flow_out * timestep_resolution, over=[nodes, timesteps]) /
+          sum(flow_out * timestep_weights, over=[nodes, timesteps]) /
           (sum(flow_cap, over=nodes) * sum(timestep_resolution * timestep_weights, over=timesteps))
 
   total_generation:
     foreach: [techs, carriers]
     default: 0
-    where: flow_out AND (base_tech==supply OR base_tech==conversion)
+    where: flow_out AND NOT base_tech==demand
     equations:
       - expression: sum(flow_out + flow_export * timestep_weights, over=[nodes, timesteps])
 
   systemwide_levelised_cost:
     foreach: [techs, carriers, costs]
     default: 0
-    where: total_generation AND any(cost, over=costs)
+    where: total_generation>0 AND any(cost, over=nodes)
     equations:
       - expression: sum(cost, over=nodes) / total_generation
 
   total_levelised_cost:
     foreach: [carriers, costs]
     default: 0
+    where: sum(total_generation, over=techs)>0
     equations:
       - expression: sum(cost, over=[nodes, techs]) / sum(total_generation, over=techs)
 

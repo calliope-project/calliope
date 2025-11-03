@@ -136,13 +136,13 @@ class ResultArrayParser(expression_parser.EvalArrayOrMath):
     def as_math_string(self) -> str:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
 
-        var = self.eval_attrs.backend_data.get(self.array_name, xr.DataArray())
+        var = self.eval_attrs.backend_dataset.get(self.array_name, xr.DataArray())
         data_var_string = rf"\exists ({var.attrs['math_repr']})"
         return data_var_string
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
-        da = self.eval_attrs.backend_data[self.array_name]
+        da = self.eval_attrs.backend_dataset[self.array_name]
         if self.eval_attrs.apply_where:
             da = da.notnull()
         return da
@@ -173,7 +173,7 @@ class InputArrayParser(expression_parser.EvalArrayOrMath):
     def as_math_string(self) -> str:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
 
-        var = self.eval_attrs.backend_data.get(self.array_name, xr.DataArray())
+        var = self.eval_attrs.backend_dataset.get(self.array_name, xr.DataArray())
 
         data_var_string = var.attrs["math_repr"]
         if self.eval_attrs.apply_where:

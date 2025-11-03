@@ -499,3 +499,6 @@ class CalliopeMath(CalliopeBaseModel):
 
     init: CalliopeInputMath = CalliopeInputMath()
     build: CalliopeBuildMath = CalliopeBuildMath()
+
+
+MATH_DEFS_T = Constraint | Variable | GlobalExpression | Objective | PiecewiseConstraint

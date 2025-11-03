@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope import _version, backend, exceptions, io, postprocess, preprocess
+from calliope import _version, backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.preprocess import (
     ModelDataBuilder,
@@ -723,7 +723,6 @@ class Model(ModelStructure):
                 time_since_solve_start=True,
                 comment=f"Optimisation model | SPORE {spore} complete",
             )
-            results = postprocess.postprocess_model_results(results, self)
 
             spores_config.save_per_spore_path.mkdir(parents=True, exist_ok=True)
             LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")

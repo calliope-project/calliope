@@ -216,35 +216,17 @@ class TestGetters:
 
     def test_get_variable_attrs(self, variable):
         """Check a decision variable has all expected attributes."""
-        expected_keys = {
-            "obj_type",
-            "references",
-            "coords_in_name",
-            "title",
-            "description",
-            "unit",
-            "default",
-            "domain",
+        assert variable.attrs == {
+            "obj_type": "variables",
+            "references": {
+                "flow_in_max",
+                "flow_out_max",
+                "cost_operation_fixed",
+                "cost_investment_flow_cap",
+                "symmetric_transmission",
+            },
+            "coords_in_name": False,
         }
-        assert not expected_keys.symmetric_difference(variable.attrs.keys())
-
-    def test_get_variable_obj_type(self, variable):
-        """Check a decision variable has the correct obj_type."""
-        assert variable.attrs["obj_type"] == "variables"
-
-    def test_get_variable_refs(self, variable, solved_model_cls):
-        """Check a decision variable has all expected references to other math components."""
-        assert variable.attrs["references"] == {
-            "flow_in_max",
-            "flow_out_max",
-            "cost_operation_fixed",
-            "cost_investment_flow_cap",
-            "symmetric_transmission",
-        }
-
-    def test_get_variable_coords_in_name(self, variable):
-        """Check a decision variable does not have verbose strings activated."""
-        assert variable.attrs["coords_in_name"] is False
 
     def test_get_parameter(self, parameter):
         """Check a parameter has all expected attributes."""
@@ -252,13 +234,6 @@ class TestGetters:
             "obj_type": "parameters",
             "references": {"flow_in_inc_eff"},
             "coords_in_name": False,
-            "title": "Inflow efficiency",
-            "description": (
-                "Conversion efficiency from `source`/`flow_in` (tech dependent) into the technology. "
-                "Set as value between 1 (no loss) and 0 (all lost)."
-            ),
-            "default": 1.0,
-            "unit": "unitless.",
         }
 
     def test_get_parameter_as_vals(self, solved_model_cls):
@@ -280,31 +255,11 @@ class TestGetters:
 
     def test_get_global_expression_attrs(self, global_expression):
         """Check a global expression has all expected attributes."""
-        expected_keys = {
-            "obj_type",
-            "references",
-            "title",
-            "description",
-            "unit",
-            "default",
-            "coords_in_name",
+        assert global_expression.attrs == {
+            "obj_type": "global_expressions",
+            "references": {"cost_investment_annualised", "cost_operation_fixed"},
+            "coords_in_name": False,
         }
-        assert not expected_keys.symmetric_difference(global_expression.attrs.keys())
-
-    def test_get_global_expression_obj_type(self, global_expression):
-        """Check a global expression has expected obj_type."""
-        assert global_expression.attrs["obj_type"] == "global_expressions"
-
-    def test_get_global_expression_refs(self, global_expression):
-        """Check a global expression has all expected math component refs."""
-        assert global_expression.attrs["references"] == {
-            "cost_investment_annualised",
-            "cost_operation_fixed",
-        }
-
-    def test_get_global_expression_coords_in_name(self, global_expression):
-        """Check a global expression does not have verbose strings activated."""
-        assert global_expression.attrs["coords_in_name"] is False
 
     def test_get_global_expression_as_str(self, solved_model_cls):
         """Resolving backend global expressions produces strings."""
@@ -400,48 +355,19 @@ class TestGetters:
 
     def test_get_constraint_attrs(self, constraint):
         """Check a constraint has all expected attributes."""
-        expected_keys = {
-            "obj_type",
-            "references",
-            "description",
-            "coords_in_name",
-            "title",
+        assert constraint.attrs == {
+            "obj_type": "constraints",
+            "references": set(),
+            "coords_in_name": False,
         }
-
-        assert not expected_keys.symmetric_difference(constraint.attrs.keys())
-
-    def test_get_constraint_obj_type(self, constraint):
-        """Check a constraint has expected object type."""
-        assert constraint.attrs["obj_type"] == "constraints"
-
-    def test_get_constraint_refs(self, constraint):
-        """Check a constraint has expected refs to other math components (zero for constraints)."""
-        assert constraint.attrs["references"] == set()
-
-    def test_get_constraint_coords_in_name(self, constraint):
-        """Check a constraint does not have verbose strings activated."""
-        assert constraint.attrs["coords_in_name"] is False
-
-    def test_get_lookup_obj_type(self, lookup):
-        """Check that a lookup has the right object type set."""
-        assert lookup.attrs["obj_type"] == "lookups"
-
-    def test_get_lookup_refs(self, lookup):
-        """Check that a lookup has zero refs to other components."""
-        assert not lookup.attrs["references"]
 
     def test_get_lookup_expected_keys(self, lookup):
         """Check that a lookup displays its schema attributes."""
-        expected_keys = {
-            "obj_type",
-            "references",
-            "description",
-            "coords_in_name",
-            "title",
-            "default",
-            "dtype",
+        assert lookup.attrs == {
+            "obj_type": "lookups",
+            "references": set(),
+            "coords_in_name": False,
         }
-        assert not expected_keys.symmetric_difference(lookup.attrs.keys())
 
 
 class TestAdders:
@@ -982,22 +908,11 @@ class TestPiecewiseConstraints:
 
     def test_piecewise_attrs(self, piecewise_constraint):
         """Check a piecewise constraint has all expected attributes."""
-        expected_keys = set(
-            ["obj_type", "references", "title", "description", "coords_in_name"]
-        )
-        assert not expected_keys.symmetric_difference(piecewise_constraint.attrs.keys())
-
-    def test_piecewise_obj_type(self, piecewise_constraint):
-        """Check a piecewise constraint has expected object type."""
-        assert piecewise_constraint.attrs["obj_type"] == "piecewise_constraints"
-
-    def test_piecewise_refs(self, piecewise_constraint):
-        """Check a piecewise constraint has expected refs to other math components (zero for piecewise constraints)."""
-        assert not piecewise_constraint.attrs["references"]
-
-    def test_piecewise_obj_coords_in_name(self, piecewise_constraint):
-        """Check a piecewise constraint does not have verbose strings activated."""
-        assert piecewise_constraint.attrs["coords_in_name"] is False
+        assert piecewise_constraint.attrs == {
+            "obj_type": "piecewise_constraints",
+            "references": set(),
+            "coords_in_name": False,
+        }
 
     @pytest.mark.parametrize(
         "var", ["flow_cap", "source_cap", "piecewise_x", "piecewise_y"]

@@ -45,6 +45,25 @@ def parsing_components(where_components):
 
 
 @pytest.fixture
+def eval_where_args(dummy_pyomo_backend_model):
+    return (
+        dummy_pyomo_backend_model.inputs,
+        dummy_pyomo_backend_model._dataset,
+        dummy_pyomo_backend_model.math,
+        dummy_pyomo_backend_model.config,
+    )
+
+
+@pytest.fixture
+def eval_expr_args(dummy_backend_interface):
+    return (
+        dummy_backend_interface.inputs,
+        dummy_backend_interface._dataset,
+        dummy_backend_interface.math,
+    )
+
+
+@pytest.fixture
 def component_obj(parsing_components):
     setup_string = """
     foreach: [A, A1]
@@ -310,27 +329,25 @@ def evaluatable_component_obj(parsing_components):
         ("only_techs + with_inf[techs=$tech] == 2", 1),
     ]
 )
-def evaluate_component_where(
-    evaluatable_component_obj, dummy_pyomo_backend_model, request
-):
+def evaluate_component_where(evaluatable_component_obj, eval_where_args, request):
     component_obj = evaluatable_component_obj(request.param[0])
     top_level_where = component_obj.generate_top_level_where_array(
-        dummy_pyomo_backend_model, break_early=False, align_to_foreach_sets=False
+        *eval_where_args, break_early=False, align_to_foreach_sets=False
     )
     equation_where = component_obj.equations[0].evaluate_where(
-        dummy_pyomo_backend_model, initial_where=top_level_where
+        *eval_where_args, initial_where=top_level_where
     )
     equation_where_aligned = component_obj.drop_dims_not_in_foreach(equation_where)
     return component_obj, equation_where_aligned, request.param[1]
 
 
 @pytest.fixture
-def evaluate_component_expression(evaluate_component_where, dummy_backend_interface):
+def evaluate_component_expression(evaluate_component_where, eval_expr_args):
     component_obj, equation_where, n_true = evaluate_component_where
 
     return (
         component_obj.equations[0].evaluate_expression(
-            dummy_backend_interface, where=equation_where
+            *eval_expr_args, where=equation_where
         ),
         n_true,
     )
@@ -530,7 +547,7 @@ class TestParsedComponent:
 
             eval_attrs = parsing.EvalAttrs(
                 sub_expression_dict=component_sub_dict,
-                backend_data=dummy_backend_interface._dataset,
+                backend_dataset=dummy_backend_interface._dataset,
                 where_array=xr.DataArray(True),
             )
             comparison_expr = constraint_eq.expression[0].eval("array", eval_attrs)
@@ -653,9 +670,9 @@ equations[0].expression (line 1, char 5): bar = 1
         component_obj.combine_definition_matrix_and_foreach(dummy_model_data)
         assert "indexed over unidentified set names" in caplog.text
 
-    def test_evaluate_where_to_false(self, dummy_pyomo_backend_model, component_obj):
+    def test_evaluate_where_to_false(self, eval_where_args, component_obj):
         component_obj.parse_top_level_where()
-        where = component_obj.evaluate_where(dummy_pyomo_backend_model)
+        where = component_obj.evaluate_where(*eval_where_args)
         assert where.item() is True
 
     def test_parse_top_level_where_fail(self, component_obj):
@@ -666,13 +683,11 @@ equations[0].expression (line 1, char 5): bar = 1
         assert check_error_or_warning(excinfo, "Errors during math string parsing")
 
     def test_generate_top_level_where_array_break_at_foreach(
-        self, caplog, dummy_pyomo_backend_model, component_obj
+        self, caplog, eval_where_args, component_obj
     ):
         component_obj.sets = ["nodes", "techs", "foos"]
         caplog.set_level(logging.DEBUG)
-        where_array = component_obj.generate_top_level_where_array(
-            dummy_pyomo_backend_model
-        )
+        where_array = component_obj.generate_top_level_where_array(*eval_where_args)
 
         assert "indexed over unidentified set names: `{'foos'}`" in caplog.text
         assert "'foreach' does not apply anywhere." in caplog.text
@@ -681,25 +696,23 @@ equations[0].expression (line 1, char 5): bar = 1
         assert not where_array.shape
 
     def test_generate_top_level_where_array_break_at_top_level_where(
-        self, dummy_pyomo_backend_model, component_obj
+        self, eval_where_args, component_obj
     ):
         component_obj.sets = ["nodes", "techs", "timesteps"]
         component_obj._unparsed = component_obj._unparsed.update({"where": "all_nan"})
-        where_array = component_obj.generate_top_level_where_array(
-            dummy_pyomo_backend_model
-        )
+        where_array = component_obj.generate_top_level_where_array(*eval_where_args)
         assert not where_array.any()
         assert not set(component_obj.sets).difference(where_array.dims)
 
     def test_generate_top_level_where_array_no_break_no_align(
-        self, caplog, dummy_pyomo_backend_model, component_obj
+        self, caplog, eval_where_args, component_obj
     ):
         component_obj.sets = ["nodes", "techs", "foos"]
         component_obj._unparsed = component_obj._unparsed.update({"where": "all_nan"})
         caplog.set_level(logging.DEBUG)
 
         where_array = component_obj.generate_top_level_where_array(
-            dummy_pyomo_backend_model, break_early=False, align_to_foreach_sets=False
+            *eval_where_args, break_early=False, align_to_foreach_sets=False
         )
         assert "indexed over unidentified set names: `{'foos'}`" in caplog.text
         assert "'foreach' does not apply anywhere." in caplog.text
@@ -709,14 +722,14 @@ equations[0].expression (line 1, char 5): bar = 1
         assert set(component_obj.sets).difference(where_array.dims) == {"foos"}
 
     def test_generate_top_level_where_array_no_break_align(
-        self, dummy_pyomo_backend_model, component_obj
+        self, eval_where_args, component_obj
     ):
         component_obj.sets = ["nodes", "techs"]
         component_obj._unparsed = component_obj._unparsed.update(
             {"where": "all_nan AND all_true_carriers"}
         )
         where_array = component_obj.generate_top_level_where_array(
-            dummy_pyomo_backend_model, break_early=False, align_to_foreach_sets=True
+            *eval_where_args, break_early=False, align_to_foreach_sets=True
         )
         assert not where_array.any()
         assert not set(component_obj.sets).difference(where_array.dims)
@@ -923,17 +936,13 @@ class TestParsedBackendEquation:
 
     @pytest.mark.parametrize("false_location", [0, -1])
     def test_create_subset_from_where_definitely_empty(
-        self,
-        dummy_pyomo_backend_model,
-        equation_obj,
-        where_string_parser,
-        false_location,
+        self, eval_where_args, equation_obj, where_string_parser, false_location
     ):
         equation_obj.sets = ["nodes", "techs"]
         equation_obj.where.insert(
             false_location, where_string_parser.parse_string("False", parse_all=True)
         )
-        where = equation_obj.evaluate_where(dummy_pyomo_backend_model)
+        where = equation_obj.evaluate_where(*eval_where_args)
 
         assert not where.any()
 
@@ -954,7 +963,7 @@ class TestParsedBackendEquation:
     def test_create_subset_from_where_one_level_where(
         self,
         dummy_model_data,
-        dummy_pyomo_backend_model,
+        eval_where_args,
         equation_obj,
         where_string_parser,
         where_string,
@@ -966,17 +975,17 @@ class TestParsedBackendEquation:
             equation_obj.where = [
                 where_string_parser.parse_string(where_string, parse_all=True)
             ]
-            where = equation_obj.evaluate_where(dummy_pyomo_backend_model)
+            where = equation_obj.evaluate_where(*eval_where_args)
         if level_ == "initial_where":
             equation_obj.where = [
                 where_string_parser.parse_string(where_string, parse_all=True)
             ]
-            initial_where = equation_obj.evaluate_where(dummy_pyomo_backend_model)
+            initial_where = equation_obj.evaluate_where(*eval_where_args)
             equation_obj.where = [
                 where_string_parser.parse_string("True", parse_all=True)
             ]
             where = equation_obj.evaluate_where(
-                dummy_pyomo_backend_model, initial_where=initial_where
+                *eval_where_args, initial_where=initial_where
             )
 
         expected = dummy_model_data[expected_where_array]
@@ -986,27 +995,25 @@ class TestParsedBackendEquation:
         )
 
     def test_create_subset_from_where_trim_dimension(
-        self, dummy_pyomo_backend_model, where_string_parser, equation_obj, exists_array
+        self, eval_where_args, where_string_parser, equation_obj, exists_array
     ):
         equation_obj.sets = ["nodes", "techs"]
 
         equation_obj.where = [
             where_string_parser.parse_string("[foo] in carriers", parse_all=True)
         ]
-        where = equation_obj.evaluate_where(
-            dummy_pyomo_backend_model, initial_where=exists_array
-        )
+        where = equation_obj.evaluate_where(*eval_where_args)
         assert where.sel(carriers="foo").any()
         assert not where.sel(carriers="bar").any()
 
     def test_create_subset_align_dims_with_sets(
-        self, dummy_pyomo_backend_model, where_string_parser, equation_obj, exists_array
+        self, eval_where_args, where_string_parser, equation_obj, exists_array
     ):
         equation_obj.sets = ["nodes", "techs"]
 
         equation_obj.where = [where_string_parser.parse_string("True", parse_all=True)]
         where = equation_obj.evaluate_where(
-            dummy_pyomo_backend_model, initial_where=exists_array
+            *eval_where_args, initial_where=exists_array
         )
         aligned_where = equation_obj.drop_dims_not_in_foreach(where)
 
@@ -1049,28 +1056,22 @@ class TestParsedConstraint:
     def test_parse_constraint_dict_n_equations(self, constraint_obj):
         assert len(constraint_obj.equations) == 2
 
-    def test_parse_constraint_dict_empty_eq1(
-        self, constraint_obj, dummy_pyomo_backend_model
-    ):
-        assert (
-            not constraint_obj.equations[0]
-            .evaluate_where(dummy_pyomo_backend_model)
-            .any()
-        )
+    def test_parse_constraint_dict_empty_eq1(self, constraint_obj, eval_where_args):
+        assert not constraint_obj.equations[0].evaluate_where(*eval_where_args)
 
     def test_parse_constraint_dict_evaluate_eq2(
-        self, constraint_obj, dummy_pyomo_backend_model, dummy_backend_interface
+        self, constraint_obj, eval_where_args, eval_expr_args
     ):
         # We ignore foreach here so we can do "== 1" below. With foreach, there is
         # a random element that might create a where array that masks the only valid index item
-        top_level_where = constraint_obj.evaluate_where(dummy_pyomo_backend_model)
+        top_level_where = constraint_obj.evaluate_where(*eval_where_args)
         valid_where = constraint_obj.equations[1].evaluate_where(
-            dummy_pyomo_backend_model, initial_where=top_level_where
+            *eval_where_args, initial_where=top_level_where
         )
         aligned_where = constraint_obj.drop_dims_not_in_foreach(valid_where)
         references = set()
         comparison_expr = constraint_obj.equations[1].evaluate_expression(
-            dummy_backend_interface, where=aligned_where, references=references
+            *eval_expr_args, where=aligned_where, references=references
         )
         assert comparison_expr.sum() == 1
         assert references == {"only_techs"}
@@ -1093,11 +1094,9 @@ class TestParsedVariable:
     def test_parse_variable_dict_n_equations(self, variable_obj):
         assert len(variable_obj.equations) == 0
 
-    def test_parse_variable_dict_empty_eq1(
-        self, variable_obj, dummy_pyomo_backend_model
-    ):
+    def test_parse_variable_dict_empty_eq1(self, variable_obj, eval_where_args):
         top_level_where_where = variable_obj.generate_top_level_where_array(
-            dummy_pyomo_backend_model, break_early=False, align_to_foreach_sets=False
+            *eval_where_args, break_early=False, align_to_foreach_sets=False
         )
         assert not top_level_where_where.any()
 
@@ -1130,22 +1129,14 @@ class TestParsedObjective:
     def test_parse_objective_dict_n_equations(self, objective_obj):
         assert len(objective_obj.equations) == 2
 
-    def test_parse_objective_dict_empty_eq1(
-        self, objective_obj, dummy_pyomo_backend_model
-    ):
-        assert (
-            not objective_obj.equations[0]
-            .evaluate_where(dummy_pyomo_backend_model)
-            .any()
-        )
+    def test_parse_objective_dict_empty_eq1(self, objective_obj, eval_where_args):
+        assert not objective_obj.equations[0].evaluate_where(*eval_where_args).any()
 
     def test_parse_objective_dict_evaluate_eq2(
-        self, objective_obj, dummy_pyomo_backend_model, dummy_backend_interface
+        self, objective_obj, eval_where_args, eval_expr_args
     ):
-        valid_where = objective_obj.equations[1].evaluate_where(
-            dummy_pyomo_backend_model
-        )
+        valid_where = objective_obj.equations[1].evaluate_where(*eval_where_args)
         objective_expression = objective_obj.equations[1].evaluate_expression(
-            dummy_backend_interface, where=valid_where
+            *eval_expr_args, where=valid_where
         )
         assert objective_expression.sum() == 12

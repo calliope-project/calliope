@@ -10,7 +10,7 @@ import logging
 import operator
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Literal, overload
 
 import pyparsing as pp
 import xarray as xr
@@ -20,19 +20,10 @@ from calliope.backend import expression_parser, helper_functions, where_parser
 from calliope.schemas import config_schema, math_schema
 
 if TYPE_CHECKING:
-    from calliope.backend import backend_model
+    pass
 
 
 TRUE_ARRAY = xr.DataArray(True)
-
-MATH_DEFS = (
-    math_schema.Constraint
-    | math_schema.Variable
-    | math_schema.GlobalExpression
-    | math_schema.Objective
-    | math_schema.PiecewiseConstraint
-)
-T = TypeVar("T", bound=MATH_DEFS)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 class EvalAttrs:
     """Attributes required for evaluating parsed expressions."""
 
-    backend_data: xr.Dataset = field(default_factory=xr.Dataset)
+    backend_dataset: xr.Dataset = field(default_factory=xr.Dataset)
     """Backend interface component dataset."""
 
     equation_name: str = ""
@@ -237,7 +228,10 @@ class ParsedBackendEquation:
     @overload
     def evaluate_where(
         self,
-        backend_interface: backend_model.BackendModelGenerator,
+        input_data: xr.Dataset,
+        backend_dataset: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
+        build_config: config_schema.Build,
         *,
         return_type: Literal["array"] = "array",
         references: set | None = None,
@@ -248,7 +242,10 @@ class ParsedBackendEquation:
     @overload
     def evaluate_where(
         self,
-        backend_interface: backend_model.BackendModelGenerator,
+        input_data: xr.Dataset,
+        backend_dataset: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
+        build_config: config_schema.Build,
         *,
         return_type: Literal["math_string"],
         references: set | None = None,
@@ -256,7 +253,10 @@ class ParsedBackendEquation:
 
     def evaluate_where(
         self,
-        backend_interface: backend_model.BackendModelGenerator,
+        input_data: xr.Dataset,
+        backend_dataset: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
+        build_config: config_schema.Build,
         *,
         return_type: str = "array",
         references: set | None = None,
@@ -265,8 +265,10 @@ class ParsedBackendEquation:
         """Evaluate parsed backend object dictionary `where` string.
 
         Args:
-            backend_interface (backend_model.BackendModelGenerator):
-                Interface to an optimisation backend.
+            input_data (xr.Dataset): Model input data.
+            backend_dataset (xr.Dataset): Backend interface component dataset.
+            math (math_schema.CalliopeBuildMath): Calliope math definitions.
+            build_config (config_schema.Build): Build configuration options.
             return_type (str, optional): If "array", return xarray.DataArray.
                 If "math_string", return LaTex math string.
                 Defaults to "array".
@@ -284,10 +286,10 @@ class ParsedBackendEquation:
         eval_attrs = {
             "equation_name": self.name,
             "helper_functions": helper_functions._registry["where"],
-            "input_data": backend_interface.inputs,
-            "backend_data": backend_interface._dataset,
-            "math": backend_interface.math,
-            "build_config": backend_interface.config,
+            "input_data": input_data,
+            "backend_dataset": backend_dataset,
+            "math": math,
+            "build_config": build_config,
         }
         if references is not None:
             eval_attrs["references"] = references
@@ -323,7 +325,9 @@ class ParsedBackendEquation:
     @overload
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModelGenerator,
+        input_data: xr.Dataset,
+        backend_dataset: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
         *,
         return_type: Literal["array"] = "array",
         references: set | None = None,
@@ -334,7 +338,9 @@ class ParsedBackendEquation:
     @overload
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModelGenerator,
+        input_data: xr.Dataset,
+        backend_dataset: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
         *,
         return_type: Literal["math_string"],
         references: set | None = None,
@@ -342,7 +348,9 @@ class ParsedBackendEquation:
 
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModelGenerator,
+        input_data: xr.Dataset,
+        backend_dataset: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
         *,
         return_type: Literal["array", "math_string"] = "array",
         references: set | None = None,
@@ -351,8 +359,9 @@ class ParsedBackendEquation:
         """Evaluate a math string to produce an array backend objects or a LaTex math string.
 
         Args:
-            backend_interface (calliope.backend.backend_model.BackendModel):
-                Interface to a optimisation backend.
+            input_data (xr.Dataset): Model input data.
+            backend_dataset (xr.Dataset): Backend interface component dataset.
+            math (math_schema.CalliopeBuildMath): Calliope math definitions.
 
         Keyword Args:
             return_type (str, optional):
@@ -375,9 +384,9 @@ class ParsedBackendEquation:
             "equation_name": self.name,
             "slice_dict": self.slices,
             "sub_expression_dict": self.sub_expressions,
-            "backend_data": backend_interface._dataset,
-            "math": backend_interface.math,
-            "input_data": backend_interface.inputs,
+            "input_data": input_data,
+            "backend_dataset": backend_dataset,
+            "math": math,
             "where_array": where,
             "helper_functions": helper_functions._registry["expression"],
         }
@@ -442,7 +451,6 @@ class ParsedBackendComponent(ParsedBackendEquation):
         "global_expressions": expression_parser.generate_arithmetic_parser,
         "postprocessed": expression_parser.generate_arithmetic_parser,
         "objectives": expression_parser.generate_arithmetic_parser,
-        "variables": lambda x: None,
         "piecewise_constraints": expression_parser.generate_arithmetic_parser,
     }
 
@@ -451,13 +459,13 @@ class ParsedBackendComponent(ParsedBackendEquation):
         group: Literal[
             "variables",
             "global_expressions",
-            "postprocessed",
             "constraints",
             "piecewise_constraints",
             "objectives",
+            "postprocessed",
         ],
         name: str,
-        unparsed_data: T,
+        unparsed_data: math_schema.MATH_DEFS_T,
         parsing_components: dict[str, dict[str, set[str]]],
     ) -> None:
         """Parse an optimisation problem configuration.
@@ -483,7 +491,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
         )
         self.where: list[pp.ParseResults] = []
         self.equations: list[ParsedBackendEquation] = []
-        self.equation_expression_parser: Callable = self.PARSERS[group]
+        self.equation_expression_parser: Callable = self.PARSERS.get(
+            group, lambda: None
+        )
 
         # capture errors to dump after processing,
         # to make it easier for a user to fix the constraint YAML.
@@ -783,7 +793,10 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
     def generate_top_level_where_array(
         self,
-        backend_interface: backend_model.BackendModel,
+        input_data: xr.Dataset,
+        backend_dataset: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
+        build_config: config_schema.Build,
         *,
         align_to_foreach_sets: bool = True,
         break_early: bool = True,
@@ -796,7 +809,10 @@ class ParsedBackendComponent(ParsedBackendEquation):
         array.
 
         Args:
-            backend_interface (backend_model.BackendModel): Interface to a optimisation backend.
+            input_data (xr.Dataset): Model input data.
+            backend_dataset (xr.Dataset): Backend interface component dataset.
+            math (math_schema.CalliopeBuildMath): Calliope math definitions.
+            build_config (config_schema.Build): Build configuration options.
             align_to_foreach_sets (bool, optional):
                 By default, all foreach arrays have the dimensions ("nodes", "techs", "carriers")
                 as well as any additional dimensions provided by the component's "foreach" key.
@@ -811,7 +827,6 @@ class ParsedBackendComponent(ParsedBackendEquation):
         Returns:
             xr.DataArray: Boolean array defining on which index items a parsed component should be built.
         """
-        input_data = backend_interface.inputs
         foreach_where = self.combine_definition_matrix_and_foreach(input_data)
 
         if not foreach_where.any():
@@ -822,7 +837,10 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         self.parse_top_level_where()
         where = self.evaluate_where(
-            backend_interface,
+            input_data,
+            backend_dataset,
+            math,
+            build_config,
             initial_where=foreach_where,
             references=references if references is not None else set(),
         )

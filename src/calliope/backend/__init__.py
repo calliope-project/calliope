@@ -1,6 +1,6 @@
 """Calliope's optimisation backend module."""
 
-from typing import TYPE_CHECKING
+from typing import TypeVar
 
 import xarray as xr
 

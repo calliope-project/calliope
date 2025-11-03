@@ -168,7 +168,7 @@ def dummy_build_config():
 def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config, dummy_model_math):
     attrs = parsing.EvalAttrs(
         input_data=dummy_pyomo_backend_model.inputs,
-        backend_data=dummy_pyomo_backend_model._dataset,
+        backend_dataset=dummy_pyomo_backend_model._dataset,
         math=dummy_model_math,
         helper_functions=helper_functions._registry["where"],
         equation_name="foo",
@@ -296,26 +296,6 @@ class TestResultArrayParser:
         # There's a chance that some values that *should* be True in evaluated are made False by a NaN value in `definition_matrix`,
         # #so we check that at least all the remaining True values match
         assert (evaluated & dummy_model_data[expected_similar]).equals(evaluated)
-
-    @pytest.mark.parametrize(
-        "data_var_string", ["multi_dim_var", "no_dim_var", "multi_dim_expr"]
-    )
-    def test_result_fail_not_parameter_where_false(
-        self, result_arr, data_var_string, eval_kwargs
-    ):
-        parsed_ = result_arr.parse_string(data_var_string, parse_all=True)
-        with pytest.raises(BackendError) as excinfo:
-            parsed_[0].eval(
-                eval_kwargs["return_type"],
-                replace(eval_kwargs["eval_attrs"], apply_where=False),
-            )
-        assert check_error_or_warning(
-            excinfo,
-            [
-                "Cannot compare variable/global expression",
-                f"Received `{data_var_string}`",
-            ],
-        )
 
 
 class TestConfigOptionParser:
@@ -724,7 +704,7 @@ class TestAsMathString:
         eval_kwargs["return_type"] = "math_string"
         eval_kwargs["eval_attrs"] = replace(
             eval_kwargs["eval_attrs"],
-            backend_data=dummy_latex_backend_model._dataset,
+            backend_dataset=dummy_latex_backend_model._dataset,
             math=dummy_model_math,
         )
         return eval_kwargs

@@ -4,10 +4,11 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 import re
 from abc import ABC
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any, Literal, SupportsFloat, overload
@@ -27,7 +28,7 @@ from pyomo.core.kernel.piecewise_library.transforms import (
 from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
-from calliope.backend import backend_model, parsing
+from calliope.backend import backend_model
 from calliope.backend.backend_model import ALL_COMPONENTS_T
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
@@ -45,9 +46,105 @@ COMPONENT_TRANSLATOR = {
     "objective": "objective",
 }
 
+ADD_OBJ_LIST_METHODS = [
+    "add_constraint",
+    "add_global_expression",
+    "add_variable",
+    "add_piecewise_constraint",
+    "add_objective",
+    "add_parameter",
+]
 
-class PyomoBackendModel(backend_model.BackendModel):
+
+def _create_backend_obj_adding_component(
+    func, component_type: ALL_COMPONENTS_T
+) -> Callable:
+    """Decorator to validate the component definition when adding a new component as a dictionary.
+
+    Args:
+        func (Callable): The function with a definition to validate.
+        component_type (str): Object type
+    """
+
+    def _create_obj_list(instance: pmo.Block, key: str) -> None:
+        """Attach an empty pyomo kernel list object to the pyomo model object.
+
+        Args:
+            instance (pmo.Block): Pyomo model instance
+            key (str): Name of object
+
+        Raises:
+            BackendError: Cannot overwrite object of same name and type.
+        """
+        component_dict = getattr(instance, component_type)
+        if key in component_dict:
+            raise BackendError(
+                f"Trying to add already existing `{key}` to backend model {component_type}."
+            )
+        else:
+            singular_component = component_type.removesuffix("s")
+            component_dict[key] = getattr(
+                pmo, f"{COMPONENT_TRANSLATOR[singular_component]}_list"
+            )()
+
+    def _del_obj_list(instance: pmo.Block, key: str) -> None:
+        """Delete a pyomo kernel list object from the pyomo model object.
+
+        Args:
+            instance (pmo.Block): Pyomo model instance
+            key (str): Name of object
+        """
+        component_dict = getattr(instance, component_type)
+        if key in component_dict:
+            del component_dict[key]
+
+    @functools.wraps(func)
+    def wrapper(self, name: str, *args, **kwargs):
+        """Wrapper to create and manage the pyomo kernel object list for optimisation components."""
+        # Create the obj_list
+        _create_obj_list(self._instance, name)
+        try:
+            # Run the original function
+            result = func(self, name, *args, **kwargs)
+        finally:
+            # Delete if obj_list is empty or if the dataset array is all null
+            if name not in self._dataset or self._dataset[name].isnull().all():
+                _del_obj_list(self._instance, name)
+
+        return result
+
+    return wrapper
+
+
+class SelectiveWrappingMeta(backend_model.SelectiveWrappingMeta):
+    """Metaclass to selectively wrap methods in concrete classes inheriting from the backend ABC."""
+
+    def __new__(mcs, name, bases, namespace):
+        """Wrap methods in all new instances of the class."""
+        cls = super().__new__(mcs, name, bases, namespace)
+        for method_name in ADD_OBJ_LIST_METHODS:
+            if hasattr(cls, method_name):
+                original = getattr(cls, method_name)
+                setattr(
+                    cls,
+                    method_name,
+                    _create_backend_obj_adding_component(
+                        original, method_name.removeprefix("add_") + "s"
+                    ),
+                )
+        return cls
+
+
+class PyomoBackendModel(backend_model.BackendModel, metaclass=SelectiveWrappingMeta):
     """Pyomo-specific backend functionality."""
+
+    OBJECTIVE_SENSE_DICT = {
+        "minimize": 1,
+        "minimise": 1,
+        "maximize": -1,
+        "maximise": -1,
+    }
+    VARIABLE_DOMAIN_DICT = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
 
     def __init__(
         self,
@@ -84,104 +181,73 @@ class PyomoBackendModel(backend_model.BackendModel):
             )
             values = xr.DataArray(np.nan, attrs=values.attrs)
         else:
-            self._create_obj_list(name, "parameters")
             values = self._apply_func(
                 self._to_pyomo_param, values.notnull(), 1, values, name=name
             )
 
         self._add_to_dataset(name, values, "parameters", definition.model_dump())
 
-        if name not in self.math["parameters"]:
-            self.math = self.math.update(
-                {f"parameters.{name}": definition.model_dump()}
+    def _add_variable(  # noqa: D102, override
+        self,
+        name: str,
+        where: xr.DataArray,
+        references: set,
+        domain_type: object,
+        bounds: math_schema.Bounds,
+    ) -> xr.DataArray:
+        lb = self._get_variable_bound(bounds.min, name, references)
+        ub = self._get_variable_bound(bounds.max, name, references)
+        var = self._apply_func(
+            self._to_pyomo_variable,
+            where,
+            1,
+            lb,
+            ub,
+            name=name,
+            domain_type=domain_type,
+        )
+        var.attrs = {}
+        return var
+
+    def _add_global_expression(  # noqa: D102, override
+        self, name: str, where: xr.DataArray, expression: xr.DataArray
+    ) -> xr.DataArray:
+        expression = expression.squeeze(drop=True)
+
+        to_fill = expression.where(where)
+
+        return to_fill
+
+    def _add_constraint(  # noqa: D102, override
+        self, name: str, where: xr.DataArray, expression: xr.DataArray
+    ) -> xr.DataArray:
+        try:
+            to_fill = self._apply_func(
+                self._to_pyomo_constraint, where, 1, expression, name=name
             )
+        except BackendError as err:
+            types = self._apply_func(lambda x: type(x).__name__, where, 1, expression)
+            offending_items = types.to_series().dropna().str.startswith("bool")
+            offending_idx = offending_items[offending_items].index.values
+            err.args = (f"{err.args[0]}: {offending_idx}", *err.args[1:])
+            raise err
 
-    def add_constraint(  # noqa: D102, override
-        self, name: str, definition: math_schema.Constraint
-    ) -> None:
-        def _constraint_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> xr.DataArray:
-            expr = element.evaluate_expression(self, where=where, references=references)
+        return to_fill
 
-            try:
-                to_fill = self._apply_func(
-                    self._to_pyomo_constraint, where, 1, expr, name=name
-                )
-            except BackendError as err:
-                types = self._apply_func(lambda x: type(x).__name__, where, 1, expr)
-                offending_items = types.to_series().dropna().str.startswith("bool")
-                offending_idx = offending_items[offending_items].index.values
-                err.args = (f"{err.args[0]}: {offending_idx}", *err.args[1:])
-                raise err
+    def _add_objective(  # noqa: D102, override
+        self, name: str, where: xr.DataArray, expression: xr.DataArray, sense: int
+    ) -> xr.DataArray:
+        objective = pmo.objective(expression.item(), sense=sense)
+        if name == self.objective:
+            text = "activated"
+            objective.activate()
+        else:
+            text = "deactivated"
+            objective.deactivate()
+        self.log("objectives", name, f"Objective {text}.")
 
-            return to_fill
-
-        self._add_component(name, definition, _constraint_setter, "constraints")
-
-    def add_global_expression(  # noqa: D102, override
-        self, name: str, definition: math_schema.GlobalExpression
-    ) -> None:
-        def _expression_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> xr.DataArray:
-            expr = element.evaluate_expression(self, where=where, references=references)
-            expr = expr.squeeze(drop=True)
-
-            to_fill = expr.where(where)
-
-            return to_fill
-
-        self._add_component(name, definition, _expression_setter, "global_expressions")
-
-    def add_variable(  # noqa: D102, override
-        self, name: str, definition: math_schema.Variable
-    ) -> None:
-        domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
-
-        def _variable_setter(where, references):
-            domain_type = domain_dict[definition.domain]
-            bounds = definition.bounds
-            lb = self._get_variable_bound(bounds["min"], name, references)
-            ub = self._get_variable_bound(bounds["max"], name, references)
-            var = self._apply_func(
-                self._to_pyomo_variable,
-                where,
-                1,
-                lb,
-                ub,
-                name=name,
-                domain_type=domain_type,
-            )
-            var.attrs = {}
-            return var
-
-        self._add_component(name, definition, _variable_setter, "variables")
-
-    def add_objective(  # noqa: D102, override
-        self, name: str, definition: math_schema.Objective
-    ) -> None:
-        sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
-
-        sense = sense_dict[definition.sense]
-
-        def _objective_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> xr.DataArray:
-            expr = element.evaluate_expression(self, references=references)
-            objective = pmo.objective(expr.item(), sense=sense)
-            if name == self.objective:
-                text = "activated"
-                objective.activate()
-            else:
-                text = "deactivated"
-                objective.deactivate()
-            self.log("objectives", name, f"Objective {text}.")
-
-            self._instance.objectives[name].append(objective)
-            return xr.DataArray(objective)
-
-        self._add_component(name, definition, _objective_setter, "objectives")
+        self._instance.objectives[name].append(objective)
+        return xr.DataArray(objective)
 
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         self.objectives[self.objective].item().deactivate()
@@ -342,27 +408,6 @@ class PyomoBackendModel(backend_model.BackendModel):
 
     def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
         self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
-
-    def _create_obj_list(self, key: str, component_type: ALL_COMPONENTS_T) -> None:
-        """Attach an empty pyomo kernel list object to the pyomo model object.
-
-        Args:
-            key (str): Name of object
-            component_type (str): Object type
-
-        Raises:
-            BackendError: Cannot overwrite object of same name and type.
-        """
-        component_dict = getattr(self._instance, component_type)
-        if key in component_dict:
-            raise BackendError(
-                f"Trying to add already existing `{key}` to backend model {component_type}."
-            )
-        else:
-            singular_component = component_type.removesuffix("s")
-            component_dict[key] = getattr(
-                pmo, f"{COMPONENT_TRANSLATOR[singular_component]}_list"
-            )()
 
     def delete_component(  # noqa: D102, override
         self, key: str, component_type: ALL_COMPONENTS_T

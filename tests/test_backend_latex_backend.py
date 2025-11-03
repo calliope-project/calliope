@@ -207,7 +207,7 @@ class TestLatexBackendModel:
         )
         assert (
             "multi_dim_expr"
-            not in valid_latex_backend.constraints["valid_constr"].attrs["math_string"]
+            not in valid_latex_backend.math_strings["constraints"]["valid_constr"]
         )
 
     def test_add_objective(self, dummy_latex_backend_model):
@@ -218,7 +218,7 @@ class TestLatexBackendModel:
                 "sense": "minimize",
             },
         )
-        assert dummy_latex_backend_model.objectives["obj"].isnull().all()
+        assert dummy_latex_backend_model.objectives["obj"] == 1.0
         assert (
             "obj" not in dummy_latex_backend_model.math.parsing_components["expression"]
         )
@@ -270,8 +270,8 @@ class TestLatexBackendModel:
                 "description": "FOO",
             },
         )
-        math_string = dummy_latex_backend_model.piecewise_constraints["p_constr"].attrs[
-            "math_string"
+        math_string = dummy_latex_backend_model.math_strings["piecewise_constraints"][
+            "p_constr"
         ]
         assert (
             r"\text{ breakpoint }\negthickspace \in \negthickspace\text{ breakpoints }"
@@ -312,16 +312,13 @@ class TestLatexBackendModel:
                 "description": "BAR",
             },
         )
-        math_string = dummy_latex_backend_model.piecewise_constraints[
+        math_string = dummy_latex_backend_model.math_strings["piecewise_constraints"][
             "p_constr_no_foreach"
-        ].attrs["math_string"]
+        ]
         assert (
             r"\text{ breakpoint }\negthickspace \in \negthickspace\text{ breakpoints }"
             in math_string
         )
-
-    def test_create_obj_list(self, dummy_latex_backend_model):
-        assert dummy_latex_backend_model._create_obj_list("var", "variables") is None
 
     @pytest.mark.parametrize(
         ("format", "expected"),
@@ -617,19 +614,7 @@ class TestLatexBackendModel:
         ("kwargs", "expected"),
         [
             (
-                {"sets": ["nodes", "techs"]},
-                textwrap.dedent(
-                    r"""
-                \begin{array}{l}
-                    \forall{}
-                    \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
-                    \text{ tech }\negthickspace \in \negthickspace\text{ techs }
-                    \!\!:\\[2em]
-                \end{array}"""
-                ),
-            ),
-            (
-                {"sense": r"\min{}"},
+                {"sense_string": r"\min{}"},
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
@@ -638,7 +623,7 @@ class TestLatexBackendModel:
                 ),
             ),
             (
-                {"where": r"foo \land bar"},
+                {"where_strings": r"foo \land bar"},
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
@@ -647,7 +632,7 @@ class TestLatexBackendModel:
                 ),
             ),
             (
-                {"where": r""},
+                {"where_strings": r""},
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
@@ -656,7 +641,7 @@ class TestLatexBackendModel:
             ),
             (
                 {
-                    "equations": [
+                    "equation_strings": [
                         {"expression": "foo", "where": "bar"},
                         {"expression": "foo + 1", "where": ""},
                     ]
@@ -673,9 +658,9 @@ class TestLatexBackendModel:
         ],
     )
     def test_generate_math_string(self, dummy_latex_backend_model, kwargs, expected):
-        da = xr.DataArray()
-        dummy_latex_backend_model._generate_math_string(None, da, **kwargs)
-        assert da.math_string == expected
+        da = xr.DataArray(attrs=kwargs)
+        dummy_latex_backend_model._generate_math_string("foo", "bar", da)
+        assert dummy_latex_backend_model.math_strings["foo"]["bar"] == expected
 
     @pytest.mark.parametrize(
         ("instring", "kwargs", "expected"),

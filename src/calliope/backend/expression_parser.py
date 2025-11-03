@@ -795,7 +795,7 @@ class EvalUnslicedComponent(EvalArrayOrMath):
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         try:
-            evaluated = self.eval_attrs.backend_data[self.name]
+            evaluated = self.eval_attrs.backend_dataset[self.name]
             if (
                 self.eval_attrs.as_values
                 and evaluated.attrs["obj_type"] == "parameters"
