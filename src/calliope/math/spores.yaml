@@ -44,22 +44,6 @@ constraints:
               over=timesteps
             ) * bigM
 
-global_expressions:
-  spores_score_cumulative:
-    description: Track SPORES score to include in the model results
-    foreach: [nodes, techs, carriers]
-    equations:
-      - expression: spores_score
-    unit: unitless
-    default: 0
-
-  spores_baseline_cost_tracked:
-    description: Track SPORES baseline cost to include in the model results
-    equations:
-      - expression: spores_baseline_cost
-    unit: cost
-    default: .inf
-
 objectives:
   min_spores:
     description: >-
@@ -76,3 +60,20 @@ objectives:
               over=timesteps
             ) * bigM
     sense: minimise
+
+postprocessed:
+  spores_score_cumulative:
+    description: Track SPORES score to include in the model results
+    foreach: [nodes, techs, carriers]
+    equations:
+      - expression: spores_score
+    unit: unitless
+    default: 0
+
+  spores_baseline_cost_tracked:
+    description: Track SPORES baseline cost to include in the model results
+    equations:
+      - expression: spores_baseline_cost
+    unit: cost
+    default: .inf
+

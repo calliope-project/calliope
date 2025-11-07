@@ -142,7 +142,7 @@ class TestModelBuild:
         )
         model.build(force=True)
         assert len(model.backend.constraints) > 0
-        assert model.backend.constraints.system_balance.equals(xr.DataArray(np.nan))
+        assert "system_balance" not in model.backend.constraints
 
 
 class TestModelSolve:

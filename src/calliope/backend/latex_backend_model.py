@@ -109,15 +109,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     * {{ ref }}
     {% endfor %}
     {% endif %}
-    {% if equation.unit != "" %}
+    {% if 'unit' in equation and equation.unit != "" %}
 
     **Unit**: {{ equation.unit }}
     {% endif %}
-    {% if equation.default is not none %}
+    {% if 'default' in equation and equation.default is not none %}
 
     **Default**: {{ equation.default }}
     {% endif %}
-    {% if equation.dtype is not none %}
+    {% if 'dtype' in equation and equation.dtype is not none %}
 
     **Type**: {{ equation.dtype }}
     {% endif %}
@@ -192,11 +192,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     \textbf{Unit}: {{ equation.unit }}
     {% endif %}
-    {% if equation.default is not none %}
+    {% if 'default' in equation and equation.default is not none %}
 
     \textbf{Default}: {{ equation.default }}
     {% endif %}
-    {% if equation.dtype is not none %}
+    {% if 'dtype' in equation and equation.dtype is not none %}
 
     \textbf{Type}: {{ equation.dtype }}
     {% endif %}
@@ -264,15 +264,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {{ "    " if mkdocs_features else "" }}* [{{ ref }}](#{{ ref }})
     {% endfor %}
     {% endif %}
-    {% if equation.unit != "" %}
+    {% if 'unit' in equation and equation.unit != "" %}
 
     **Unit**: {{ equation.unit }}
     {% endif %}
-    {% if equation.default is not none %}
+    {% if 'default' in equation and equation.default is not none %}
 
     **Default**: {{ equation.default }}
     {% endif %}
-    {% if equation.dtype is not none %}
+    {% if 'dtype' in equation and equation.dtype is not none %}
 
     **Type**: {{ equation.dtype }}
     {% endif %}
@@ -376,7 +376,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
         parsed_component = parsing.ParsedBackendComponent(
-            "piecewise_constraints", name, definition, self.math.parsing_components
+            "piecewise_constraints",
+            name,
+            constraint_def_with_breakpoints,
+            self.math.parsing_components,
         )
         component_da = self._eval_top_level_where(
             self._dataset, references, parsed_component
@@ -409,7 +412,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             name,
             component_da,
             "piecewise_constraints",
-            constraint_def_with_breakpoints.model_dump(),
+            definition.model_dump(),
             references=references,
         )
         self._generate_math_string(
@@ -520,7 +523,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         components = {
             objtype: [
                 {
-                    "expression": self.math_strings[objtype][name],
+                    "expression": math_string,
                     "name": name,
                     "used_in": sorted(
                         list(da.attrs.get("references", set()) - set([name]))
@@ -532,7 +535,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     **self.math[objtype][name].model_dump(),
                 }
                 for name, da in sorted(getattr(self, objtype).data_vars.items())
-                if ("math_string" in da.attrs)
+                if (math_string := self.math_strings[objtype][name]) != ""
                 or (objtype in ["parameters", "lookups"] and da.attrs["references"])
             ]
             for objtype in [

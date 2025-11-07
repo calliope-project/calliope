@@ -52,7 +52,7 @@ class TestLatexBackendModel:
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "var" in backend_model.math.parsing_components["where"]["results"]
-        assert "math_string" in backend_model.variables["var"].attrs
+        assert backend_model.math_strings["variables"]["var"]
         assert (
             backend_model.variables["var"].attrs["math_repr"]
             == r"\textbf{var}_\text{node,tech}"
@@ -74,7 +74,7 @@ class TestLatexBackendModel:
             "invalid_var"
             in valid_latex_backend.math.parsing_components["where"]["results"]
         )
-        assert "math_string" not in valid_latex_backend.variables["invalid_var"].attrs
+        assert not valid_latex_backend.math_strings["variables"]["invalid_var"]
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -95,7 +95,7 @@ class TestLatexBackendModel:
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "expr" in backend_model.math.parsing_components["where"]["results"]
-        assert "math_string" in backend_model.global_expressions["expr"].attrs
+        assert backend_model.math_strings["global_expressions"]["expr"]
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -120,7 +120,7 @@ class TestLatexBackendModel:
         assert (
             "var_init_expr" in backend_model.math.parsing_components["where"]["results"]
         )
-        assert "math_string" in backend_model.global_expressions["var_init_expr"].attrs
+        assert backend_model.math_strings["global_expressions"]["var_init_expr"]
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -145,7 +145,7 @@ class TestLatexBackendModel:
         assert "constr" not in set().union(
             *backend_model.math.parsing_components["where"].values()
         )
-        assert "math_string" in backend_model.constraints["constr"].attrs
+        assert backend_model.math_strings["constraints"]["constr"]
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -174,7 +174,7 @@ class TestLatexBackendModel:
             *backend_model.math.parsing_components["where"].values()
         )
 
-        assert "math_string" in backend_model.constraints["var_init_constr"].attrs
+        assert backend_model.math_strings["constraints"]["var_init_constr"]
 
     def test_add_constraint_not_valid(self, valid_latex_backend):
         valid_latex_backend.add_constraint(
@@ -623,7 +623,7 @@ class TestLatexBackendModel:
                 ),
             ),
             (
-                {"where_strings": r"foo \land bar"},
+                {"where_string": r"foo \land bar"},
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
@@ -632,7 +632,7 @@ class TestLatexBackendModel:
                 ),
             ),
             (
-                {"where_strings": r""},
+                {"where_string": r""},
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
@@ -658,7 +658,7 @@ class TestLatexBackendModel:
         ],
     )
     def test_generate_math_string(self, dummy_latex_backend_model, kwargs, expected):
-        da = xr.DataArray(attrs=kwargs)
+        da = xr.DataArray(True, attrs=kwargs)
         dummy_latex_backend_model._generate_math_string("foo", "bar", da)
         assert dummy_latex_backend_model.math_strings["foo"]["bar"] == expected
 

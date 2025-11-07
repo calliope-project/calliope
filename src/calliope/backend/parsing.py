@@ -488,7 +488,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         self.where: list[pp.ParseResults] = []
         self.equations: list[ParsedBackendEquation] = []
         self.equation_expression_parser: Callable = self.PARSERS.get(
-            group, lambda: None
+            group, lambda x: None
         )
 
         # capture errors to dump after processing,

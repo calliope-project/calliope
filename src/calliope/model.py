@@ -560,7 +560,7 @@ class Model(ModelStructure):
                         self.backend.update_input(param_name, param_data)
                         self.backend.inputs[param_name] = param_data
 
-            if "storage" in iteration_results:
+            if iteration_results.get("storage", xr.DataArray()).notnull().any():
                 self.backend.update_input(
                     "storage_initial",
                     self._recalculate_storage_initial(previous_iteration_results),

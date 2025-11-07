@@ -293,9 +293,10 @@ class SubsetParser(expression_parser.EvalArrayOrMath):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         subset = self._eval()
-        dim = self.set_name.eval("array", self.eval_attrs)
+        dim = self.set_name.eval("math_string", self.eval_attrs)
+        iterator = self.eval_attrs.math.dimensions[dim].iterator
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
-        return rf"\text{{{dim.iterator}}} \in \text{{{subset_string}}}"
+        return rf"\text{{{iterator}}} \in \text{{{subset_string}}}"
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         subset = self._eval()
@@ -522,7 +523,7 @@ def generate_where_string_parser(
     config_option = config_option_parser(generic_identifier)
     bool_operand = bool_parser()
     unique_evaluatable_string = evaluatable_string_parser(
-        generic_identifier, set().union(dimensions, inputs, results)
+        generic_identifier, set().union(dimensions, inputs, results, postprocessed)
     )
     general_evaluatable_string = evaluatable_string_parser(generic_identifier, [])
     id_list = expression_parser.list_parser(
@@ -542,14 +543,13 @@ def generate_where_string_parser(
     )
     arithmetic_elements = [
         comparison_helper_function,
-        subset,
         number,
         dimensions_parser,
         inputs_parser,
         config_option,
     ]
     if postprocessed:
-        arithmetic_elements.append(results_parser)
+        arithmetic_elements.insert(-2, results_parser)
 
     comparison_arithmetic = expression_parser.arithmetic_parser(
         *arithmetic_elements, arithmetic=arithmetic
@@ -575,5 +575,5 @@ def generate_where_string_parser(
         generic_identifier=generic_identifier,
     )
     return where_parser(
-        bool_operand, helper_function, comparison, subset, inputs_parser, results_parser
+        bool_operand, comparison, helper_function, subset, inputs_parser, results_parser
     )

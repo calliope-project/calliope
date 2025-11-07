@@ -11,6 +11,7 @@ import typing
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
+from copy import deepcopy
 from functools import partial
 from pathlib import Path
 from typing import (
@@ -378,7 +379,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             self.log("postprocessed", name, "Component deactivated.")
             return default_empty
 
-        parsing_components = self.math.parsing_components.copy()
+        parsing_components = deepcopy(self.math.parsing_components)
         parsing_components["where"]["postprocessed"] = set(self.math.postprocessed.root)
         parsing_components["expression"]["postprocessed"] = set(
             self.math.postprocessed._active
@@ -581,7 +582,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         new_inputs = xr.Dataset()
         for obj_type in ["parameters", "lookups", "dimensions"]:
             for name, config in self.math[obj_type].root.items():
-                attrs: dict = {"obj_type": obj_type, **config.model_dump()}
+                attrs: dict = {"obj_type": obj_type}
                 default = config.default if obj_type == "lookups" else np.nan
                 data = inputs.get(name, xr.DataArray(default))
                 if obj_type == "dimensions" and name in inputs.dims:
@@ -1422,15 +1423,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         if postprocess:
             results = self.add_postprocessed_arrays(results)
-        cleaned_results = xr.Dataset(
-            {
-                k: _drop_attrs(v)
-                for k, v in results.data_vars.items()
-                if v.notnull().any()
-            },
-            attrs=self._dataset.attrs,
-        )
-        return cleaned_results
+        # cleaned_results = xr.Dataset(
+        #    {
+        #        k: _drop_attrs(v)
+        #        for k, v in results.data_vars.items()
+        #        if v.notnull().any()
+        #    },
+        #    attrs=self._dataset.attrs,
+        # )
+        return results
 
     def _find_all_references(self, initial_references: set) -> set:
         """Find all nested references to optimisation problem components from an initial set of references.

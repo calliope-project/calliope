@@ -14,6 +14,7 @@ import calliope.backend
 import calliope.exceptions as exceptions
 from calliope.backend.pyomo_backend_model import (
     ADD_OBJ_LIST_METHODS,
+    COMPONENT_TRANSLATOR,
     PyomoBackendModel,
     _create_backend_obj_adding_component,
 )
@@ -2480,7 +2481,7 @@ class TestWrapperAndMetaclass:
         # Manually create an obj_list
         component_dict = getattr(mock_backend._instance, component)
         component_dict["duplicate"] = getattr(
-            pmo, f"{component.removesuffix('s')}_list"
+            pmo, f"{COMPONENT_TRANSLATOR[component.removesuffix('s')]}_list"
         )()
 
         # Try to create it again - should raise error
