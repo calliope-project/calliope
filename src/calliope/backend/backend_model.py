@@ -1423,15 +1423,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         if postprocess:
             results = self.add_postprocessed_arrays(results)
-        # cleaned_results = xr.Dataset(
-        #    {
-        #        k: _drop_attrs(v)
-        #        for k, v in results.data_vars.items()
-        #        if v.notnull().any()
-        #    },
-        #    attrs=self._dataset.attrs,
-        # )
-        return results
+        cleaned_results = xr.Dataset(
+            {
+                k: _drop_attrs(v)
+                for k, v in results.data_vars.items()
+                if v.notnull().any()
+            },
+            attrs=self._dataset.attrs,
+        )
+        return cleaned_results
 
     def _find_all_references(self, initial_references: set) -> set:
         """Find all nested references to optimisation problem components from an initial set of references.

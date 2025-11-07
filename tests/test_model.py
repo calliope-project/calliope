@@ -171,7 +171,6 @@ class TestModelSolve:
             "systemwide_capacity_factor",
             "systemwide_levelised_cost",
             "total_levelised_cost",
-            "unmet_sum",
         ]:
             assert setting == (postprocess in model.results)
 
