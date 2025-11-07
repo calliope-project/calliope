@@ -1330,13 +1330,22 @@ piecewise_constraints: {}
 
 postprocessed:
   capacity_factor:
-    foreach: [nodes, techs, carriers, timesteps]
+    title: Capacity factor
+    description: >-
+      The fraction of a technology's capacity that is utilised for carrier outflow in each time period.
+    unit: unitless
     default: 0
+    foreach: [nodes, techs, carriers, timesteps]
     where: flow_out AND flow_cap>0
     equations:
       - expression: flow_out / (flow_cap * timestep_resolution)
 
   systemwide_capacity_factor:
+    title: Systemwide capacity factor
+    description: >-
+      The fraction of a technology's capacity that is utilised for carrier outflow,
+      averaged over the full time horizon and all nodes.
+    unit: unitless
     foreach: [techs, carriers]
     default: 0
     where: flow_out AND flow_cap>0
@@ -1346,6 +1355,10 @@ postprocessed:
           (sum(flow_cap, over=nodes) * sum(timestep_resolution * timestep_weights, over=timesteps))
 
   total_generation:
+    title: Total generation
+    description: >-
+      Sum of technology carrier outflow across all nodes and time periods.
+    unit: energy
     foreach: [techs, carriers]
     default: 0
     where: flow_out AND NOT base_tech==demand
@@ -1353,6 +1366,11 @@ postprocessed:
       - expression: sum(flow_out + flow_export * timestep_weights, over=[nodes, timesteps])
 
   systemwide_levelised_cost:
+    title: Systemwide levelised cost of energy (LCOE)
+    description: >-
+      Levelised cost of each technology's generated carrier,
+      averaged over all nodes and time periods.
+    unit: $\frac{\text{cost}}{\text{energy}}$
     foreach: [techs, carriers, costs]
     default: 0
     where: total_generation>0 AND any(cost, over=nodes)
@@ -1360,6 +1378,11 @@ postprocessed:
       - expression: sum(cost, over=nodes) / total_generation
 
   total_levelised_cost:
+    title: Total levelised cost of energy (LCOE)
+    description: >-
+      Levelised cost of each carrier in the system,
+      averaged over all technologies, nodes, and time periods.
+    unit: $\frac{\text{cost}}{\text{energy}}$
     foreach: [carriers, costs]
     default: 0
     where: sum(total_generation, over=techs)>0
@@ -1367,6 +1390,13 @@ postprocessed:
       - expression: sum(cost, over=[nodes, techs]) / sum(total_generation, over=techs)
 
   unmet_sum:
+    title: Net unmet demand
+    description: >-
+      Net unmet demand for each time period, node, and carrier.
+      This accounts for the net effect of the two dummy variables:
+      unmet demand (load shedding) and unused supply (forced curtailment).
+      Note: this should only be used for debugging.
+    unit: energy
     foreach: [nodes, carriers, timesteps]
     default: 0
     where: config.ensure_feasibility == True
@@ -1374,6 +1404,11 @@ postprocessed:
       - expression: unmet_demand + unused_supply
 
   curtailment:
+    title: Curtailment
+    description: >-
+      Fraction of outflow curtailed compared to that could have been generated if utilising all available resource.
+      This is useful for renewable energy technologies, for which unused resource in any hour is effectively lost revenue.
+    unit: unitless
     foreach: [nodes, techs, timesteps]
     where: base_tech==supply AND source_use_max>0 AND NOT source_use_max==inf AND source_cap>0
     default: 0
@@ -1383,7 +1418,13 @@ postprocessed:
       source_scaler: *source_scaler
 
   total_curtailment:
-    foreach: [nodes, techs, timesteps]
+    title: Total curtailment
+    description: >-
+      Fraction of outflow curtailed compared to that could have been generated if utilising all available resource,
+      averaged over the full time horizon.
+      This is useful for renewable energy technologies, for which unused resource in any hour is effectively lost revenue.
+    unit: unitless
+    foreach: [nodes, techs]
     where: base_tech==supply AND source_use_max AND source_cap>0
     default: 0
     equations:

@@ -34,6 +34,7 @@ class MathDocumentation:
             model.inputs, model.math.build, model.config.build, include
         )
         self.backend.add_optimisation_components()
+        self.backend.add_postprocessed_arrays(self.backend._dataset)
 
     @property
     def math(self):

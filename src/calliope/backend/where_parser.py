@@ -135,10 +135,11 @@ class ResultArrayParser(expression_parser.EvalArrayOrMath):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
+        math_repr = self.eval_attrs.backend_data[self.array_name].attrs.get(
+            "math_repr", rf"\exists (\textbf{{{self.array_name}}})"
+        )
 
-        var = self.eval_attrs.backend_data.get(self.array_name, xr.DataArray())
-        data_var_string = rf"\exists ({var.attrs['math_repr']})"
-        return data_var_string
+        return math_repr
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
@@ -173,12 +174,12 @@ class InputArrayParser(expression_parser.EvalArrayOrMath):
     def as_math_string(self) -> str:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
 
-        var = self.eval_attrs.backend_data.get(self.array_name, xr.DataArray())
-
-        data_var_string = var.attrs["math_repr"]
+        math_repr = self.eval_attrs.backend_data[self.array_name].attrs.get(
+            "math_repr", rf"\textit{{{self.array_name}}}"
+        )
         if self.eval_attrs.apply_where:
-            data_var_string = rf"\exists ({data_var_string})"
-        return data_var_string
+            math_repr = rf"\exists ({math_repr})"
+        return math_repr
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)

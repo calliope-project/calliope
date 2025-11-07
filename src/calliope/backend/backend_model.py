@@ -401,7 +401,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             )
         else:
             component_da = default_empty
-        return component_da.astype(float)
+        return component_da.astype(float).assign_attrs(references=references)
 
     def _eval_top_level_where(
         self,

@@ -80,10 +80,18 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     Decision Variables
     ------------------
+    {% elif component_type == "postprocessed" %}
+
+    Postprocessed Statistics
+    -------------------------
     {% elif component_type == "parameters" %}
 
     Parameters
     ----------
+    {% elif component_type == "lookups" %}
+
+    Lookup Arrays
+    -------------
     {% endif %}
     {% for equation in equations %}
 
@@ -160,8 +168,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     \section{Where}
     {% elif component_type == "variables" %}
     \section{Decision Variables}
+    {% elif component_type == "postprocessed" %}
+    \section{Postprocessed Statistics}
     {% elif component_type == "parameters" %}
     \section{Parameters}
+    {% elif component_type == "lookups" %}
+    \section{Lookup arrays}
     {% endif %}
     {% for equation in equations %}
 
@@ -229,9 +241,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% elif component_type == "variables" %}
 
     ## Decision Variables
+    {% elif component_type == "postprocessed" %}
+
+    ## Postprocessed Statistics
     {% elif component_type == "parameters" %}
 
     ## Parameters
+    {% elif component_type == "lookups" %}
+
+    ## Lookup Arrays
     {% endif %}
     {% for equation in equations %}
 
@@ -470,6 +488,32 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             ),
         )
 
+    def _add_postprocessed(  # noqa: D102, override
+        self,
+        name: str,
+        definition: math_schema.PostprocessedExpression,
+        dataset: xr.Dataset,
+    ) -> xr.DataArray:
+        expr_da = super()._add_postprocessed(name, definition, dataset)
+
+        self._add_to_dataset(
+            name,
+            expr_da,
+            "postprocessed",
+            definition.model_dump(),
+            references=expr_da.attrs["references"],
+        )
+        expr_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
+            expr_da
+        )
+        self._generate_math_string("postprocessed", name, expr_da)
+        return expr_da
+
+    @property
+    def postprocessed(self):
+        """Slice of backend dataset to show only built postprocessed expressions."""
+        return self._dataset.filter_by_attrs(obj_type="postprocessed")
+
     def set_objective(self, name: str):  # noqa: D102, override
         self.objective = name
         self.log("objectives", name, "Objective activated.", level="info")
@@ -544,6 +588,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 "piecewise_constraints",
                 "global_expressions",
                 "variables",
+                "postprocessed",
                 "parameters",
                 "lookups",
             ]
@@ -558,7 +603,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 objective["name"] += " (active)"
             else:
                 objective["name"] += " (inactive)"
-
+        breakpoint()
         return self._render(
             doc_template, mkdocs_features=mkdocs_features, components=components
         )
