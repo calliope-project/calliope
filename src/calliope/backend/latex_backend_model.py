@@ -603,7 +603,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 objective["name"] += " (active)"
             else:
                 objective["name"] += " (inactive)"
-        breakpoint()
         return self._render(
             doc_template, mkdocs_features=mkdocs_features, components=components
         )
