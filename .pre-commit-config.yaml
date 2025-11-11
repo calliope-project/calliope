@@ -26,9 +26,9 @@ repos:
       - id: check-added-large-files
         args: [--enforce-all --maxkb=100000]
       - id: trailing-whitespace
-        exclude: "^(inventory|user_analysis)/output/.*.csv$"
+        exclude: ".*.(svg|png|csv|lp)$"
       - id: end-of-file-fixer
-        exclude: "^(inventory|user_analysis)/output/.*.csv$"
+        exclude: ".*.(svg|png|csv|lp)$"
 
 ci:  # https://pre-commit.ci/
   autofix_prs: false

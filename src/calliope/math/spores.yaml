@@ -76,4 +76,3 @@ postprocessed:
       - expression: spores_baseline_cost
     unit: cost
     default: .inf
-
