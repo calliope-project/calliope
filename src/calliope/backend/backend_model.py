@@ -147,10 +147,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
         self._add_to_dataset(name, values, "lookups", definition.model_dump())
 
-        if name not in self.math["lookups"]:
-            self.math = self.math.update({f"lookups.{name}": definition.model_dump()})
-
-    @abstractmethod
     def add_parameter(
         self, name: str, values: xr.DataArray, definition: math_schema.Parameter
     ) -> None:
@@ -165,6 +161,13 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             values (xr.DataArray): Array of parameter values.
             definition (math_schema.Parameter): Parameter math definition.
         """
+        self._raise_error_on_preexistence(name, "parameters")
+
+        if values.isnull().all():
+            self.log("parameters", name, "Component not added; no data found in array.")
+            values = xr.DataArray(np.nan, attrs=values.attrs)
+
+        self._add_to_dataset(name, values, "parameters", definition.model_dump())
 
     def add_variable(self, name: str, definition: math_schema.Variable) -> None:
         """Add decision variable to backend model in-place.
@@ -711,7 +714,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         da: xr.DataArray,
         obj_type: ALL_COMPONENTS_T,
         definition: dict,
-        extra_attrs: dict | None = None,
         references: set | None = None,
     ):
         """Add array of backend objects to backend dataset in-place.
@@ -722,8 +724,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             obj_type (ALL_COMPONENTS_T): Type of backend objects in the array.
             definition (dict):
                 Dictionary describing the object being added, in case it needs to be added to the math.
-            extra_attrs (dict, optional):
-                Any extra attributes to add to the dataset object. Defaults to None.
             references (set | None, optional):
                 All other backend objects which are references in this backend object's linear expression(s).
                 E.g. the constraint "flow_out / flow_out_eff <= flow_cap" references the variables ["flow_out", "flow_cap"]
@@ -731,11 +731,10 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """
-        attrs = {
+        attrs: dict = {
             "obj_type": obj_type,
             "references": set(),
             "coords_in_name": False,
-            **(extra_attrs or {}),
         }
         self._dataset[name] = da.assign_attrs(attrs)
         if references is not None:

@@ -212,6 +212,8 @@ def dummy_model_data():
         coords={k: v for k, v in coords.items() if k in node_tech_dims},
     )
 
+    coords["breakpoints"] = [0, 1, 2]
+
     model_data = xr.Dataset(
         coords=coords,
         data_vars={
@@ -272,6 +274,8 @@ def dummy_model_data():
             ),
             "timeseries_data": (["timesteps"], [1, 1, 1, 1]),
             "timeseries_nodes_data": (["nodes", "timesteps"], np.ones((2, 4))),
+            "piecewise_x": (["breakpoints"], [0, 5, 10]),
+            "piecewise_y": (["breakpoints"], [0, 1, 5]),
         },
         attrs={"scenarios": ["foo"]},
     )

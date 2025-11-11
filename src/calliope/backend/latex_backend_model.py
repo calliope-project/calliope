@@ -356,38 +356,37 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     def add_parameter(  # noqa: D102, override
         self, name: str, values: xr.DataArray, definition: math_schema.Parameter
     ) -> None:
-        attrs = {"math_repr": rf"\textit{{{name}}}" + self._dims_to_var_string(values)}
-
-        self._add_to_dataset(
-            name, values, "parameters", definition.model_dump(), extra_attrs=attrs
+        super().add_parameter(name, values, definition)
+        if not definition.active:
+            return
+        param_da = self.parameters[name]
+        param_da.attrs["math_repr"] = rf"\textit{{{name}}}" + self._dims_to_var_string(
+            values
         )
-
-        if name not in self.math["parameters"]:
-            self.math = self.math.update(
-                {f"parameters.{name}": definition.model_dump()}
-            )
 
     def add_lookup(  # noqa: D102, override
         self, name: str, values: xr.DataArray, definition: math_schema.Lookup
     ) -> None:
         super().add_lookup(name, values, definition)
-        self._dataset[name].attrs["math_repr"] = (
-            rf"\textit{{{name}}}" + self._dims_to_var_string(values)
+        if not definition.active:
+            return
+        lookup_da = self.lookups[name]
+        lookup_da.attrs["math_repr"] = rf"\textit{{{name}}}" + self._dims_to_var_string(
+            values
         )
 
     def add_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.Constraint
     ) -> None:
         super().add_constraint(name, definition)
-        self._generate_math_string("constraints", name, self.constraints[name])
+        if not definition.active:
+            return
+        constraint_da = self.constraints[name]
+        self._generate_math_string("constraints", name, constraint_da)
 
     def add_piecewise_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.PiecewiseConstraint
     ) -> None:
-        if not definition.active:
-            self.log("piecewise_constraints", name, "Component deactivated.")
-            return
-
         references: set[str] = set()
         constraint_def_with_breakpoints = definition.update(
             {"foreach": definition.foreach + ["breakpoints"]}
@@ -445,8 +444,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self, name: str, definition: math_schema.GlobalExpression
     ) -> None:
         super().add_global_expression(name, definition)
-
+        if not definition.active:
+            return
         expr_da = self.global_expressions[name]
+
         expr_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
             expr_da
         )
@@ -456,8 +457,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self, name: str, definition: math_schema.Variable
     ) -> None:
         super().add_variable(name, definition)
-
+        if name not in self.variables:
+            return
         var_da = self.variables[name]
+
         var_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
             var_da
         )
@@ -479,11 +482,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self, name: str, definition: math_schema.Objective
     ) -> None:
         super().add_objective(name, definition)
+        if not definition.active:
+            return
+
+        obj_da = self.objectives[name]
 
         self._generate_math_string(
             "objectives",
             name,
-            self.objectives[name].assign_attrs(
+            obj_da.assign_attrs(
                 {"sense_string": self.OBJECTIVE_SENSE_DICT[definition.sense]}
             ),
         )
@@ -495,6 +502,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         dataset: xr.Dataset,
     ) -> xr.DataArray:
         expr_da = super()._add_postprocessed(name, definition, dataset)
+        if not definition.active:
+            return expr_da
 
         self._add_to_dataset(
             name,
@@ -685,7 +694,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             da (xr.DataArray): The array to evaluate, whose attributes contain the component parts to build the string.
         """
         if self.include == "all" or (
-            self.include == "valid" and da.fillna(0).astype(bool).any()
+            self.include == "valid"
+            and da.fillna(0).astype(bool).any()
+            and self.math[group][name].active
         ):
             where = da.attrs.pop("where_string", None)
             equations = da.attrs.pop("equation_strings", [])
