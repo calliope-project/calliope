@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|new| YAML math section for creating data arrays after solving a model, using expressions combining inputs and/or results (#638).
+
 |new| Dimensions can now be referenced in math `where` and `expression` strings and arithmetic can be used when making comparisons and using helper functions in `where` strings (#733).
 
 |removed| Duplication of math attributes in array attributes.
@@ -14,6 +16,8 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 |fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
 
 ### Internal changes
+
+|changed| refactoring of backend model class to separate out logic to add different component types to the backend.
 
 |changed| Math conditionals removed where math component defaults will achieve the same result.
 
