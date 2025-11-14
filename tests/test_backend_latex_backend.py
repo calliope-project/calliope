@@ -725,3 +725,131 @@ class TestLatexBackendModel:
             **Default**: 100
             """
         )
+
+
+class TestLatexBackendModelPostprocessed:
+    MATH_STRINGS = {
+        "post_expr1": r"""
+            \begin{array}{l}
+                \forall{}
+                \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+                \text{ tech }\negthickspace \in \negthickspace\text{ techs }
+                \!\!:\\[2em]
+                \quad (\textbf{test\_var}_\text{node,tech} \times 2) + \textit{no\_dims}\\
+            \end{array}
+            """,
+        "post_expr2": r"""
+            \begin{array}{l}
+                \forall{}
+                \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+                \text{ tech }\negthickspace \in \negthickspace\text{ techs }
+                \!\!,\\
+                \text{if } (\textbf{test\_expr}_\text{node,tech}\mathord{>}\text{0} \lor \textbf{post\_expr1}_\text{node,tech} + \textbf{test\_var}_\text{node,tech}\mathord{<}\text{10})\!\!:\\[2em]
+                \quad (\textbf{test\_var}_\text{node,tech} \times 2) + \textbf{test\_expr}_\text{node,tech}\\
+            \end{array}
+            """,
+    }
+
+    @pytest.fixture
+    def processed_latex_backend_model(self, temp_dummy_latex_backend_model):
+        temp_dummy_latex_backend_model._load_inputs()
+        # Add a variable
+        temp_dummy_latex_backend_model.add_variable(
+            "test_var",
+            {
+                "foreach": ["nodes", "techs"],
+                "where": "with_inf",
+                "bounds": {"min": 0, "max": 1},
+                "domain": "real",
+            },
+        )
+        temp_dummy_latex_backend_model.add_global_expression(
+            "test_expr",
+            {
+                "foreach": ["nodes", "techs"],
+                "where": "with_inf",
+                "equations": [{"expression": "test_var / with_inf"}],
+            },
+        )
+        # Add a postprocessed expression
+        temp_dummy_latex_backend_model._add_postprocessed(
+            "post_expr1",
+            {
+                "foreach": ["nodes", "techs"],
+                "equations": [{"expression": "test_var * 2 + no_dims"}],
+                "description": "A postprocessed expression",
+            },
+            temp_dummy_latex_backend_model._dataset,
+        )
+        temp_dummy_latex_backend_model._add_postprocessed(
+            "post_expr2",
+            {
+                "foreach": ["nodes", "techs"],
+                "equations": [{"expression": "test_var * 2 + test_expr"}],
+                "where": "test_expr > 0 OR post_expr1 + test_var < 10",
+                "description": "A postprocessed expression with where clause",
+                "default": 0,
+            },
+            temp_dummy_latex_backend_model._dataset,
+        )
+
+        return temp_dummy_latex_backend_model
+
+    @pytest.mark.parametrize("name", ["post_expr1", "post_expr2"])
+    def test_add_postprocessed(self, processed_latex_backend_model, name):
+        """Test that postprocessed math entries are processed correctly by the latex backend."""
+
+        # Verify the postprocessed expression was added
+        assert name in processed_latex_backend_model.postprocessed
+        assert (
+            processed_latex_backend_model.postprocessed[name].attrs["math_repr"]
+            == rf"\textbf{{{name}}}_\text{{node,tech}}"
+        )
+
+        # Verify the math string contains the expected expression
+        math_string = processed_latex_backend_model.math_strings["postprocessed"][name]
+        assert math_string.strip("\n") == textwrap.dedent(
+            self.MATH_STRINGS[name]
+        ).strip("\n").replace(r"\_", "_")
+
+    def test_postprocessed_in_math_doc(self, processed_latex_backend_model):
+        """Test that postprocessed expressions appear correctly in generated math documentation."""
+        # Generate documentation and verify postprocessed section exists
+        doc = processed_latex_backend_model.generate_math_doc(format="md")
+        expected = textwrap.dedent(
+            rf"""
+            ## Postprocessed Statistics
+
+            ### post_expr1
+
+            A postprocessed expression
+
+            **Used in**:
+
+            * [post_expr2](#post_expr2)
+
+            **Uses**:
+
+            * [no_dims](#no_dims)
+            * [test_var](#test_var)
+
+            **Default**: nan
+
+            $${self.MATH_STRINGS["post_expr1"]}$$
+
+            ### post_expr2
+
+            A postprocessed expression with where clause
+
+            **Uses**:
+
+            * [post_expr1](#post_expr1)
+            * [test_expr](#test_expr)
+            * [test_var](#test_var)
+
+            **Default**: 0
+
+            $${self.MATH_STRINGS["post_expr2"]}$$
+        """
+        )
+        assert expected in doc

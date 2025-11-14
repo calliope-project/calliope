@@ -53,6 +53,7 @@ VALIDATE_METHODS = [
     "add_objective",
     "add_parameter",
     "add_lookup",
+    "_add_postprocessed",
 ]
 """Methods whose input definitions will be validated when adding components."""
 

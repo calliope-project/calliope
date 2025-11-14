@@ -505,15 +505,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         if not definition.active:
             return expr_da
 
+        expr_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
+            expr_da
+        )
         self._add_to_dataset(
             name,
             expr_da,
             "postprocessed",
             definition.model_dump(),
             references=expr_da.attrs["references"],
-        )
-        expr_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
-            expr_da
         )
         self._generate_math_string("postprocessed", name, expr_da)
         return expr_da
