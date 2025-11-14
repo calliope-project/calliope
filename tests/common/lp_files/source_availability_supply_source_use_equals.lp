@@ -6,32 +6,26 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(source_max)(a__test_supply_plus__2005_01_01_00_00)_:
+c_e_constraints(source_availability_supply)(a__test_supply_plus__2005_01_01_00_00)_:
 +1 variables(source_use)(a__test_supply_plus__2005_01_01_00_00)
--24.0 variables(source_cap)(a__test_supply_plus)
-<= 0.0
+= 5.0
 
-c_u_constraints(source_max)(a__test_supply_plus__2005_01_02_00_00)_:
--24.0 variables(source_cap)(a__test_supply_plus)
+c_e_constraints(source_availability_supply)(a__test_supply_plus__2005_01_02_00_00)_:
 +1 variables(source_use)(a__test_supply_plus__2005_01_02_00_00)
-<= 0.0
+= 5.0
 
-c_u_constraints(source_max)(b__test_supply_plus__2005_01_01_00_00)_:
+c_u_constraints(source_availability_supply)(b__test_supply_plus__2005_01_01_00_00)_:
 +1 variables(source_use)(b__test_supply_plus__2005_01_01_00_00)
--24.0 variables(source_cap)(b__test_supply_plus)
-<= 0.0
+<= 80.0
 
-c_u_constraints(source_max)(b__test_supply_plus__2005_01_02_00_00)_:
--24.0 variables(source_cap)(b__test_supply_plus)
+c_u_constraints(source_availability_supply)(b__test_supply_plus__2005_01_02_00_00)_:
 +1 variables(source_use)(b__test_supply_plus__2005_01_02_00_00)
-<= 0.0
+<= 80.0
 
 bounds
    1 <= ONE_VAR_CONSTANT <= 1
    0 <= variables(source_use)(a__test_supply_plus__2005_01_01_00_00) <= +inf
-   0.0 <= variables(source_cap)(a__test_supply_plus) <= +inf
    0 <= variables(source_use)(a__test_supply_plus__2005_01_02_00_00) <= +inf
    0 <= variables(source_use)(b__test_supply_plus__2005_01_01_00_00) <= +inf
-   0.0 <= variables(source_cap)(b__test_supply_plus) <= +inf
    0 <= variables(source_use)(b__test_supply_plus__2005_01_02_00_00) <= +inf
 end
