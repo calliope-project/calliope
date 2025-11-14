@@ -501,7 +501,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         definition: math_schema.PostprocessedExpression,
         dataset: xr.Dataset,
     ) -> xr.DataArray:
-        # FIXME: inputs in dataset representation missing math_repr attribute
         expr_da = super()._add_postprocessed(name, definition, dataset)
         if not definition.active:
             return expr_da

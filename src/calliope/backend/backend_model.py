@@ -680,11 +680,11 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         """Preemptively delete of objects with large memory footprints."""
         del args
 
-    def add_postprocessed_arrays(self, results: xr.Dataset) -> xr.Dataset:
+    def add_postprocessed_arrays(self, dataset: xr.Dataset) -> xr.Dataset:
         """Add postprocessed arrays to the results dataset.
 
         Args:
-            results (xr.Dataset): The results dataset to add postprocessed arrays to.
+            dataset (xr.Dataset): The resolved dataset with which to evaluate postprocessed arrays.
 
         Returns:
             xr.Dataset: The updated results dataset with postprocessed arrays.
@@ -693,20 +693,18 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         ordered_items = sorted(
             postprocessed_math.items(), key=lambda item: item[1].order
         )
-        dummy_dataset = results.assign(self.inputs)
         postprocessed = {}
         for name, definition in ordered_items:
             start = time.time()
-            # FIXME: break references to avoid backend objects getting postprocessed arrays added
-            da = self._add_postprocessed(name, definition, dummy_dataset)
+            da = self._add_postprocessed(name, definition, dataset)
             end = time.time() - start
             LOGGER.debug(
                 f"Optimisation Model | postprocess:{name} | Built in {end:.4f}s"
             )
-            dummy_dataset = dummy_dataset.assign({name: da})
+            dataset = dataset.assign({name: da})
             postprocessed[name] = da
         LOGGER.info("Optimisation Model | postprocess | Generated.")
-        return results.assign(postprocessed)
+        return xr.Dataset(postprocessed)
 
     def _add_to_dataset(
         self,
@@ -1421,7 +1419,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         ).astype(float)
 
         if postprocess:
-            results = self.add_postprocessed_arrays(results)
+            postprocessed = self.add_postprocessed_arrays(results.assign(self.inputs))
+            results = results.assign(postprocessed)
         cleaned_results = xr.Dataset(
             {
                 k: _drop_attrs(v)
