@@ -14,15 +14,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Literal,
-    SupportsFloat,
-    TypeVar,
-    overload,
-)
+from typing import Any, Generic, Literal, SupportsFloat, TypeVar, overload
 
 import numpy as np
 import xarray as xr
@@ -33,9 +25,6 @@ from calliope.exceptions import BackendError
 from calliope.exceptions import warn as model_warn
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
 from calliope.schemas import config_schema, math_schema
-
-if TYPE_CHECKING:
-    pass
 
 T = TypeVar("T")
 ALL_COMPONENTS_T = Literal[
