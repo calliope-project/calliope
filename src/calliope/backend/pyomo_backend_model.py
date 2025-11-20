@@ -38,12 +38,12 @@ from calliope.util.logging import LogWriter
 LOGGER = logging.getLogger(__name__)
 
 COMPONENT_TRANSLATOR = {
-    "parameter": "parameter",
-    "variable": "variable",
-    "global_expression": "expression",
-    "constraint": "constraint",
-    "piecewise_constraint": "block",
-    "objective": "objective",
+    "parameters": "parameter",
+    "variables": "variable",
+    "global_expressions": "expression",
+    "constraints": "constraint",
+    "piecewise_constraints": "block",
+    "objectives": "objective",
 }
 
 ADD_OBJ_LIST_METHODS = [
@@ -82,9 +82,8 @@ def _create_backend_obj_adding_component(
                 f"Trying to add already existing `{key}` to backend model {component_type}."
             )
         else:
-            singular_component = component_type.removesuffix("s")
             component_dict[key] = getattr(
-                pmo, f"{COMPONENT_TRANSLATOR[singular_component]}_list"
+                pmo, f"{COMPONENT_TRANSLATOR[component_type]}_list"
             )()
 
     def _del_obj_list(instance: pmo.Block, key: str) -> None:
