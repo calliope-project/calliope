@@ -180,20 +180,20 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             definition (math_schema.Variable): Variable configuration dictionary.
         """
         references: set[str] = set()
-        default_empty = xr.DataArray(np.nan)
+        component_da = xr.DataArray(np.nan)
         if not definition.active:
             self.log(
                 "variables",
                 name,
-                "Component deactivated; only metadata will be stored if no other component with the same name is defined.",
+                "Component deactivated; only metadata will be stored if no other "
+                "component with the same name is defined.",
             )
-            if (
-                name in self.math.parsing_components["where"]["results"]
-                # FIXME: won't work if we later add a global expression with the same name
-                and name not in self.math.parsing_components["expression"]["results"]
-            ):
-                component_da = default_empty
-            else:
+
+            # FIXME: won't work if we later add a global expression with the same name
+            where_results = self.math.parsing_components["where"]["results"]
+            expr_results = self.math.parsing_components["expression"]["results"]
+            if not (name in where_results and name not in expr_results):
+                # No dataset entry, no metadata
                 return
         else:
             parsed_component = parsing.ParsedBackendComponent(
@@ -211,8 +211,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                     self.VARIABLE_DOMAIN_DICT[definition.domain],
                     definition.bounds,
                 )
-            else:
-                component_da = default_empty
         self._add_to_dataset(
             name,
             component_da,
