@@ -9,7 +9,7 @@ import logging
 import time
 import typing
 from abc import ABC, ABCMeta, abstractmethod
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from copy import deepcopy
 from functools import partial
@@ -631,10 +631,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         self._load_inputs()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
-            ordered_items = sorted(
-                self.math[components].root.items(),
-                key=lambda item: getattr(item[1], "order", 0),
-            )
+            ordered_items = self._sorted_by_order(self.math[components].root)
             for name, definition in ordered_items:
                 start = time.time()
                 getattr(self, f"add_{component}")(name, definition)
@@ -679,6 +676,11 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         """Preemptively delete of objects with large memory footprints."""
         del args
 
+    @staticmethod
+    def _sorted_by_order(root: Mapping[str, Any]) -> list[tuple[str, Any]]:
+        """Return (name, obj) pairs from a root mapping, sorted by obj.order."""
+        return sorted(root.items(), key=lambda item: getattr(item[1], "order", 0))
+
     def add_postprocessed_arrays(self, dataset: xr.Dataset) -> xr.Dataset:
         """Add postprocessed arrays to the results dataset.
 
@@ -688,10 +690,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         Returns:
             xr.Dataset: The updated results dataset with postprocessed arrays.
         """
-        postprocessed_math = self.math.postprocessed.root
-        ordered_items = sorted(
-            postprocessed_math.items(), key=lambda item: item[1].order
-        )
+        ordered_items = self._sorted_by_order(self.math.postprocessed.root)
         postprocessed = {}
         for name, definition in ordered_items:
             start = time.time()
