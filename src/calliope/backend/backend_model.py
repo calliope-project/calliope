@@ -372,7 +372,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
         Args:
             name (str): Name of the postprocessed array.
-            definition (math_schema.PostprocessArray): Definition of the postprocessed array.
+            definition (math_schema.PostprocessedExpression): Definition of the postprocessed expression.
             dataset (xr.Dataset): The results dataset from the optimisation to use in postprocessing.
         """
         references: set[str] = set()
