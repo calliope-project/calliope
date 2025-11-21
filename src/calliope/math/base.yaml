@@ -503,7 +503,6 @@ lookups:
     description: >
       If true, link storage levels in the last model timestep with the first model timestep.
       `inter_cluster_storage` custom math must be included if using time clustering and setting this to `true`.
-      This must be set to `false` if using `operate` mode.
 
   sink_unit:
     dtype: string
@@ -1265,12 +1264,12 @@ checks:
     errors: raise
 
   unbounded_area_use_cost:
-    where: cost_area_use<0 AND not area_use_max
+    where: cost_area_use<0 AND NOT area_use_max OR (area_use_per_flow_cap AND NOT flow_cap_max AND NOT area_use_max)
     message: Cannot have a negative `cost_area_use` as there is an unset corresponding `area_use_max` constraint
     errors: raise
 
   unbounded_source_use_cost:
-    where: cost_source_cap<0 AND not source_use_max
+    where: cost_source_cap<0 AND not source_use_max OR (source_cap_equals_flow_cap AND NOT flow_cap_max AND NOT source_use_max)
     message: Cannot have a negative `cost_source_cap` as there is an unset corresponding `source_use_max` constraint
     errors: raise
 
@@ -1308,3 +1307,15 @@ checks:
     where: base_tech==demand AND cost_flow_out
     message: "`cost_flow_out` does not apply to `demand` technologies. Use `cost_flow_in` instead."
     errors: warn
+
+  no_storage_discharge_depth_when_clustering:
+    where: storage_discharge_depth AND lookup_cluster_last_timestep
+    message: >-
+      storage_discharge_depth is currently not allowed when time clustering is active.
+    errors: raise
+
+  cyclic_storage_needs_inter_cluster:
+    where: cyclic_storage AND lookup_cluster_last_timestep
+    message: >-
+      Include the `storage_inter_cluster_storage` pre-defined math to allow cyclic storage alongside timeseries clustering.
+    errors: raise

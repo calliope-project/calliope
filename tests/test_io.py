@@ -11,6 +11,7 @@ import calliope.io
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 
+from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 
@@ -158,15 +159,13 @@ class TestIO:
         output_file = tmpdir / "inputs_flow_cap_max_systemwide.csv"
         assert "demand_power" in output_file.read_text()
 
-    @pytest.mark.xfail(reason="Not reimplemented the 'check feasibility' objective")
     def test_save_csv_not_optimal(self, tmp_path):
-        model = calliope.examples.national_scale(
-            scenario="check_feasibility",
-            override_dict={"config.build.cyclic_storage": False},
-        )
-
+        model = build_model({"techs.test_supply_elec.flow_cap_max": 1}, "simple_supply")
         model.build()
-        model.solve()
+        with pytest.warns(
+            calliope.exceptions.BackendWarning, match="Model solution was non-optimal"
+        ):
+            model.solve(force=True)
 
         out_path = tmp_path / "out_dir"
         with pytest.warns(exceptions.ModelWarning):

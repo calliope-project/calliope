@@ -204,7 +204,7 @@ class TestGetters:
 
     @pytest.fixture(scope="class")
     def lookup(self, solved_model_cls):
-        return solved_model_cls.backend.get_lookup("cap_method")
+        return solved_model_cls.backend.get_lookup("base_tech")
 
     @pytest.mark.parametrize(
         "component_type", ["variable", "global_expression", "parameter", "constraint"]
@@ -428,7 +428,25 @@ class TestGetters:
 
     def test_get_lookup_refs(self, lookup):
         """Check that a lookup has zero refs to other components."""
-        assert not lookup.attrs["references"]
+        assert lookup.attrs["references"] == {
+            "balance_storage",
+            "source_use",
+            "balance_conversion",
+            "flow_in_inc_eff",
+            "source_cap",
+            "symmetric_transmission",
+            "balance_supply_no_storage",
+            "balance_demand",
+            "balance_supply_with_storage",
+            "link_flow_cap",
+            "storage",
+            "cost_investment_flow_cap",
+            "balance_demand_min_use",
+            "storage_cap",
+            "balance_supply_min_use",
+            "balance_transmission",
+            "flow_out_inc_eff",
+        }
 
     def test_get_lookup_expected_keys(self, lookup):
         """Check that a lookup displays its schema attributes."""

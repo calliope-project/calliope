@@ -159,3 +159,7 @@ variables:
     bounds:
       min: -.inf
       max: .inf
+
+checks:
+  cyclic_storage_needs_inter_cluster:
+    active: false

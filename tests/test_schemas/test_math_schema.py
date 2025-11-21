@@ -139,7 +139,7 @@ class TestCalliopeBuildMath:
         ("flow_cap", "parameters"),
         ("bigM", "parameters"),
         ("timesteps", "dimensions"),
-        ("cap_method", "lookups"),
+        ("base_tech", "lookups"),
         ("force_zero_area_use", "constraints"),
         ("min_cost_optimisation", "objectives"),
         ("cost_operation_variable", "global_expressions"),

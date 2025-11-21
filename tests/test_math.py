@@ -241,7 +241,7 @@ class TestBaseMath(InternalMathFiles):
         lp_file = lp_temp_path / "min_cost_optimisation_weighted.lp"
         build_lp_file(model, lp_file, objective="min_cost_optimisation")
         self.TEST_REGISTER.add("objectives.min_cost_optimisation")
-        self.TEST_REGISTER.add("parameters.obj")
+        self.TEST_REGISTER.add("parameters.objective_cost_weights")
         compare_lps_new(lp_file)
 
 
