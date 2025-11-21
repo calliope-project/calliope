@@ -116,7 +116,13 @@ def _create_backend_obj_adding_component(
 
 
 class SelectiveWrappingMeta(backend_model.SelectiveWrappingMeta):
-    """Metaclass to selectively wrap methods in concrete classes inheriting from the backend ABC."""
+    """Metaclass to selectively wrap methods in concrete classes inheriting from the backend ABC.
+
+    We wrap the methods `add_<component_type>s` to manage the creation and (if needed) deletion of pyomo kernel object lists.
+    This class allows us to avoid defining these methods in the pyomo subclass just to be able to decorate them.
+
+    We inherit from the backend ABC metaclass to also apply any other wrapping defined there.
+    """
 
     def __new__(mcs, name, bases, namespace):
         """Wrap methods in all new instances of the class."""

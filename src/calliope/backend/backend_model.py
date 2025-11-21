@@ -73,7 +73,12 @@ def validate_on_adding_component(func) -> Callable:
 
 
 class SelectiveWrappingMeta(ABCMeta):
-    """Metaclass to selectively wrap methods in concrete classes inheriting from the backend ABC."""
+    """Metaclass to selectively wrap methods in concrete classes inheriting from the backend ABC.
+
+    we wrap the methods `add_<component_type>s` to validate the component definitions when adding them to the backend model.
+    This way, a user can provide a dictionary or a validated schema object when adding components.
+    We will ensure that the methods only ever receive a validated schema object, using the decorator attached here.
+    """
 
     def __new__(mcs, name, bases, namespace):
         """Wrap methods in all new instances of the class."""
