@@ -173,7 +173,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             name (str): name of the variable.
             definition (math_schema.Variable): Variable configuration dictionary.
         """
-        self._raise_error_on_preexistence(name, "variables")
         references: set[str] = set()
         component_da = xr.DataArray(np.nan)
         if not definition.active:
@@ -191,6 +190,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 # No dataset entry, no metadata
                 return
         else:
+            self._raise_error_on_preexistence(name, "variables")
             parsed_component = parsing.ParsedBackendComponent(
                 "variables", name, definition, self.math.parsing_components
             )
@@ -225,13 +225,13 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             name (str): name of the global expression
             definition (math_schema.GlobalExpression): Global expression configuration dictionary, ready to be parsed and then evaluated.
         """
-        self._raise_error_on_preexistence(name, "global_expressions")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if not definition.active:
             self.log("global_expressions", name, "Component deactivated.")
             return
 
+        self._raise_error_on_preexistence(name, "global_expressions")
         parsed_component = parsing.ParsedBackendComponent(
             "global_expressions", name, definition, self.math.parsing_components
         )
@@ -269,13 +269,13 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             definition (math_schema.Constraint):
                 Constraint configuration dictionary, ready to be parsed and then evaluated.
         """
-        self._raise_error_on_preexistence(name, "constraints")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if not definition.active:
             self.log("constraints", name, "Component deactivated.")
             return
 
+        self._raise_error_on_preexistence(name, "constraints")
         parsed_component = parsing.ParsedBackendComponent(
             "constraints", name, definition, self.math.parsing_components
         )
@@ -326,12 +326,13 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             name (str): name of the objective.
             definition (math_schema.Objective): Unparsed objective configuration dictionary.
         """
-        self._raise_error_on_preexistence(name, "objectives")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if not definition.active:
             self.log("objectives", name, "Component deactivated.")
             return
+
+        self._raise_error_on_preexistence(name, "objectives")
 
         parsed_component = parsing.ParsedBackendComponent(
             "objectives", name, definition, self.math.parsing_components
@@ -896,7 +897,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     def add_piecewise_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.PiecewiseConstraint
     ) -> None:
-        self._raise_error_on_preexistence(name, "piecewise_constraints")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if "breakpoints" in definition.foreach:
@@ -908,6 +908,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         if not definition.active:
             self.log("piecewise_constraints", name, "Component deactivated.")
             return
+
+        self._raise_error_on_preexistence(name, "piecewise_constraints")
 
         parsed_component = parsing.ParsedBackendComponent(
             "piecewise_constraints", name, definition, self.math.parsing_components
