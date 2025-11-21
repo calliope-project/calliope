@@ -1244,32 +1244,32 @@ global_expressions:
 piecewise_constraints: {}
 checks:
   must_have_base:
-    where: not base_tech
+    where: NOT base_tech
     message: An abstract `base_tech` must be defined for every technology at every node.
     errors: raise
 
   distance_only_for_transmission:
-    where: not base_tech==transmission and (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance)
+    where: NOT base_tech==transmission AND (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance)
     message: Only transmission technologies can define `distance` or `..._per_distance`.
     errors: raise
 
   unbounded_flow_cap_cost:
-    where: cost_flow_cap<0 AND not flow_cap_max
+    where: cost_flow_cap<0 AND NOT flow_cap_max
     message: Cannot have a negative `cost_flow_cap` as there is an unset corresponding `flow_cap_max` constraint
     errors: raise
 
   unbounded_storage_cap_cost:
-    where: cost_storage_cap<0 AND not storage_cap_max
+    where: cost_storage_cap<0 AND NOT storage_cap_max
     message: Cannot have a negative `cost_storage_cap` as there is an unset corresponding `storage_cap_max` constraint
     errors: raise
 
   unbounded_area_use_cost:
-    where: cost_area_use<0 AND NOT area_use_max OR (area_use_per_flow_cap AND NOT flow_cap_max AND NOT area_use_max)
+    where: cost_area_use<0 AND NOT area_use_max
     message: Cannot have a negative `cost_area_use` as there is an unset corresponding `area_use_max` constraint
     errors: raise
 
   unbounded_source_use_cost:
-    where: cost_source_cap<0 AND not source_use_max OR (source_cap_equals_flow_cap AND NOT flow_cap_max AND NOT source_use_max)
+    where: cost_source_cap<0 AND NOT source_use_max
     message: Cannot have a negative `cost_source_cap` as there is an unset corresponding `source_use_max` constraint
     errors: raise
 
@@ -1279,17 +1279,17 @@ checks:
     errors: raise
 
   all_or_nothing_lat_lon:
-    where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not (latitude or longitude)
+    where: (any(latitude, over=nodes) or any(longitude, over=nodes)) AND NOT (latitude or longitude)
     message: "Must define node latitude and longitude for _all_ nodes or _no_ nodes."
     errors: raise
 
   export_only_for_outflows:
-    where: carrier_export and not any(carrier_out, over=nodes)
+    where: carrier_export AND NOT any(carrier_out, over=nodes)
     message: "Export carriers must be one of the technology outflow carriers."
     errors: raise
 
   storage_initial_max:
-    where: storage_initial and (storage_initial<0 OR storage_initial>1)
+    where: storage_initial AND (storage_initial<0 OR storage_initial>1)
     message: "storage_initial is a fraction, requiring values within the interval [0, 1]."
     errors: raise
 
