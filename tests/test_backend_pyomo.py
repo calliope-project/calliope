@@ -2481,7 +2481,7 @@ class TestWrapperAndMetaclass:
         # Manually create an obj_list
         component_dict = getattr(mock_backend._instance, component)
         component_dict["duplicate"] = getattr(
-            pmo, f"{COMPONENT_TRANSLATOR[component.removesuffix('s')]}_list"
+            pmo, f"{COMPONENT_TRANSLATOR[component]}_list"
         )()
 
         # Try to create it again - should raise error

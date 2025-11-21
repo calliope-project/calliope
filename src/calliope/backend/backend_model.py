@@ -9,20 +9,12 @@ import logging
 import time
 import typing
 from abc import ABC, ABCMeta, abstractmethod
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Literal,
-    SupportsFloat,
-    TypeVar,
-    overload,
-)
+from typing import Any, Generic, Literal, SupportsFloat, TypeVar, overload
 
 import numpy as np
 import xarray as xr
@@ -33,9 +25,6 @@ from calliope.exceptions import BackendError
 from calliope.exceptions import warn as model_warn
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
 from calliope.schemas import config_schema, math_schema
-
-if TYPE_CHECKING:
-    pass
 
 T = TypeVar("T")
 ALL_COMPONENTS_T = Literal[
@@ -180,20 +169,20 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             definition (math_schema.Variable): Variable configuration dictionary.
         """
         references: set[str] = set()
-        default_empty = xr.DataArray(np.nan)
+        component_da = xr.DataArray(np.nan)
         if not definition.active:
             self.log(
                 "variables",
                 name,
-                "Component deactivated; only metadata will be stored if no other component with the same name is defined.",
+                "Component deactivated; only metadata will be stored if no other "
+                "component with the same name is defined.",
             )
-            if (
-                name in self.math.parsing_components["where"]["results"]
-                # FIXME: won't work if we later add a global expression with the same name
-                and name not in self.math.parsing_components["expression"]["results"]
-            ):
-                component_da = default_empty
-            else:
+
+            # FIXME: won't work if we later add a global expression with the same name
+            where_results = self.math.parsing_components["where"]["results"]
+            expr_results = self.math.parsing_components["expression"]["results"]
+            if not (name in where_results and name not in expr_results):
+                # No dataset entry, no metadata
                 return
         else:
             parsed_component = parsing.ParsedBackendComponent(
@@ -211,8 +200,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                     self.VARIABLE_DOMAIN_DICT[definition.domain],
                     definition.bounds,
                 )
-            else:
-                component_da = default_empty
         self._add_to_dataset(
             name,
             component_da,
@@ -374,7 +361,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
 
         Args:
             name (str): Name of the postprocessed array.
-            definition (math_schema.PostprocessArray): Definition of the postprocessed array.
+            definition (math_schema.PostprocessedExpression): Definition of the postprocessed expression.
             dataset (xr.Dataset): The results dataset from the optimisation to use in postprocessing.
         """
         references: set[str] = set()
@@ -633,10 +620,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         self._load_inputs()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
-            ordered_items = sorted(
-                self.math[components].root.items(),
-                key=lambda item: getattr(item[1], "order", 0),
-            )
+            ordered_items = self._sorted_by_order(self.math[components].root)
             for name, definition in ordered_items:
                 start = time.time()
                 getattr(self, f"add_{component}")(name, definition)
@@ -681,6 +665,11 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         """Preemptively delete of objects with large memory footprints."""
         del args
 
+    @staticmethod
+    def _sorted_by_order(root: Mapping[str, Any]) -> list[tuple[str, Any]]:
+        """Return (name, obj) pairs from a root mapping, sorted by obj.order."""
+        return sorted(root.items(), key=lambda item: getattr(item[1], "order", 0))
+
     def add_postprocessed_arrays(self, dataset: xr.Dataset) -> xr.Dataset:
         """Add postprocessed arrays to the results dataset.
 
@@ -690,10 +679,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         Returns:
             xr.Dataset: The updated results dataset with postprocessed arrays.
         """
-        postprocessed_math = self.math.postprocessed.root
-        ordered_items = sorted(
-            postprocessed_math.items(), key=lambda item: item[1].order
-        )
+        ordered_items = self._sorted_by_order(self.math.postprocessed.root)
         postprocessed = {}
         for name, definition in ordered_items:
             start = time.time()
