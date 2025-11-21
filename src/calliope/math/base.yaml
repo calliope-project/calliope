@@ -366,9 +366,9 @@ parameters:
   source_use_max:
     default: .inf
     resample_method: sum
-    title: Maximum bound on sink.
+    title: Maximum bound on source.
     description: >-
-      Maximum sink use to remove a carrier from the system (e.g., biofuel, coal, rainfall, wind flow).
+      Maximum sink use to add a carrier to the system (e.g., biofuel, coal, rainfall, wind flow).
       Unit dictated by `source_unit`.
     unit: energy | $\frac{\text{energy}}{\text{power}}$ | $\frac{\text{energy}}{\text{area}}$
 
@@ -1269,8 +1269,8 @@ checks:
     errors: raise
 
   unbounded_source_use_cost:
-    where: cost_source_cap<0 AND NOT source_use_max
-    message: Cannot have a negative `cost_source_cap` as there is an unset corresponding `source_use_max` constraint
+    where: cost_source_cap<0 AND NOT source_cap_max
+    message: Cannot have a negative `cost_source_cap` as there is an unset corresponding `source_cap_max` constraint
     errors: raise
 
   finite_source_use:
@@ -1292,11 +1292,6 @@ checks:
     where: storage_initial AND (storage_initial<0 OR storage_initial>1)
     message: "storage_initial is a fraction, requiring values within the interval [0, 1]."
     errors: raise
-
-  lat_lons_out_of_range:
-    where: latitude < -90 OR latitude > 90 OR longitude < -180 OR longitude > 180
-    message: Node latitude/longitude must be specified in WGS84 / EPSG4326 format.
-    errors: warn
 
   flow_in_for_supply_tech:
     where: base_tech==supply AND cost_flow_in
