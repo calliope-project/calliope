@@ -374,13 +374,13 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             definition (math_schema.PostprocessedExpression): Definition of the postprocessed expression.
             dataset (xr.Dataset): The results dataset from the optimisation to use in postprocessing.
         """
-        self._raise_error_on_preexistence(name, "postprocessed")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if not definition.active:
             self.log("postprocessed", name, "Component deactivated.")
             return default_empty
 
+        self._raise_error_on_preexistence(name, "postprocessed", dataset)
         parsing_components = deepcopy(self.math.parsing_components)
         parsing_components["where"]["postprocessed"] = set(self.math.postprocessed.root)
         parsing_components["expression"]["postprocessed"] = set(
@@ -803,7 +803,9 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             da = tuple(arr.fillna(np.nan) for arr in da)
         return da
 
-    def _raise_error_on_preexistence(self, key: str, obj_type: ALL_COMPONENTS_T):
+    def _raise_error_on_preexistence(
+        self, key: str, obj_type: ALL_COMPONENTS_T, dataset: xr.Dataset | None = None
+    ):
         """Detect if preexistent errors are present in the dataset.
 
         We do not allow any overlap of backend object names since they all have to
@@ -813,12 +815,14 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         Args:
             key (str): Backend object name
             obj_type (ALL_COMPONENTS_T): Object type.
+            dataset (xr.Dataset | None, optional): Dataset to check for preexistence. Defaults to self._dataset.
 
         Raises:
             BackendError: if `key` already exists in the backend model
                 (either with the same or different type as `obj_type`).
         """
-        if key in self._dataset and (math_def := self.math.find(key)).active:
+        dataset = dataset or self._dataset
+        if key in dataset and (math_def := self.math.find(key)).active:
             if math_def._group == obj_type:
                 raise BackendError(
                     f"Trying to add already existing `{key}` to backend model {obj_type}."

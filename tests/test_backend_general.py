@@ -1,4 +1,5 @@
 import logging
+import re
 from unittest.mock import patch
 
 import numpy as np
@@ -371,25 +372,64 @@ class TestGetters:
 
 
 class TestAdders:
-    def test_raise_error_on_preexistence_same_type(self, solved_model_func):
+    @pytest.mark.parametrize(
+        ("component_type", "name"),
+        [("parameter", "flow_out_eff"), ("lookup", "base_tech")],
+    )
+    def test_raise_error_on_preexistence_same_type_inputs(
+        self, solved_model_cls, component_type, name
+    ):
         """Cannot add a parameter if one with the same name already exists"""
-        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
-            solved_model_func.backend.add_parameter("flow_out_eff", xr.DataArray(1), {})
+        with pytest.raises(
+            calliope.exceptions.BackendError,
+            match=rf"Trying to add already existing `{name}` to backend model {component_type}s.",
+        ):
+            getattr(solved_model_cls.backend, f"add_{component_type}")(
+                name, xr.DataArray(1), {}
+            )
 
-        assert check_error_or_warning(
-            excinfo,
-            "Trying to add already existing `flow_out_eff` to backend model parameters.",
-        )
+    @pytest.mark.parametrize(
+        ("component_type", "name"),
+        [
+            ("variable", "flow_out"),
+            ("global_expression", "cost_investment"),
+            ("constraint", "system_balance"),
+            ("objective", "min_cost_optimisation"),
+        ],
+    )
+    def test_raise_error_on_preexistence_same_type_other_components(
+        self, solved_model_cls, component_type, name
+    ):
+        """Cannot add a variable/expr/constraint/objective if one with the same name already exists"""
+        def_ = solved_model_cls.math.build[f"{component_type}s"][name]
+        with pytest.raises(
+            calliope.exceptions.BackendError,
+            match=rf"Trying to add already existing `{name}` to backend model {component_type}s.",
+        ):
+            getattr(solved_model_cls.backend, f"add_{component_type}")(name, def_)
 
-    def test_raise_error_on_preexistence_diff_type(self, solved_model_func):
+    def test_raise_error_on_preexistence_same_type_postprocessed(
+        self, solved_model_cls
+    ):
+        """Cannot add a postprocessed array if one with the same name already exists"""
+        def_ = solved_model_cls.math.build.postprocessed["capacity_factor"]
+        with pytest.raises(
+            calliope.exceptions.BackendError,
+            match=r"Trying to add already existing `capacity_factor` to backend model postprocessed.",
+        ):
+            solved_model_cls.backend._add_postprocessed(
+                "capacity_factor", def_, solved_model_cls.results
+            )
+
+    def test_raise_error_on_preexistence_diff_type(self, solved_model_cls):
         """Cannot add a component if one with the same name already exists, even if it is a different component type."""
-        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
-            solved_model_func.backend.add_parameter("flow_out", xr.DataArray(1), {})
-
-        assert check_error_or_warning(
-            excinfo,
-            "Trying to add already existing *variable* `flow_out` as a backend model *parameter*.",
-        )
+        with pytest.raises(
+            calliope.exceptions.BackendError,
+            match=re.escape(
+                "Trying to add already existing *variable* `flow_out` as a backend model *parameter*."
+            ),
+        ):
+            solved_model_cls.backend.add_parameter("flow_out", xr.DataArray(1), {})
 
     def test_add_constraint(self, solved_model_func):
         """A very simple constraint: For each tech, let the annual and regional sum of `flow_out` be larger than 100.
