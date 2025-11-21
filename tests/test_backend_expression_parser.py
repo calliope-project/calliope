@@ -9,7 +9,7 @@ import pytest
 import xarray as xr
 
 from calliope import exceptions
-from calliope.backend import expression_parser, helper_functions, parsing
+from calliope.backend import eval_attrs, expression_parser, helper_functions
 
 from .common.util import check_error_or_warning
 
@@ -167,7 +167,7 @@ def helper_function_one_parser_in_args(identifier, request):
 
 @pytest.fixture
 def eval_kwargs(dummy_pyomo_backend_model):
-    attrs = parsing.EvalAttrs(
+    attrs = eval_attrs.EvalAttrs(
         helper_functions=helper_functions._registry["expression"],
         equation_name="foobar",
         backend_data=dummy_pyomo_backend_model._dataset,
@@ -254,7 +254,7 @@ class TestEquationParserElements:
     )
     def test_numbers(self, number, string_val, expected):
         parsed_ = number.parse_string(string_val, parse_all=True)
-        assert parsed_[0].eval("array", parsing.EvalAttrs()) == expected
+        assert parsed_[0].eval("array", eval_attrs.EvalAttrs()) == expected
 
     @pytest.mark.parametrize(
         "string_val",
@@ -899,7 +899,7 @@ class TestEquationParserComparison:
 class TestAsMathString:
     @pytest.fixture
     def latex_eval_kwargs(self, dummy_latex_backend_model):
-        attrs = parsing.EvalAttrs(
+        attrs = eval_attrs.EvalAttrs(
             helper_functions=helper_functions._registry["expression"],
             equation_name="foobar",
             backend_data=dummy_latex_backend_model._dataset,

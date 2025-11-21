@@ -8,7 +8,13 @@ import ruamel.yaml as yaml
 import xarray as xr
 
 import calliope
-from calliope.backend import backend_model, expression_parser, parsing, where_parser
+from calliope.backend import (
+    backend_model,
+    eval_attrs,
+    expression_parser,
+    parsing,
+    where_parser,
+)
 from calliope.schemas import math_schema
 
 from .common.util import check_error_or_warning
@@ -402,7 +408,7 @@ class TestParsedComponent:
         )
 
         assert (
-            parsed_list[0].where[0][0].eval("array", parsing.EvalAttrs())
+            parsed_list[0].where[0][0].eval("array", eval_attrs.EvalAttrs())
             == expected_where_eval
         )
         assert isinstance(parsed_list[0].expression, pp.ParseResults)
@@ -545,12 +551,12 @@ class TestParsedComponent:
             component_sub_dict = constraint_eq.sub_expressions
             assert set(component_sub_dict.keys()) == {"foo", "bar"}
 
-            eval_attrs = parsing.EvalAttrs(
+            eval_attrs_ = eval_attrs.EvalAttrs(
                 sub_expression_dict=component_sub_dict,
                 backend_data=dummy_backend_interface._dataset,
                 where_array=xr.DataArray(True),
             )
-            comparison_expr = constraint_eq.expression[0].eval("array", eval_attrs)
+            comparison_expr = constraint_eq.expression[0].eval("array", eval_attrs_)
 
             assert comparison_expr == expected
 

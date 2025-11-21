@@ -9,7 +9,6 @@ import itertools
 import logging
 import operator
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass, field
 from typing import Literal, overload
 
 import pyparsing as pp
@@ -17,55 +16,12 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.backend import expression_parser, helper_functions, where_parser
+from calliope.backend.eval_attrs import EvalAttrs
 from calliope.schemas import config_schema, math_schema
 
 TRUE_ARRAY = xr.DataArray(True)
 
 LOGGER = logging.getLogger(__name__)
-
-
-@dataclass
-class EvalAttrs:
-    """Attributes required for evaluating parsed expressions."""
-
-    backend_data: xr.Dataset = field(default_factory=xr.Dataset)
-    """Backend interface component dataset."""
-
-    equation_name: str = ""
-    """Name of the equation being evaluated."""
-
-    helper_functions: dict[str, Callable] = field(default_factory=dict)
-    """Helper functions available for evaluations."""
-
-    input_data: xr.Dataset = field(default_factory=xr.Dataset)
-    """Model input data."""
-
-    math: math_schema.CalliopeBuildMath = field(
-        default_factory=math_schema.CalliopeBuildMath
-    )
-    """Calliope math definitions."""
-
-    apply_where: bool = True
-    """Whether to apply the 'where' condition."""
-
-    as_values: bool = False
-    """If True, return with the array contents evaluated to base Python objects.
-    If False, return with the array contents as they are in the backend dataset."""
-
-    build_config: config_schema.Build = field(default_factory=config_schema.Build)
-    """Build configuration options."""
-
-    references: set[str] = field(default_factory=set)
-    """References to dimensions/lookups/parameters/variables/global expressions used in the expression."""
-
-    slice_dict: dict = field(default_factory=dict)
-    """Dictionary to look up array slice expressions if referenced in the evaluated string."""
-
-    sub_expression_dict: dict = field(default_factory=dict)
-    """Dictionary to look up sub-expressions if referenced in the evaluated string."""
-
-    where_array: xr.DataArray = field(default_factory=lambda: xr.DataArray(True))
-    """Boolean array defining where the expression should be applied."""
 
 
 class ParsedBackendEquation:
@@ -279,7 +235,7 @@ class ParsedBackendEquation:
                 If return_type == `array`: Boolean array defining on which index items a parsed component should be built.
                 If return_type == `math_string`: Valid LaTeX math string defining the "where" conditions using logic notation.
         """
-        eval_attrs = {
+        eval_attrs_ = {
             "equation_name": self.name,
             "helper_functions": helper_functions._registry["where"],
             "input_data": input_data,
@@ -288,10 +244,10 @@ class ParsedBackendEquation:
             "build_config": build_config,
         }
         if references is not None:
-            eval_attrs["references"] = references
+            eval_attrs_["references"] = references
 
         evaluated_wheres = [
-            where[0].eval(return_type, EvalAttrs(**eval_attrs)) for where in self.where
+            where[0].eval(return_type, EvalAttrs(**eval_attrs_)) for where in self.where
         ]
         if return_type == "math_string":
             return r"\land{}".join(f"({i})" for i in evaluated_wheres if i != "true")
@@ -376,7 +332,7 @@ class ParsedBackendEquation:
                 If return_type == `math_string`: Valid LaTeX math string defining the
                 "where" conditions using logic notation.
         """
-        eval_attrs = {
+        eval_attrs_ = {
             "equation_name": self.name,
             "slice_dict": self.slices,
             "sub_expression_dict": self.sub_expressions,
@@ -387,8 +343,8 @@ class ParsedBackendEquation:
             "helper_functions": helper_functions._registry["expression"],
         }
         if references is not None:
-            eval_attrs["references"] = references
-        evaluated = self.expression[0].eval(return_type, EvalAttrs(**eval_attrs))
+            eval_attrs_["references"] = references
+        evaluated = self.expression[0].eval(return_type, EvalAttrs(**eval_attrs_))
         if return_type == "array":
             self.raise_error_on_where_expr_mismatch(evaluated, where)
         return evaluated

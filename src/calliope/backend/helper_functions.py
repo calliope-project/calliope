@@ -10,17 +10,16 @@ import functools
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import Any, Literal, overload
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
+from calliope.backend.eval_attrs import EvalAttrs
 from calliope.exceptions import BackendError
 from calliope.util import DTYPE_OPTIONS
 
-if TYPE_CHECKING:
-    from calliope.backend.expression_parser import EvalAttrs
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
 ] = {"where": {}, "expression": {}}

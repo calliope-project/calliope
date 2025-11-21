@@ -6,7 +6,12 @@ import pyparsing as pp
 import pytest
 import xarray as xr
 
-from calliope.backend import expression_parser, helper_functions, parsing, where_parser
+from calliope.backend import (
+    eval_attrs,
+    expression_parser,
+    helper_functions,
+    where_parser,
+)
 from calliope.exceptions import BackendError
 
 from .common.util import check_error_or_warning
@@ -166,7 +171,7 @@ def dummy_build_config():
 
 @pytest.fixture
 def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config, dummy_model_math):
-    attrs = parsing.EvalAttrs(
+    attrs = eval_attrs.EvalAttrs(
         input_data=dummy_pyomo_backend_model.inputs,
         backend_data=dummy_pyomo_backend_model._dataset,
         math=dummy_model_math,
@@ -248,11 +253,11 @@ class TestInputParser:
         self, input_arr, dummy_model_data, data_var_string, expected, eval_kwargs, kwarg
     ):
         parsed_ = input_arr.parse_string(data_var_string, parse_all=True)
-        eval_attrs = replace(eval_kwargs["eval_attrs"], **kwarg)
+        eval_attrs_ = replace(eval_kwargs["eval_attrs"], **kwarg)
 
         assert (
             parsed_[0]
-            .eval(eval_kwargs["return_type"], eval_attrs)
+            .eval(eval_kwargs["return_type"], eval_attrs_)
             .equals(dummy_model_data[expected])
         )
 
@@ -371,7 +376,7 @@ class TestBoolParser:
     )
     def test_boolean_parser(self, bool_operand, bool_string, expected_true):
         parsed_ = bool_operand.parse_string(bool_string, parse_all=True)
-        evaluated = parsed_[0].eval("array", parsing.EvalAttrs())
+        evaluated = parsed_[0].eval("array", eval_attrs.EvalAttrs())
         assert evaluated if expected_true else not evaluated
 
     @pytest.mark.parametrize(
@@ -387,7 +392,7 @@ class TestEvalStringParser:
     @pytest.mark.parametrize("instring", ["foo", "FOO", "foo10", "foo_10"])
     def test_evaluatable_string_parser(self, evaluatable_string, instring):
         parsed_ = evaluatable_string.parse_string(instring, parse_all=True)
-        parsed_[0].eval("array", parsing.EvalAttrs()) == instring
+        parsed_[0].eval("array", eval_attrs.EvalAttrs()) == instring
 
     @pytest.mark.parametrize("instring", ["_foo", "1foo", ".foo", "$foo", "__foo__"])
     def test_evaluatable_string_parser_malformed(self, evaluatable_string, instring):
@@ -509,7 +514,7 @@ class TestSubsettingParser:
         parsed_ = subset.parse_string(f"{subset_string} in nodes", parse_all=True)
         assert parsed_[0].set_name == "DIM:nodes"
         assert [
-            i.eval("array", parsing.EvalAttrs()) for i in parsed_[0].val
+            i.eval("array", eval_attrs.EvalAttrs()) for i in parsed_[0].val
         ] == expected_subset
 
     @pytest.mark.parametrize(

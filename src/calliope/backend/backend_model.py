@@ -20,7 +20,7 @@ import numpy as np
 import xarray as xr
 
 from calliope import exceptions
-from calliope.backend import helper_functions, parsing
+from calliope.backend import eval_attrs, helper_functions, parsing
 from calliope.exceptions import BackendError
 from calliope.exceptions import warn as model_warn
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
@@ -168,6 +168,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             name (str): name of the variable.
             definition (math_schema.Variable): Variable configuration dictionary.
         """
+        self._raise_error_on_preexistence(name, "variables")
         references: set[str] = set()
         component_da = xr.DataArray(np.nan)
         if not definition.active:
@@ -219,6 +220,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             name (str): name of the global expression
             definition (math_schema.GlobalExpression): Global expression configuration dictionary, ready to be parsed and then evaluated.
         """
+        self._raise_error_on_preexistence(name, "global_expressions")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if not definition.active:
@@ -262,6 +264,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             definition (math_schema.Constraint):
                 Constraint configuration dictionary, ready to be parsed and then evaluated.
         """
+        self._raise_error_on_preexistence(name, "constraints")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if not definition.active:
@@ -318,6 +321,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             name (str): name of the objective.
             definition (math_schema.Objective): Unparsed objective configuration dictionary.
         """
+        self._raise_error_on_preexistence(name, "objectives")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if not definition.active:
@@ -364,6 +368,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             definition (math_schema.PostprocessedExpression): Definition of the postprocessed expression.
             dataset (xr.Dataset): The results dataset from the optimisation to use in postprocessing.
         """
+        self._raise_error_on_preexistence(name, "postprocessed")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if not definition.active:
@@ -601,8 +606,8 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         for name, check in data_checks.root.items():
             if check.active:
                 parsed_ = parser_.parse_string(check.where, parse_all=True)
-                eval_attrs = parsing.EvalAttrs(equation_name=name, **eval_kwargs)
-                evaluated = parsed_[0].eval("array", eval_attrs)
+                eval_attrs_ = eval_attrs.EvalAttrs(equation_name=name, **eval_kwargs)
+                evaluated = parsed_[0].eval("array", eval_attrs_)
                 if (
                     evaluated.any()
                     and (evaluated & self.inputs.definition_matrix).any()
@@ -886,6 +891,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     def add_piecewise_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.PiecewiseConstraint
     ) -> None:
+        self._raise_error_on_preexistence(name, "piecewise_constraints")
         references: set[str] = set()
         default_empty = xr.DataArray(np.nan)
         if "breakpoints" in definition.foreach:
