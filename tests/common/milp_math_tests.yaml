@@ -3,7 +3,7 @@
 
 unit_commitment_milp:
   description: "Test unit_commitment_milp constraint - operating units bounded by purchased units"
-  math:
+  register:
     constraints: [unit_commitment_milp]
     variables: [operating_units, purchased_units]
     parameters: [flow_cap_per_unit]
@@ -14,7 +14,7 @@ unit_commitment_milp:
 
 flow_out_max_milp:
   description: "Test flow_out_max_milp constraint - output bounded by operating units"
-  math:
+  register:
     constraints: [flow_out_max_milp]
     variables: [flow_out, operating_units]
   overrides:
@@ -24,7 +24,7 @@ flow_out_max_milp:
 
 flow_in_max_milp:
   description: "Test flow_in_max_milp constraint - input bounded by operating units"
-  math:
+  register:
     constraints: [flow_in_max_milp]
     variables: [flow_in, operating_units]
   overrides:
@@ -34,7 +34,7 @@ flow_in_max_milp:
 
 flow_out_min_milp:
   description: "Test flow_out_min_milp constraint with flow_cap_per_unit"
-  math:
+  register:
     constraints: [flow_out_min_milp]
     variables: [flow_out, operating_units, available_flow_cap]
     parameters: [flow_out_min_relative, flow_cap_per_unit]
@@ -46,7 +46,7 @@ flow_out_min_milp:
 
 flow_out_min_milp_available_flow_cap:
   description: "Test flow_out_min_milp constraint with available_flow_cap"
-  math:
+  register:
     constraints: [flow_out_min_milp]
     variables: [flow_out, operating_units, available_flow_cap]
     parameters: [flow_out_min_relative]
@@ -59,7 +59,7 @@ flow_out_min_milp_available_flow_cap:
 
 storage_capacity_units_milp:
   description: "Test storage_capacity_units_milp constraint - storage capacity fixed by units"
-  math:
+  register:
     constraints: [storage_capacity_units_milp]
     variables: [storage_cap, purchased_units]
     parameters: [storage_cap_per_unit]
@@ -71,7 +71,7 @@ storage_capacity_units_milp:
 
 flow_capacity_units_milp:
   description: "Test flow_capacity_units_milp constraint - flow capacity fixed by units"
-  math:
+  register:
     constraints: [flow_capacity_units_milp]
     variables: [flow_cap, purchased_units]
   overrides:
@@ -81,7 +81,7 @@ flow_capacity_units_milp:
 
 flow_capacity_max_purchase_milp:
   description: "Test flow_capacity_max_purchase_milp constraint with flow_cap_max"
-  math:
+  register:
     constraints: [flow_capacity_max_purchase_milp]
     variables: [flow_cap, purchased_units]
   overrides:
@@ -91,7 +91,7 @@ flow_capacity_max_purchase_milp:
 
 flow_capacity_max_purchase_milp_no_max:
   description: "Test flow_capacity_max_purchase_milp constraint without flow_cap_max (uses bigM)"
-  math:
+  register:
     constraints: [flow_capacity_max_purchase_milp]
     variables: [flow_cap, purchased_units]
   overrides: {}
@@ -100,7 +100,7 @@ flow_capacity_max_purchase_milp_no_max:
 
 storage_capacity_max_purchase_milp:
   description: "Test storage_capacity_max_purchase_milp constraint"
-  math:
+  register:
     constraints: [storage_capacity_max_purchase_milp]
     variables: [storage_cap, purchased_units]
   overrides:
@@ -111,7 +111,7 @@ storage_capacity_max_purchase_milp:
 
 unit_capacity_max_systemwide_milp:
   description: "Test unit_capacity_max_systemwide_milp constraint"
-  math:
+  register:
     constraints: [unit_capacity_max_systemwide_milp]
     variables: [purchased_units]
   overrides:
@@ -121,7 +121,7 @@ unit_capacity_max_systemwide_milp:
 
 unit_capacity_min_systemwide_milp:
   description: "Test unit_capacity_min_systemwide_milp constraint"
-  math:
+  register:
     constraints: [unit_capacity_min_systemwide_milp]
     variables: [purchased_units]
     parameters: [purchased_units_max_systemwide, purchased_units_min_systemwide]
@@ -133,7 +133,7 @@ unit_capacity_min_systemwide_milp:
 
 async_flow_in_milp:
   description: "Test async_flow_in_milp constraint - force asynchronous flows"
-  math:
+  register:
     constraints: [async_flow_in_milp]
     variables: [flow_in, async_flow_switch]
     lookups: [force_async_flow]
@@ -144,7 +144,7 @@ async_flow_in_milp:
 
 async_flow_out_milp:
   description: "Test async_flow_out_milp constraint - force asynchronous flows"
-  math:
+  register:
     constraints: [async_flow_out_milp]
     variables: [flow_out, async_flow_switch]
   overrides:
@@ -154,7 +154,7 @@ async_flow_out_milp:
 
 available_flow_cap_continuous:
   description: "Test available_flow_cap_continuous constraint"
-  math:
+  register:
     constraints: [available_flow_cap_continuous]
     variables: [available_flow_cap, flow_cap]
   overrides:
@@ -164,7 +164,7 @@ available_flow_cap_continuous:
 
 available_flow_cap_binary:
   description: "Test available_flow_cap_binary constraint"
-  math:
+  register:
     constraints: [available_flow_cap_binary]
     variables: [available_flow_cap, operating_units]
   overrides:
@@ -175,7 +175,7 @@ available_flow_cap_binary:
 
 available_flow_cap_max_binary_continuous_switch:
   description: "Test available_flow_cap_max_binary_continuous_switch constraint"
-  math:
+  register:
     constraints: [available_flow_cap_max_binary_continuous_switch]
     variables: [available_flow_cap, flow_cap, operating_units, purchased_units]
   overrides:
@@ -186,7 +186,7 @@ available_flow_cap_max_binary_continuous_switch:
 
 cost_investment_purchase:
   description: "Test cost_investment_purchase global expression"
-  math:
+  register:
     global_expressions: [cost_investment_purchase]
     variables: [purchased_units]
     parameters: ['purchased_units_min', 'purchased_units_max']
@@ -203,7 +203,7 @@ cost_investment_purchase:
 
 cost_investment_purchase_transmission:
   description: "Test cost_investment_purchase for transmission tech"
-  math:
+  register:
     global_expressions: [cost_investment_purchase]
     parameters: [cost_purchase_per_distance, cost_purchase]
     lookups: [cap_method]
@@ -223,7 +223,7 @@ cost_investment_purchase_transmission:
 
 cost_investment:
   description: "Test cost_investment_purchase global expression"
-  math:
+  register:
     global_expressions: [cost_investment]
   overrides:
     techs.test_supply_elec.cost_purchase:
@@ -240,7 +240,7 @@ cost_investment:
 
 flow_capacity_minimum:
   description: "Test flow_capacity_minimum constraint without purchased_units"
-  math:
+  register:
     constraints: [flow_capacity_minimum]
     variables: [flow_cap]
     parameters: [flow_cap_min]
@@ -251,7 +251,7 @@ flow_capacity_minimum:
 
 flow_capacity_minimum_milp:
   description: "Test flow_capacity_minimum constraint with purchased_units"
-  math:
+  register:
     constraints: [flow_capacity_minimum]
     variables: [flow_cap, purchased_units]
     parameters: [flow_cap_min]
@@ -262,7 +262,7 @@ flow_capacity_minimum_milp:
 
 storage_capacity_minimum:
   description: "Test storage_capacity_minimum constraint without purchased_units"
-  math:
+  register:
     constraints: [storage_capacity_minimum]
     variables: [storage_cap]
   overrides:
@@ -273,7 +273,7 @@ storage_capacity_minimum:
 
 storage_capacity_minimum_milp:
   description: "Test storage_capacity_minimum constraint with purchased_units"
-  math:
+  register:
     constraints: [storage_capacity_minimum]
     variables: [storage_cap, purchased_units]
   overrides:
@@ -284,7 +284,7 @@ storage_capacity_minimum_milp:
 
 area_use_minimum:
   description: "Test area_use_minimum constraint without purchased_units"
-  math:
+  register:
     constraints: [area_use_minimum]
     variables: [area_use]
   overrides:
@@ -295,7 +295,7 @@ area_use_minimum:
 
 area_use_minimum_milp:
   description: "Test area_use_minimum constraint with purchased_units"
-  math:
+  register:
     constraints: [area_use_minimum]
     variables: [area_use, purchased_units]
   overrides:
@@ -306,7 +306,7 @@ area_use_minimum_milp:
 
 source_capacity_minimum:
   description: "Test source_capacity_minimum constraint without purchased_units"
-  math:
+  register:
     constraints: [source_capacity_minimum]
     variables: [source_cap]
   overrides:
@@ -316,7 +316,7 @@ source_capacity_minimum:
 
 source_capacity_minimum_milp:
   description: "Test source_capacity_minimum constraint with purchased_units"
-  math:
+  register:
     constraints: [source_capacity_minimum]
     variables: [source_cap, purchased_units]
     parameters: [source_cap_min]
@@ -328,7 +328,7 @@ source_capacity_minimum_milp:
 
 flow_out_max:
   description: "Test flow_out_max modified constraint - only applies without operating_units (node b)"
-  math:
+  register:
     constraints: [flow_out_max]
     parameters: [flow_cap_max]
   overrides:
@@ -339,7 +339,7 @@ flow_out_max:
 
 flow_out_min:
   description: "Test flow_out_min modified constraint - only applies without operating_units (node b)"
-  math:
+  register:
     constraints: [flow_out_min]
     parameters: [flow_out_min_relative]
   overrides:
@@ -350,7 +350,7 @@ flow_out_min:
 
 flow_in_max:
   description: "Test flow_in_max modified constraint - only applies without operating_units (node b)"
-  math:
+  register:
     constraints: [flow_in_max]
   overrides:
     techs.test_conversion.flow_cap_max: 40
@@ -360,7 +360,7 @@ flow_in_max:
 
 flow_capacity_systemwide_min:
   description: "Test flow_capacity_systemwide_min constraint with purchased_units"
-  math:
+  register:
     constraints: [flow_capacity_systemwide_min]
     variables: [flow_cap]
     parameters: [flow_cap_min_systemwide]

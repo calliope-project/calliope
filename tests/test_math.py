@@ -157,7 +157,7 @@ class InternalMathFiles(ABC):
         """Test math using YAML configuration."""
         # Build custom math from config
         custom_math = {}
-        for component_type, components in config["math"].items():
+        for component_type, components in config["register"].items():
             custom_math[component_type] = {
                 comp: full_math[component_type][comp] for comp in components
             }
@@ -167,8 +167,8 @@ class InternalMathFiles(ABC):
         if config.get("add_objective"):
             objective = "test_obj"
             # Create custom objective that uses the global expression
-            if "global_expressions" in config["math"]:
-                expr_name = "+".join(config["math"]["global_expressions"])
+            if "global_expressions" in config["register"]:
+                expr_name = "+".join(config["register"]["global_expressions"])
                 expr = (
                     f"sum({expr_name}, over=[nodes, techs, costs, carriers, timesteps])"
                 )
@@ -191,7 +191,7 @@ class InternalMathFiles(ABC):
         lp_file = lp_temp_path / config["lp_file"]
         build_lp_file(model, lp_file, objective)
 
-        for component_type, component_list in config["math"].items():
+        for component_type, component_list in config["register"].items():
             for component_name in component_list:
                 self.TEST_REGISTER.add(f"{component_type}.{component_name}")
 
