@@ -1,0 +1,371 @@
+# MILP math test configurations
+# Each test validates MILP-specific constraints
+
+unit_commitment_milp:
+  description: "Test unit_commitment_milp constraint - operating units bounded by purchased units"
+  math:
+    constraints: [unit_commitment_milp]
+    variables: [operating_units, purchased_units]
+    parameters: [flow_cap_per_unit]
+  overrides:
+    techs.test_supply_elec.flow_cap_per_unit: 5
+  scenario: supply_milp,two_hours
+  lp_file: unit_commitment_milp.lp
+
+flow_out_max_milp:
+  description: "Test flow_out_max_milp constraint - output bounded by operating units"
+  math:
+    constraints: [flow_out_max_milp]
+    variables: [flow_out, operating_units]
+  overrides:
+    techs.test_supply_elec.flow_cap_per_unit: 10
+  scenario: supply_milp,two_hours
+  lp_file: flow_out_max_milp.lp
+
+flow_in_max_milp:
+  description: "Test flow_in_max_milp constraint - input bounded by operating units"
+  math:
+    constraints: [flow_in_max_milp]
+    variables: [flow_in, operating_units]
+  overrides:
+    techs.test_conversion.flow_cap_per_unit: 10
+  scenario: conversion_milp,two_hours
+  lp_file: flow_in_max_milp.lp
+
+flow_out_min_milp:
+  description: "Test flow_out_min_milp constraint with flow_cap_per_unit"
+  math:
+    constraints: [flow_out_min_milp]
+    variables: [flow_out, operating_units, available_flow_cap]
+    parameters: [flow_out_min_relative, flow_cap_per_unit]
+  overrides:
+    techs.test_supply_elec.flow_cap_per_unit: 10
+    techs.test_supply_elec.flow_out_min_relative: 0.2
+  scenario: supply_milp,two_hours
+  lp_file: flow_out_min_milp.lp
+
+flow_out_min_milp_available_flow_cap:
+  description: "Test flow_out_min_milp constraint with available_flow_cap"
+  math:
+    constraints: [flow_out_min_milp]
+    variables: [flow_out, operating_units, available_flow_cap]
+    parameters: [flow_out_min_relative]
+    lookups: [integer_dispatch]
+  overrides:
+    techs.test_supply_elec.integer_dispatch: true
+    techs.test_supply_elec.flow_out_min_relative: 0.2
+  scenario: supply_milp,two_hours
+  lp_file: flow_out_min_milp_available_flow_cap.lp
+
+storage_capacity_units_milp:
+  description: "Test storage_capacity_units_milp constraint - storage capacity fixed by units"
+  math:
+    constraints: [storage_capacity_units_milp]
+    variables: [storage_cap, purchased_units]
+    parameters: [storage_cap_per_unit]
+  overrides:
+    techs.test_supply_elec.include_storage: true
+    techs.test_supply_elec.storage_cap_per_unit: 50
+  scenario: supply_milp,two_hours
+  lp_file: storage_capacity_units_milp.lp
+
+flow_capacity_units_milp:
+  description: "Test flow_capacity_units_milp constraint - flow capacity fixed by units"
+  math:
+    constraints: [flow_capacity_units_milp]
+    variables: [flow_cap, purchased_units]
+  overrides:
+    techs.test_supply_elec.flow_cap_per_unit: 10
+  scenario: supply_milp,two_hours
+  lp_file: flow_capacity_units_milp.lp
+
+flow_capacity_max_purchase_milp:
+  description: "Test flow_capacity_max_purchase_milp constraint with flow_cap_max"
+  math:
+    constraints: [flow_capacity_max_purchase_milp]
+    variables: [flow_cap, purchased_units]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_cap_max: 100
+  scenario: supply_milp,two_hours
+  lp_file: flow_capacity_max_purchase_milp.lp
+
+flow_capacity_max_purchase_milp_no_max:
+  description: "Test flow_capacity_max_purchase_milp constraint without flow_cap_max (uses bigM)"
+  math:
+    constraints: [flow_capacity_max_purchase_milp]
+    variables: [flow_cap, purchased_units]
+  overrides: {}
+  scenario: supply_milp,two_hours
+  lp_file: flow_capacity_max_purchase_milp_no_max.lp
+
+storage_capacity_max_purchase_milp:
+  description: "Test storage_capacity_max_purchase_milp constraint"
+  math:
+    constraints: [storage_capacity_max_purchase_milp]
+    variables: [storage_cap, purchased_units]
+  overrides:
+    techs.test_supply_elec.include_storage: true
+    nodes.a.techs.test_supply_elec.storage_cap_max: 200
+  scenario: supply_milp,two_hours
+  lp_file: storage_capacity_max_purchase_milp.lp
+
+unit_capacity_max_systemwide_milp:
+  description: "Test unit_capacity_max_systemwide_milp constraint"
+  math:
+    constraints: [unit_capacity_max_systemwide_milp]
+    variables: [purchased_units]
+  overrides:
+    techs.test_supply_elec.purchased_units_max_systemwide: 5
+  scenario: supply_milp,two_hours
+  lp_file: unit_capacity_max_systemwide_milp.lp
+
+unit_capacity_min_systemwide_milp:
+  description: "Test unit_capacity_min_systemwide_milp constraint"
+  math:
+    constraints: [unit_capacity_min_systemwide_milp]
+    variables: [purchased_units]
+    parameters: [purchased_units_max_systemwide, purchased_units_min_systemwide]
+  overrides:
+    techs.test_supply_elec.purchased_units_max_systemwide: 10
+    techs.test_supply_elec.purchased_units_min_systemwide: 2
+  scenario: supply_milp,two_hours
+  lp_file: unit_capacity_min_systemwide_milp.lp
+
+async_flow_in_milp:
+  description: "Test async_flow_in_milp constraint - force asynchronous flows"
+  math:
+    constraints: [async_flow_in_milp]
+    variables: [flow_in, async_flow_switch]
+    lookups: [force_async_flow]
+  overrides:
+    techs.test_conversion_plus.force_async_flow: true
+  scenario: conversion_and_conversion_plus,two_hours
+  lp_file: async_flow_in_milp.lp
+
+async_flow_out_milp:
+  description: "Test async_flow_out_milp constraint - force asynchronous flows"
+  math:
+    constraints: [async_flow_out_milp]
+    variables: [flow_out, async_flow_switch]
+  overrides:
+    techs.test_conversion_plus.force_async_flow: true
+  scenario: conversion_and_conversion_plus,two_hours
+  lp_file: async_flow_out_milp.lp
+
+available_flow_cap_continuous:
+  description: "Test available_flow_cap_continuous constraint"
+  math:
+    constraints: [available_flow_cap_continuous]
+    variables: [available_flow_cap, flow_cap]
+  overrides:
+    techs.test_supply_elec.integer_dispatch: true
+  scenario: supply_milp,two_hours
+  lp_file: available_flow_cap_continuous.lp
+
+available_flow_cap_binary:
+  description: "Test available_flow_cap_binary constraint"
+  math:
+    constraints: [available_flow_cap_binary]
+    variables: [available_flow_cap, operating_units]
+  overrides:
+    techs.test_supply_elec.integer_dispatch: true
+    nodes.a.techs.test_supply_elec.flow_cap_max: 50
+  scenario: supply_milp,two_hours
+  lp_file: available_flow_cap_binary.lp
+
+available_flow_cap_max_binary_continuous_switch:
+  description: "Test available_flow_cap_max_binary_continuous_switch constraint"
+  math:
+    constraints: [available_flow_cap_max_binary_continuous_switch]
+    variables: [available_flow_cap, flow_cap, operating_units, purchased_units]
+  overrides:
+    techs.test_supply_elec.integer_dispatch: true
+    nodes.a.techs.test_supply_elec.flow_cap_max: 50
+  scenario: supply_milp,two_hours
+  lp_file: available_flow_cap_max_binary_continuous_switch.lp
+
+cost_investment_purchase:
+  description: "Test cost_investment_purchase global expression"
+  math:
+    global_expressions: [cost_investment_purchase]
+    variables: [purchased_units]
+    parameters: ['purchased_units_min', 'purchased_units_max']
+  overrides:
+    techs.test_supply_elec.cost_purchase:
+      data: 1000
+      index: "monetary"
+      dims: "costs"
+    techs.test_supply_elec.purchased_units_min: 1
+    techs.test_supply_elec.purchased_units_max: 2
+  scenario: supply_milp,two_hours
+  lp_file: cost_investment_purchase.lp
+  add_objective: true
+
+cost_investment_purchase_transmission:
+  description: "Test cost_investment_purchase for transmission tech"
+  math:
+    global_expressions: [cost_investment_purchase]
+    parameters: [cost_purchase_per_distance, cost_purchase]
+    lookups: [cap_method]
+  overrides:
+    techs.test_link_a_b_elec.cap_method: integer
+    techs.test_link_a_b_elec.cost_purchase:
+      data:  500
+      index: "monetary"
+      dims: "costs"
+    techs.test_link_a_b_elec.cost_purchase_per_distance:
+      data:  10
+      index: "monetary"
+      dims: "costs"
+  scenario: simple_supply,two_hours
+  lp_file: cost_investment_purchase_transmission.lp
+  add_objective: true
+
+cost_investment:
+  description: "Test cost_investment_purchase global expression"
+  math:
+    global_expressions: [cost_investment]
+  overrides:
+    techs.test_supply_elec.cost_purchase:
+      data: 1000
+      index: "monetary"
+      dims: "costs"
+    techs.test_supply_elec.cost_flow_cap:
+      data: 10
+      index: "monetary"
+      dims: "costs"
+  scenario: supply_milp,two_hours
+  lp_file: cost_investment_milp_override.lp
+  add_objective: true
+
+flow_capacity_minimum:
+  description: "Test flow_capacity_minimum constraint without purchased_units"
+  math:
+    constraints: [flow_capacity_minimum]
+    variables: [flow_cap]
+    parameters: [flow_cap_min]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_cap_min: 10
+  scenario: simple_supply,two_hours
+  lp_file: flow_capacity_minimum.lp
+
+flow_capacity_minimum_milp:
+  description: "Test flow_capacity_minimum constraint with purchased_units"
+  math:
+    constraints: [flow_capacity_minimum]
+    variables: [flow_cap, purchased_units]
+    parameters: [flow_cap_min]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_cap_min: 10
+  scenario: supply_milp,two_hours
+  lp_file: flow_capacity_minimum_milp.lp
+
+storage_capacity_minimum:
+  description: "Test storage_capacity_minimum constraint without purchased_units"
+  math:
+    constraints: [storage_capacity_minimum]
+    variables: [storage_cap]
+  overrides:
+    nodes.a.techs.test_supply_elec.include_storage: true
+    nodes.a.techs.test_supply_elec.storage_cap_min: 20
+  scenario: simple_supply,two_hours,investment_costs
+  lp_file: storage_capacity_minimum.lp
+
+storage_capacity_minimum_milp:
+  description: "Test storage_capacity_minimum constraint with purchased_units"
+  math:
+    constraints: [storage_capacity_minimum]
+    variables: [storage_cap, purchased_units]
+  overrides:
+    nodes.a.techs.test_supply_elec.include_storage: true
+    nodes.a.techs.test_supply_elec.storage_cap_min: 20
+  scenario: supply_milp,two_hours
+  lp_file: storage_capacity_minimum_milp.lp
+
+area_use_minimum:
+  description: "Test area_use_minimum constraint without purchased_units"
+  math:
+    constraints: [area_use_minimum]
+    variables: [area_use]
+  overrides:
+    techs.test_supply_elec.area_use_min: 5
+    techs.test_supply_elec.area_use_per_flow_cap: 1.5
+  scenario: simple_supply,two_hours,investment_costs
+  lp_file: area_use_minimum.lp
+
+area_use_minimum_milp:
+  description: "Test area_use_minimum constraint with purchased_units"
+  math:
+    constraints: [area_use_minimum]
+    variables: [area_use, purchased_units]
+  overrides:
+    techs.test_supply_elec.area_use_min: 5
+    techs.test_supply_elec.area_use_per_flow_cap: 1.5
+  scenario: supply_milp,two_hours
+  lp_file: area_use_minimum_milp.lp
+
+source_capacity_minimum:
+  description: "Test source_capacity_minimum constraint without purchased_units"
+  math:
+    constraints: [source_capacity_minimum]
+    variables: [source_cap]
+  overrides:
+    techs.test_supply_plus.source_cap_min: 30
+  scenario: simple_supply_plus,two_hours
+  lp_file: source_capacity_minimum.lp
+
+source_capacity_minimum_milp:
+  description: "Test source_capacity_minimum constraint with purchased_units"
+  math:
+    constraints: [source_capacity_minimum]
+    variables: [source_cap, purchased_units]
+    parameters: [source_cap_min]
+  overrides:
+    techs.test_supply_plus.cap_method: integer
+    techs.test_supply_plus.source_cap_min: 30
+  scenario: simple_supply_plus,two_hours
+  lp_file: source_capacity_minimum_milp.lp
+
+flow_out_max:
+  description: "Test flow_out_max modified constraint - only applies without operating_units (node b)"
+  math:
+    constraints: [flow_out_max]
+    parameters: [flow_cap_max]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_cap_max: 50
+    nodes.a.techs.test_conversion.cap_method: integer
+  scenario: simple_conversion,two_hours
+  lp_file: flow_out_max_milp_override.lp
+
+flow_out_min:
+  description: "Test flow_out_min modified constraint - only applies without operating_units (node b)"
+  math:
+    constraints: [flow_out_min]
+    parameters: [flow_out_min_relative]
+  overrides:
+    techs.test_conversion.flow_out_min_relative: 0.2
+    nodes.a.techs.test_conversion.cap_method: integer
+  scenario: simple_conversion,two_hours
+  lp_file: flow_out_min_milp_override.lp
+
+flow_in_max:
+  description: "Test flow_in_max modified constraint - only applies without operating_units (node b)"
+  math:
+    constraints: [flow_in_max]
+  overrides:
+    techs.test_conversion.flow_cap_max: 40
+    nodes.a.techs.test_conversion.cap_method: integer
+  scenario: simple_conversion,two_hours
+  lp_file: flow_in_max_milp_override.lp
+
+flow_capacity_systemwide_min:
+  description: "Test flow_capacity_systemwide_min constraint with purchased_units"
+  math:
+    constraints: [flow_capacity_systemwide_min]
+    variables: [flow_cap]
+    parameters: [flow_cap_min_systemwide]
+  overrides:
+    nodes.a.techs.test_supply_elec.cap_method: integer
+    techs.test_supply_elec.flow_cap_min_systemwide: 5
+  scenario: simple_supply,two_hours
+  lp_file: flow_capacity_systemwide_min_milp_override.lp
