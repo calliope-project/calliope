@@ -17,11 +17,11 @@ import pytest
 from calliope import io
 from calliope.exceptions import ModelError, ModelWarning
 
-from .common.util import build_test_model
+from ..common.util import build_test_model
 
 # Load test configuration from YAML
 
-CONFIG = io.read_rich_yaml(Path(__file__).parent / "common" / "math_checks_config.yaml")
+CONFIG = io.read_rich_yaml(Path(__file__).parent / "math_checks_config.yaml")
 
 
 class Checks(ABC):

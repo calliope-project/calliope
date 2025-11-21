@@ -11,8 +11,8 @@ import calliope
 import calliope.backend
 from calliope.util import DATETIME_DTYPE
 
-from .common.util import build_test_model as build_model
-from .common.util import check_error_or_warning
+from ..common.util import build_test_model as build_model
+from ..common.util import check_error_or_warning
 
 
 @pytest.fixture(scope="class", params=["pyomo", "gurobi"])

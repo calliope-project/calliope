@@ -9,7 +9,7 @@ import calliope
 from calliope.preprocess import data_tables
 from calliope.schemas import data_table_schema
 
-from .common.util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 
 @pytest.fixture(scope="class")

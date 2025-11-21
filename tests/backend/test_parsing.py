@@ -17,7 +17,7 @@ from calliope.backend import (
 )
 from calliope.schemas import math_schema
 
-from .common.util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 BASE_DIMS = {"carriers", "nodes", "techs"}
 
