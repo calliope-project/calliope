@@ -159,6 +159,8 @@ available_flow_cap_continuous:
     variables: [available_flow_cap, flow_cap]
   overrides:
     techs.test_supply_elec.integer_dispatch: true
+    techs.test_supply_elec.flow_cap_max: 50
+    nodes.a.techs.test_supply_elec.flow_cap_per_unit: null
   scenario: supply_milp,two_hours
   lp_file: available_flow_cap_continuous.lp
 
@@ -169,7 +171,8 @@ available_flow_cap_binary:
     variables: [available_flow_cap, operating_units]
   overrides:
     techs.test_supply_elec.integer_dispatch: true
-    nodes.a.techs.test_supply_elec.flow_cap_max: 50
+    techs.test_supply_elec.flow_cap_max: 50
+    nodes.a.techs.test_supply_elec.flow_cap_per_unit: null
   scenario: supply_milp,two_hours
   lp_file: available_flow_cap_binary.lp
 
@@ -180,7 +183,8 @@ available_flow_cap_max_binary_continuous_switch:
     variables: [available_flow_cap, flow_cap, operating_units, purchased_units]
   overrides:
     techs.test_supply_elec.integer_dispatch: true
-    nodes.a.techs.test_supply_elec.flow_cap_max: 50
+    techs.test_supply_elec.flow_cap_max: 50
+    nodes.a.techs.test_supply_elec.flow_cap_per_unit: null
   scenario: supply_milp,two_hours
   lp_file: available_flow_cap_max_binary_continuous_switch.lp
 

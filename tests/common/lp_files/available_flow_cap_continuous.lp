@@ -6,10 +6,19 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_e_ONE_VAR_CONSTANT:
-+1 ONE_VAR_CONSTANT
-= 1
+c_u_constraints(available_flow_cap_continuous)(a__test_supply_elec__electricity__2005_01_01_00_00)_:
++1 variables(available_flow_cap)(a__test_supply_elec__electricity__2005_01_01_00_00)
+-1 variables(flow_cap)(a__test_supply_elec__electricity)
+<= 0.0
+
+c_u_constraints(available_flow_cap_continuous)(a__test_supply_elec__electricity__2005_01_01_01_00)_:
+-1 variables(flow_cap)(a__test_supply_elec__electricity)
++1 variables(available_flow_cap)(a__test_supply_elec__electricity__2005_01_01_01_00)
+<= 0.0
 
 bounds
    1 <= ONE_VAR_CONSTANT <= 1
+   0 <= variables(available_flow_cap)(a__test_supply_elec__electricity__2005_01_01_00_00) <= +inf
+   0 <= variables(flow_cap)(a__test_supply_elec__electricity) <= 50.0
+   0 <= variables(available_flow_cap)(a__test_supply_elec__electricity__2005_01_01_01_00) <= +inf
 end
