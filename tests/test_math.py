@@ -28,12 +28,8 @@ MATH_TO_CHECK = [
     "lookups",
 ]
 TEST_CONFIGS = {
-    "base": io.read_rich_yaml(
-        Path(__file__).parent / "common" / "base_math_tests.yaml"
-    ),
-    "milp": io.read_rich_yaml(
-        Path(__file__).parent / "common" / "milp_math_tests.yaml"
-    ),
+    k: io.read_rich_yaml(Path(__file__).parent / "common" / f"{k}_math_tests.yaml")
+    for k in ["base", "milp", "storage_inter_cluster"]
 }
 
 
@@ -105,7 +101,6 @@ class InternalMathFiles(ABC):
     FILENAME: str
     TEST_REGISTER: set
     EXTRA_MATH: list
-    TEST_CONFIG: str
 
     @pytest.fixture(scope="class")
     def lp_temp_path(self, tmp_path_factory):
@@ -202,13 +197,14 @@ class TestBaseMath(InternalMathFiles):
     FILENAME = "base"
     TEST_REGISTER = set()
     EXTRA_MATH = []
-    TEST_CONFIG = "base"
 
-    @pytest.fixture(scope="class", params=TEST_CONFIGS[TEST_CONFIG].keys())
+    @pytest.fixture(scope="class", params=TEST_CONFIGS[FILENAME].keys())
     def config(self, request):
-        return TEST_CONFIGS[self.TEST_CONFIG][request.param]
+        return TEST_CONFIGS[self.FILENAME][request.param]
 
-    def test_min_cost_optimisation(self, full_math, lp_temp_path, barebones_config):
+    def test_min_cost_optimisation_feasible(
+        self, full_math, lp_temp_path, barebones_config
+    ):
         """Test the default min_cost_optimisation objective."""
         custom_math = {
             "objectives": {
@@ -225,7 +221,27 @@ class TestBaseMath(InternalMathFiles):
         build_lp_file(model, lp_file, objective="min_cost_optimisation")
         self.TEST_REGISTER.add("objectives.min_cost_optimisation")
         self.TEST_REGISTER.add("parameters.bigM")
-        self.TEST_REGISTER.add("parameters.objective_cost_weights")
+        compare_lps_new(lp_file)
+
+    def test_min_cost_optimisation_weighted(
+        self, full_math, lp_temp_path, barebones_config
+    ):
+        """Test the default min_cost_optimisation objective."""
+        custom_math = {
+            "objectives": {
+                "min_cost_optimisation": full_math.objectives["min_cost_optimisation"]
+            }
+        }
+        model = util.build_test_model(
+            {},
+            "simple_supply,two_hours,weighted_costs",
+            math_dict=custom_math,
+            **barebones_config,
+        )
+        lp_file = lp_temp_path / "min_cost_optimisation_weighted.lp"
+        build_lp_file(model, lp_file, objective="min_cost_optimisation")
+        self.TEST_REGISTER.add("objectives.min_cost_optimisation")
+        self.TEST_REGISTER.add("parameters.obj")
         compare_lps_new(lp_file)
 
 
@@ -233,11 +249,20 @@ class TestMILPMath(InternalMathFiles):
     FILENAME = "milp"
     TEST_REGISTER = set()
     EXTRA_MATH = [FILENAME]
-    TEST_CONFIG = "milp"
 
-    @pytest.fixture(scope="class", params=TEST_CONFIGS[TEST_CONFIG].keys())
+    @pytest.fixture(scope="class", params=TEST_CONFIGS[FILENAME].keys())
     def config(self, request):
-        return TEST_CONFIGS[self.TEST_CONFIG][request.param]
+        return TEST_CONFIGS[self.FILENAME][request.param]
+
+
+class TestInterClusterStorageMath(InternalMathFiles):
+    FILENAME = "storage_inter_cluster"
+    TEST_REGISTER = set()
+    EXTRA_MATH = [FILENAME]
+
+    @pytest.fixture(scope="class", params=TEST_CONFIGS[FILENAME].keys())
+    def config(self, request):
+        return TEST_CONFIGS[self.FILENAME][request.param]
 
 
 class CustomMathExamples(ABC):

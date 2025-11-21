@@ -1,0 +1,101 @@
+# Storage inter-cluster math test configurations
+# Each test validates storage_inter_cluster-specific constraints
+
+storage_max:
+  description: "Test storage_max constraint has been deactivated"
+  register:
+    constraints: [storage_max]
+  overrides: {}
+  scenario: simple_storage,inter_cluster_storage
+  lp_file: storage_max_inter_cluster_override.lp
+
+storage_intra_max:
+  description: "Test storage_intra_max constraint - upper bound on storage within a clustered day"
+  register:
+    constraints: [storage_intra_max]
+    variables: [storage, storage_intra_cluster_max]
+    lookups: [timestep_cluster]
+  overrides: {}
+  scenario: simple_storage,inter_cluster_storage
+  lp_file: storage_intra_max.lp
+
+storage_intra_min:
+  description: "Test storage_intra_min constraint - lower bound on storage within a clustered day"
+  register:
+    constraints: [storage_intra_min]
+    variables: [storage, storage_intra_cluster_min]
+    lookups: [timestep_cluster]
+  overrides: {}
+  scenario: simple_storage,inter_cluster_storage
+  lp_file: storage_intra_min.lp
+
+storage_inter_max:
+  description: "Test storage_inter_max constraint - upper bound on storage across all days"
+  register:
+    constraints: [storage_inter_max]
+    variables: [storage_inter_cluster, storage_intra_cluster_max, storage_cap]
+    lookups: [lookup_datestep_cluster]
+  overrides: {}
+  scenario: simple_storage,inter_cluster_storage
+  lp_file: storage_inter_max.lp
+
+storage_inter_min:
+  description: "Test storage_inter_min constraint - lower bound on storage across all days"
+  register:
+    constraints: [storage_inter_min]
+    variables: [storage_inter_cluster, storage_intra_cluster_min]
+    parameters: [storage_loss]
+    lookups: [lookup_datestep_cluster]
+  overrides: {}
+  scenario: simple_storage,inter_cluster_storage
+  lp_file: storage_inter_min.lp
+
+balance_storage_inter:
+  description: "Test balance_storage_inter constraint - balance between days"
+  register:
+    constraints: [balance_storage_inter]
+    variables: [storage, storage_inter_cluster, storage_cap]
+    parameters: [storage_initial, storage_loss]
+    lookups: [cyclic_storage, lookup_datestep_last_cluster_timestep]
+  overrides:
+    nodes.a.techs.test_storage.cyclic_storage: true
+    nodes.b.techs.test_storage.cyclic_storage: false
+  scenario: simple_storage,inter_cluster_storage
+  lp_file: balance_storage_inter.lp
+
+set_storage_initial_inter_cluster:
+  description: "Test set_storage_initial constraint with inter-cluster storage (cyclic)"
+  register:
+    constraints: [set_storage_initial]
+    variables: [storage_inter_cluster, storage_cap]
+    parameters: [storage_initial, storage_loss]
+    lookups: [cyclic_storage]
+  overrides:
+    nodes.a.techs.test_storage.storage_initial: 0.5
+    nodes.a.techs.test_storage.cyclic_storage: true
+    nodes.b.techs.test_storage.storage_initial: 0.5
+    nodes.b.techs.test_storage.cyclic_storage: false
+  scenario: simple_storage,inter_cluster_storage
+  lp_file: set_storage_initial_inter_cluster.lp
+
+balance_storage_with_inter_cluster:
+  description: "Test balance_storage constraint modified for inter-cluster (sets previous step to 0 at cluster boundaries)"
+  register:
+    constraints: [balance_storage]
+    variables: [storage, storage_cap, flow_out, flow_in]
+    global_expressions: [flow_out_inc_eff, flow_in_inc_eff]
+    parameters: [storage_initial, storage_loss, timestep_resolution]
+    lookups: [base_tech, cluster_first_timestep, cyclic_storage, include_storage, lookup_cluster_last_timestep]
+  overrides: {}
+  scenario: simple_storage,inter_cluster_storage
+  lp_file: balance_storage_with_inter_cluster.lp
+
+balance_supply_with_storage:
+  description: "Test balance_supply_with_storage constraint"
+  register:
+    constraints: [balance_supply_with_storage]
+    variables: [storage_cap]
+    lookups: [lookup_cluster_last_timestep]
+  overrides: {}
+  scenario: simple_supply_plus,inter_cluster_storage
+  lp_file: balance_supply_with_storage_inter_cluster_override.lp

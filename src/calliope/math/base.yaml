@@ -1201,7 +1201,7 @@ global_expressions:
       depreciation_rate:
         - where: cost_depreciation_rate
           expression: cost_depreciation_rate
-        - where: NOT cost_depreciation_rate AND cost_interest_rate==0
+        - where: NOT cost_depreciation_rate AND (NOT cost_interest_rate OR cost_interest_rate==0)
           expression: 1 / lifetime
         - where: NOT cost_depreciation_rate AND cost_interest_rate>0
           expression: >-

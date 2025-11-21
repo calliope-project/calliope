@@ -472,3 +472,31 @@ overrides:
 
   shadow_prices_invalid_constraint:
     config.solve.shadow_prices: ["flow_cap_max_foobar"]
+
+  inter_cluster_storage:
+    config.init.subset: {"timesteps": ["2005-01-01", "2005-01-04"]}
+    config.init.resample: {"timesteps": "24h"}
+    config.init.time_cluster: cluster_days_param
+    data_tables.cluster_days:
+      data: data_tables/cluster_days.csv
+      rows: datesteps
+      add_dims:
+        parameters: cluster_days_param
+
+  weighted_costs:
+    templates:
+      test_controller:
+        lifetime: 1
+        cost_flow_cap:
+          data: [10, 20]
+          index: [monetary, emissions]
+          dims: costs
+        cost_flow_in:
+          data: [0.1, 0.2]
+          index: [monetary, emissions]
+          dims: costs
+    data_definitions:
+      objective_cost_weights:
+        data: [1, 10]
+        index: [monetary, emissions]
+        dims: costs
