@@ -288,6 +288,7 @@ class TestNewBackend:
         simple_supply_gurobi.solve(force=True, warmstart=True)
 
         # default warmstart = 1 (<v13), = -1 (>=v13)
+        # TODO: Remove `1` check when dropping support for gurobi<13
         assert simple_supply_gurobi.backend._instance.Params.LPWarmStart in [-1, 1]
         assert (
             "LPWarmStart"
