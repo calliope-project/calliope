@@ -182,8 +182,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 "Component deactivated; only metadata will be stored if no other "
                 "component with the same name is defined.",
             )
-
-            # FIXME: won't work if we later add a global expression with the same name
             where_results = self.math.parsing_components["where"]["results"]
             expr_results = self.math.parsing_components["expression"]["results"]
             if not (name in where_results and name not in expr_results):
@@ -822,10 +820,20 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 (either with the same or different type as `obj_type`).
         """
         dataset = dataset or self._dataset
-        if (
-            key in dataset
-            and (math_def := self.math[dataset[key].obj_type][key]).active
-        ):
+        if key in dataset:
+            try:
+                math_def = self.math.find(
+                    key
+                )  # this means the component is activate somewhere in the math
+            except KeyError:
+                # we are ok with cases where the component exists in the dataset but is not active in the math
+                self.log(
+                    obj_type,
+                    key,
+                    "Component already exists in backend dataset but is not active in math; overwriting.",
+                    level="warning",
+                )
+                return
             if math_def._group == obj_type:
                 raise BackendError(
                     f"Trying to add already existing `{key}` to backend model {obj_type}."

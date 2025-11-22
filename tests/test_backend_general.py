@@ -435,7 +435,7 @@ class TestAdders:
         assert f"variables:{name} | Component deactivated" in caplog.text
         assert name not in built_model_func.backend.variables
 
-    def test_add_global_expr_after_deactivated_variable(self, built_model_func):
+    def test_add_global_expr_after_deactivated_variable(self, caplog, built_model_func):
         """Overwrite a variable in dataset with a global expression if it was added as an empty shell initially."""
         # Adding a deactivate variable first, which should be added to the dataset as an empty shell
         # So we have something to refer to access in expression parsing
@@ -449,7 +449,12 @@ class TestAdders:
         # Now we add a global expression with the same name - this should be added successfully
         # effectively replacing the deactivated variable
         expr_def_ = {"active": True, "equations": [{"expression": "bigM"}]}
-        built_model_func.backend.add_global_expression("foo", expr_def_)
+        with caplog.at_level(logging.WARNING, logger="calliope.backend.backend_model"):
+            built_model_func.backend.add_global_expression("foo", expr_def_)
+        assert (
+            "global_expressions:foo | Component already exists in backend dataset but is not active in math"
+            in caplog.text
+        )
         assert "foo" not in built_model_func.backend.variables
         assert "foo" in built_model_func.backend.global_expressions
 
