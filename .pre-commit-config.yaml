@@ -3,7 +3,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit # https://beta.ruff.rs/docs/usage/#github-action
-    rev: v0.13.3
+    rev: v0.14.3
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -18,4 +18,4 @@ repos:
 
 ci:  # https://pre-commit.ci/
   autofix_prs: false
-  autoupdate_schedule: monthly
+  autoupdate_schedule: quarterly
