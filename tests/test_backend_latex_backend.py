@@ -228,6 +228,40 @@ class TestLatexBackendModel:
 
         assert len(dummy_latex_backend_model.objectives.data_vars) == 1
 
+    @pytest.mark.parametrize(
+        ("component_type", "dummy_def"),
+        [
+            ("global_expression", {"equations": []}),
+            ("constraint", {"equations": []}),
+            ("objective", {"equations": [], "sense": "minimize"}),
+            ("variable", {"bounds": {"min": 0, "max": 1}, "domain": "real"}),
+        ],
+    )
+    def test_skip_deactivated(
+        self, caplog, dummy_latex_backend_model, component_type, dummy_def
+    ):
+        """Skip adding a component if it is deactivated in the math definition."""
+
+        dummy_def["active"] = False
+        with caplog.at_level(logging.DEBUG, logger="calliope.backend.backend_model"):
+            getattr(dummy_latex_backend_model, f"add_{component_type}")(
+                "foo", dummy_def
+            )
+        assert f"{component_type}s:foo | Component deactivated" in caplog.text
+        assert "foo" not in dummy_latex_backend_model._dataset
+
+    def test_skip_deactivated_postprocessed(self, caplog, dummy_latex_backend_model):
+        """Skip adding a postprocessed expression if it is deactivated in the math definition."""
+
+        dummy_def = {"active": False, "equations": []}
+        with caplog.at_level(logging.DEBUG, logger="calliope.backend.backend_model"):
+            da = dummy_latex_backend_model._add_postprocessed(
+                "foo", dummy_def, dummy_latex_backend_model._dataset
+            )
+        assert "postprocessed:foo | Component deactivated" in caplog.text
+        assert "foo" not in dummy_latex_backend_model._dataset
+        assert da.equals(xr.DataArray())
+
     def test_default_objective_set(self, dummy_latex_backend_model):
         assert dummy_latex_backend_model.objective == "min_cost_optimisation"
 

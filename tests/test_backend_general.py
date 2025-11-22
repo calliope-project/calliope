@@ -387,26 +387,22 @@ class TestGetters:
 
 class TestAdders:
     @pytest.mark.parametrize(
-        "component_type", ["global_expression", "constraint", "objective"]
+        ("component_type", "dummy_def"),
+        [
+            ("global_expression", {"equations": []}),
+            ("constraint", {"equations": []}),
+            ("objective", {"equations": [], "sense": "minimize"}),
+            ("variable", {"bounds": {"min": 0, "max": 1}, "domain": "real"}),
+        ],
     )
-    def test_skip_deactivated(self, caplog, built_model_cls, component_type):
+    def test_skip_deactivated(self, caplog, built_model_cls, component_type, dummy_def):
         """Skip adding a component if it is deactivated in the math definition."""
 
-        def_ = {"active": False, "equations": []}
-        if component_type == "objective":
-            def_["sense"] = "minimise"
+        dummy_def["active"] = False
         with caplog.at_level(logging.DEBUG, logger="calliope.backend.backend_model"):
-            getattr(built_model_cls.backend, f"add_{component_type}")("foo", def_)
+            getattr(built_model_cls.backend, f"add_{component_type}")("foo", dummy_def)
+
         assert f"{component_type}s:foo | Component deactivated" in caplog.text
-        assert "foo" not in built_model_cls.backend._dataset
-
-    def test_skip_deactivated_variable(self, caplog, built_model_cls):
-        """Skip adding a variable if it is deactivated in the math definition."""
-
-        def_ = {"active": False, "bounds": {"min": 0, "max": 1}}
-        with caplog.at_level(logging.DEBUG, logger="calliope.backend.backend_model"):
-            built_model_cls.backend.add_variable("foo", def_)
-        assert "variables:foo | Component deactivated" in caplog.text
         assert "foo" not in built_model_cls.backend._dataset
 
     def test_skip_deactivated_variable_keep_in_dataset(self, caplog, built_model_func):
