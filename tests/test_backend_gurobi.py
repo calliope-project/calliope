@@ -478,3 +478,18 @@ class TestPiecewiseConstraints:
             excinfo,
             "Gurobi backend can only build piecewise constraints using decision variables.",
         )
+
+
+class TestGurobiImportHandling:
+    """Test handling of Gurobi import failures."""
+
+    def test_gurobi_backend_requires_gurobi(self, monkeypatch):
+        """Test that building with gurobi backend fails gracefully without gurobipy."""
+        import sys
+
+        # Mock gurobipy as unavailable
+        monkeypatch.setitem(sys.modules, "gurobipy", None)
+
+        m = build_model({}, "simple_supply,two_hours")
+        with pytest.raises(ImportError, match="Install the `gurobipy` package"):
+            m.build(backend="gurobi")
