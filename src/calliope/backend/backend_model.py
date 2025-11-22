@@ -822,7 +822,10 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 (either with the same or different type as `obj_type`).
         """
         dataset = dataset or self._dataset
-        if key in dataset and (math_def := self.math.find(key)).active:
+        if (
+            key in dataset
+            and (math_def := self.math[dataset[key].obj_type][key]).active
+        ):
             if math_def._group == obj_type:
                 raise BackendError(
                     f"Trying to add already existing `{key}` to backend model {obj_type}."
