@@ -6,34 +6,93 @@ import pytest
 
 import calliope
 from calliope.io import read_rich_yaml
+from calliope.postprocess.math_documentation import MathDocumentation
 
 from .common.util import check_error_or_warning
 
 approx = pytest.approx
 
 
+@pytest.fixture(scope="module")
+def national_scale_model():
+    return calliope.examples.national_scale()
+
+
+@pytest.fixture(scope="module")
+def time_clustering_model():
+    return calliope.examples.time_clustering()
+
+
+@pytest.fixture(scope="module")
+def time_resampling_model():
+    return calliope.examples.time_resampling()
+
+
+@pytest.fixture(scope="module")
+def urban_scale_model():
+    return calliope.examples.urban_scale()
+
+
+@pytest.fixture(scope="module")
+def milp_model():
+    return calliope.examples.milp()
+
+
+@pytest.fixture(scope="module")
+def operate_model():
+    return calliope.examples.operate()
+
+
+@pytest.fixture(scope="module")
+def operate_milp_model():
+    return calliope.examples.operate_milp()
+
+
 class TestModelPreprocessing:
-    def test_preprocess_national_scale(self):
-        calliope.examples.national_scale()
+    def test_preprocess_national_scale(self, national_scale_model):
+        pass
 
     @pytest.mark.time_intensive
-    def test_preprocess_time_clustering(self):
-        calliope.examples.time_clustering()
+    def test_preprocess_time_clustering(self, time_clustering_model):
+        pass
 
-    def test_preprocess_time_resampling(self):
-        calliope.examples.time_resampling()
+    def test_preprocess_time_resampling(self, time_resampling_model):
+        pass
 
-    def test_preprocess_urban_scale(self):
-        calliope.examples.urban_scale()
+    def test_preprocess_urban_scale(self, urban_scale_model):
+        pass
 
-    def test_preprocess_milp(self):
-        calliope.examples.milp()
+    def test_preprocess_milp(self, milp_model):
+        pass
 
-    def test_preprocess_operate(self):
-        calliope.examples.operate()
+    def test_preprocess_operate(self, operate_model):
+        pass
 
-    def test_preprocess_operate_milp(self):
-        calliope.examples.operate_milp()
+    def test_preprocess_operate_milp(self, operate_milp_model):
+        pass
+
+
+class TestModelMathDocs:
+    def test_preprocess_national_scale(self, national_scale_model):
+        MathDocumentation(national_scale_model).write(
+            None, format="md", mkdocs_features=True
+        )
+
+    def test_preprocess_urban_scale(self, urban_scale_model):
+        MathDocumentation(urban_scale_model).write(
+            None, format="md", mkdocs_features=True
+        )
+
+    def test_preprocess_milp(self, milp_model):
+        MathDocumentation(milp_model).write(None, format="md", mkdocs_features=True)
+
+    def test_preprocess_operate(self, operate_model):
+        MathDocumentation(operate_model).write(None, format="md", mkdocs_features=True)
+
+    def test_preprocess_operate_milp(self, operate_milp_model):
+        MathDocumentation(operate_milp_model).write(
+            None, format="md", mkdocs_features=True
+        )
 
 
 class TestNationalScaleExampleModelSenseChecks:

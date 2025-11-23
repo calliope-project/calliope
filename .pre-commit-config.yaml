@@ -16,6 +16,20 @@ repos:
       additional_dependencies:
         - tomli
 
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Check for debugger imports and py37+ breakpoint() calls
+      - id: debug-statements
+      - id: check-merge-conflict
+      - id: check-illegal-windows-names
+      - id: check-added-large-files
+        args: [--enforce-all --maxkb=100000]
+      - id: trailing-whitespace
+        exclude: ".*.(svg|png|csv|lp)$"
+      - id: end-of-file-fixer
+        exclude: ".*.(svg|png|csv|lp)$"
+
 ci:  # https://pre-commit.ci/
   autofix_prs: false
   autoupdate_schedule: quarterly

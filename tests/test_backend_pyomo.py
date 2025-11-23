@@ -1,5 +1,6 @@
 import logging
 from itertools import product
+from unittest.mock import Mock
 
 import numpy as np
 import pyomo.core as po
@@ -11,6 +12,13 @@ from pyomo.core.kernel.piecewise_library.transforms import piecewise_sos2
 import calliope
 import calliope.backend
 import calliope.exceptions as exceptions
+from calliope.backend.pyomo_backend_model import (
+    ADD_OBJ_LIST_METHODS,
+    COMPONENT_TRANSLATOR,
+    PyomoBackendModel,
+    _create_backend_obj_adding_component,
+)
+from calliope.exceptions import BackendError
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -1817,18 +1825,6 @@ class TestNewBackend:
     @pytest.mark.parametrize(
         "component", ["parameters", "variables", "global_expressions", "constraints"]
     )
-    def test_create_and_delete_pyomo_list(self, simple_supply, component):
-        backend_instance = simple_supply.backend._instance
-        simple_supply.backend._create_obj_list("foo", component)
-        assert "foo" in getattr(backend_instance, component).keys()
-
-        simple_supply.backend.delete_component("foo", component)
-        assert "foo" not in getattr(backend_instance, component).keys()
-        assert "foo" not in getattr(simple_supply.backend, component).keys()
-
-    @pytest.mark.parametrize(
-        "component", ["parameters", "variables", "global_expressions", "constraints"]
-    )
     def test_delete_inexistent_pyomo_list(self, simple_supply, component):
         backend_instance = simple_supply.backend._instance
         assert "bar" not in getattr(backend_instance, component).keys()
@@ -2342,3 +2338,155 @@ class TestShadowPrices:
         )
         # Since we listed only one (invalid) constraint, tracking should not be active
         assert not m.backend.shadow_prices.is_active
+
+
+class TestWrapperAndMetaclass:
+    """Test the _create_backend_obj_adding_component decorator and SelectiveWrappingMeta metaclass."""
+
+    @pytest.fixture
+    def mock_backend(self):
+        """Create a minimal mock PyomoBackendModel instance for testing."""
+        # Create a mock backend instance
+        backend = Mock(spec=PyomoBackendModel)
+
+        # Create a real pyomo instance with the component dicts
+        backend._instance = pmo.block()
+        backend._instance.parameters = pmo.parameter_dict()
+        backend._instance.variables = pmo.variable_dict()
+        backend._instance.global_expressions = pmo.expression_dict()
+        backend._instance.constraints = pmo.constraint_dict()
+        backend._instance.piecewise_constraints = pmo.block_dict()
+        backend._instance.objectives = pmo.objective_dict()
+
+        # Create a mock dataset
+        backend._dataset = xr.Dataset()
+
+        return backend
+
+    @pytest.mark.parametrize(("method"), ADD_OBJ_LIST_METHODS)
+    def test_wrapper_applied_to_all_methods(self, method):
+        """Test that SelectiveWrappingMeta applies the wrapper to all add_* methods."""
+        # Verify that the method exists on the class
+        assert getattr(PyomoBackendModel, method).__wrapped__
+
+    @pytest.mark.parametrize(
+        "component",
+        [
+            "parameters",
+            "variables",
+            "global_expressions",
+            "constraints",
+            "objectives",
+            "piecewise_constraints",
+        ],
+    )
+    def test_obj_list_created_initially(self, mock_backend, component):
+        """Test that component dicts are initialized in the pyomo instance."""
+        # Verify component dict exists
+        assert hasattr(mock_backend._instance, component)
+        assert "test" not in getattr(mock_backend._instance, component).keys()
+
+        # Test _create_obj_list directly
+        def dummy_func(self, name):
+            pass
+
+        wrapped = _create_backend_obj_adding_component(dummy_func, component)
+
+        # Mock the dataset to not include the component (trigger cleanup)
+        mock_backend._dataset = xr.Dataset()
+
+        # Call wrapper - should create and then delete obj_list
+        wrapped(mock_backend, "test")
+
+        # Should be deleted because it's not in dataset
+        assert "test" not in getattr(mock_backend._instance, component).keys()
+
+    @pytest.mark.parametrize(
+        "component",
+        ["parameters", "variables", "global_expressions", "constraints", "objectives"],
+    )
+    def test_obj_list_kept_when_in_dataset(self, mock_backend, component):
+        """Test that obj_list is kept when component is added to dataset."""
+
+        def add_to_dataset(self, name):
+            # Simulate adding a valid component to dataset
+            self._dataset[name] = xr.DataArray([1, 2, 3], attrs={"obj_type": component})
+
+        wrapped = _create_backend_obj_adding_component(add_to_dataset, component)
+
+        # Call wrapper
+        wrapped(mock_backend, "test")
+
+        # Should be kept because it's in dataset with valid data
+        assert "test" in getattr(mock_backend._instance, component).keys()
+        assert "test" in mock_backend._dataset
+
+    @pytest.mark.parametrize(
+        "component",
+        ["parameters", "variables", "global_expressions", "constraints", "objectives"],
+    )
+    def test_obj_list_deleted_when_all_null(self, mock_backend, component):
+        """Test that obj_list is deleted when dataset array is all null."""
+
+        def add_null_to_dataset(self, name):
+            # Simulate adding a component with all null values
+            self._dataset[name] = xr.DataArray(
+                [np.nan, np.nan], attrs={"obj_type": component}
+            )
+
+        wrapped = _create_backend_obj_adding_component(add_null_to_dataset, component)
+
+        # Call wrapper
+        wrapped(mock_backend, "test_null")
+
+        # Should be deleted because all values are null
+        assert "test_null" not in getattr(mock_backend._instance, component).keys()
+        assert "test_null" in mock_backend._dataset
+
+    @pytest.mark.parametrize(
+        "component",
+        ["parameters", "variables", "global_expressions", "constraints", "objectives"],
+    )
+    def test_wrapper_handles_errors_gracefully(self, mock_backend, component):
+        """Test that wrapper cleanup happens even when the method raises an error."""
+
+        def raise_error(self, name):
+            # While in the try block, the instance should have the obj_list created
+            assert "test_error" in getattr(mock_backend._instance, component).keys()
+            raise ValueError("Test error")
+
+        wrapped = _create_backend_obj_adding_component(raise_error, component)
+
+        # Call wrapper - should raise the error
+        with pytest.raises(ValueError, match="Test error"):
+            wrapped(mock_backend, "test_error")
+
+        # obj_list should still be cleaned up (deleted because not in dataset)
+        assert "test_error" not in getattr(mock_backend._instance, component).keys()
+
+    @pytest.mark.parametrize(
+        "component",
+        ["parameters", "variables", "global_expressions", "constraints", "objectives"],
+    )
+    def test_wrapper_prevents_duplicate_obj_list_creation(
+        self, mock_backend, component
+    ):
+        """Test that wrapper raises error when trying to create duplicate obj_list."""
+
+        def dummy_func(self, name):
+            pass
+
+        wrapped = _create_backend_obj_adding_component(dummy_func, component)
+
+        # Manually create an obj_list
+        component_dict = getattr(mock_backend._instance, component)
+        component_dict["duplicate"] = getattr(
+            pmo, f"{COMPONENT_TRANSLATOR[component]}_list"
+        )()
+
+        # Try to create it again - should raise error
+        with pytest.raises(
+            BackendError,
+            match=f"Trying to add already existing `duplicate` to backend model {component}",
+        ):
+            wrapped(mock_backend, "duplicate")

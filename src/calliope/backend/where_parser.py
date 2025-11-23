@@ -135,21 +135,17 @@ class ResultArrayParser(expression_parser.EvalArrayOrMath):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
+        math_repr = self.eval_attrs.backend_data[self.array_name].attrs.get(
+            "math_repr", rf"\exists (\textbf{{{self.array_name}}})"
+        )
 
-        var = self.eval_attrs.backend_data.get(self.array_name, xr.DataArray())
-        data_var_string = rf"\exists ({var.attrs['math_repr']})"
-        return data_var_string
+        return math_repr
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
         da = self.eval_attrs.backend_data[self.array_name]
         if self.eval_attrs.apply_where:
             da = da.notnull()
-        else:
-            raise self.error_msg(
-                f"where string | Cannot compare variable/global expression array contents with expected values. "
-                f"Received `{self.array_name}`."
-            )
         return da
 
 
@@ -178,12 +174,12 @@ class InputArrayParser(expression_parser.EvalArrayOrMath):
     def as_math_string(self) -> str:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
 
-        var = self.eval_attrs.backend_data.get(self.array_name, xr.DataArray())
-
-        data_var_string = var.attrs["math_repr"]
+        math_repr = self.eval_attrs.backend_data[self.array_name].attrs.get(
+            "math_repr", rf"\textit{{{self.array_name}}}"
+        )
         if self.eval_attrs.apply_where:
-            data_var_string = rf"\exists ({data_var_string})"
-        return data_var_string
+            math_repr = rf"\exists ({math_repr})"
+        return math_repr
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         self.eval_attrs.references.add(self.array_name)
@@ -298,9 +294,10 @@ class SubsetParser(expression_parser.EvalArrayOrMath):
 
     def as_math_string(self) -> str:  # noqa: D102, override
         subset = self._eval()
-        dim = self.set_name.eval("array", self.eval_attrs)
+        dim = self.set_name.eval("math_string", self.eval_attrs)
+        iterator = self.eval_attrs.math.dimensions[dim].iterator
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
-        return rf"\text{{{dim.iterator}}} \in \text{{{subset_string}}}"
+        return rf"\text{{{iterator}}} \in \text{{{subset_string}}}"
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         subset = self._eval()
@@ -503,7 +500,10 @@ def where_parser(*args: pp.ParserElement) -> pp.ParserElement:
 
 
 def generate_where_string_parser(
-    dimensions: Iterable, inputs: Iterable, results: Iterable
+    dimensions: Iterable,
+    inputs: Iterable,
+    results: Iterable,
+    postprocessed: Iterable | None = None,
 ) -> pp.ParserElement:
     """Creates and executes the where parser.
 
@@ -511,18 +511,20 @@ def generate_where_string_parser(
         dimensions (Iterable): List of valid dimension names.
         inputs (Iterable): List of valid input names.
         results (Iterable): List of valid variable/global expression names.
+        postprocessed (Iterable | None): List of valid postprocessed expression names. Defaults to None.
 
     Returns:
         pp.ParseResults: evaluatable to a bool/boolean array.
     """
+    postprocessed = postprocessed if postprocessed is not None else set()
     number, generic_identifier = expression_parser.setup_base_parser_elements()
     dimensions_parser = data_var_parser(dimensions, DimensionArrayParser)
     inputs_parser = data_var_parser(inputs, InputArrayParser)
-    results_parser = data_var_parser(results, ResultArrayParser)
+    results_parser = data_var_parser(results | postprocessed, ResultArrayParser)
     config_option = config_option_parser(generic_identifier)
     bool_operand = bool_parser()
     unique_evaluatable_string = evaluatable_string_parser(
-        generic_identifier, set().union(dimensions, inputs, results)
+        generic_identifier, set().union(dimensions, inputs, results, postprocessed)
     )
     general_evaluatable_string = evaluatable_string_parser(generic_identifier, [])
     id_list = expression_parser.list_parser(
@@ -540,14 +542,18 @@ def generate_where_string_parser(
         arithmetic,
         generic_identifier=generic_identifier,
     )
-    comparison_arithmetic = expression_parser.arithmetic_parser(
+    arithmetic_elements = [
         comparison_helper_function,
-        subset,
         number,
         dimensions_parser,
         inputs_parser,
         config_option,
-        arithmetic=arithmetic,
+    ]
+    if postprocessed:
+        arithmetic_elements.insert(-2, results_parser)
+
+    comparison_arithmetic = expression_parser.arithmetic_parser(
+        *arithmetic_elements, arithmetic=arithmetic
     )
     comparison = comparison_parser(
         lhs=[comparison_arithmetic],
@@ -570,5 +576,5 @@ def generate_where_string_parser(
         generic_identifier=generic_identifier,
     )
     return where_parser(
-        bool_operand, helper_function, comparison, subset, inputs_parser, results_parser
+        bool_operand, comparison, helper_function, subset, inputs_parser, results_parser
     )

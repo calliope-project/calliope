@@ -91,7 +91,7 @@ def format_exceptions(
         if debug:
             traceback.print_exc()
             if pdb:
-                import ipdb
+                ipdb = __import__("ipdb")
 
                 ipdb.post_mortem(e.__traceback__)
         else:

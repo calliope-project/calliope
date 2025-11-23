@@ -4,7 +4,7 @@ import pytest
 import xarray as xr
 
 from calliope import exceptions
-from calliope.backend import helper_functions, parsing
+from calliope.backend import eval_attrs, helper_functions
 
 from .common.util import check_error_or_warning
 
@@ -91,7 +91,7 @@ def expression_sum_next_n(expression, parsing_kwargs):
 class TestAsArray:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data, dummy_model_math):
-        attrs = parsing.EvalAttrs(
+        attrs = eval_attrs.EvalAttrs(
             input_data=dummy_model_data, equation_name="foo", math=dummy_model_math
         )
         return {"return_type": "array", "attrs": attrs}
@@ -507,7 +507,7 @@ class TestAsArray:
 class TestAsMathString:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data, dummy_model_math):
-        attrs = parsing.EvalAttrs(
+        attrs = eval_attrs.EvalAttrs(
             input_data=dummy_model_data, equation_name="foo", math=dummy_model_math
         )
         return {"return_type": "math_string", "attrs": attrs}

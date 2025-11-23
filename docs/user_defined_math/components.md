@@ -4,6 +4,96 @@
 Here, we will briefly introduce each of the math components you will need to build an optimisation problem.
 A more detailed description of the math YAML syntax is provided on the [math syntax](syntax.md) page and in the [math formulation schema][model-math-schema].
 
+## Dimensions
+
+Dimensions define the possible index sets over which model components can be defined.
+When you add custom math, you may need to define new dimensions that are not part of Calliope's built-in dimensions.
+
+```yaml
+dimensions:
+  breakpoints:
+    description: Breakpoints for piecewise linear constraints
+    dtype: string
+    ordered: false
+    iterator: breakpoint
+```
+
+1. It needs a unique name (`breakpoints` in the above example).
+1. Ideally, it has a long-form `title` and `description` added.
+These are not required, but are useful metadata for later reference.
+1. It can specify a `dtype` (data type) for the dimension items: `string`, `datetime`, `date`, `float`, or `integer` (default: `string`).
+1. It can be marked as `ordered: true` if the order of dimension items is meaningful (e.g., chronological time). Default is `false`.
+1. It requires an `iterator` string that defines the symbol to use in LaTeX math formulation for this dimension (e.g., `breakpoint` for breakpoints, `timestep` for timesteps).
+1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
+
+!!! warning
+    Dimension defined in math are metadata only.
+    You still need to provide the actual dimension values through your model's data tables or YAML configuration.
+
+## Parameters
+
+Parameters are input data that your math formulation will reference.
+While Calliope has many built-in parameters, you may need to define additional parameters for custom math.
+
+```yaml
+parameters:
+  monthly_cost:
+    description: Cost per unit capacity to apply per month
+    default: 0
+    unit: $\frac{\text{cost}}{\text{energy}}$
+    resample_method: first
+```
+
+1. It needs a unique name (`monthly_cost` in the above example).
+1. Ideally, it has a long-form `title`, `description` and a `unit` added.
+These are not required, but are useful metadata for later reference.
+Unit information can be given in LaTeX math format for prettier rendering in the documentation.
+1. It can have a `default` value (numeric: integer or float) that will be used where the parameter is not defined in the input data.
+The default is `NaN` if not specified.
+1. It can specify a `resample_method` (`mean`, `sum`, or `first`) which determines how to aggregate data if resampling is applied over any of the parameter's dimensions.
+Default is `first`.
+1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
+
+!!! warning
+    Parameters defined in math are metadata only.
+    You still need to provide the actual parameter values through your model's data tables or YAML configuration.
+
+## Lookups
+
+Lookups allow you to create derived arrays, by selecting or transforming existing parameters, and allow you to mask arrays.
+This is useful when you need to reference data under different index sets or apply complex conditions that have been computed in a preprocessing step.
+
+```yaml
+lookups:
+  remote_node:
+    description: For each transmission node pair at node A, get corresponding node B
+    dtype: string
+    default: .nan
+    resample_method: first
+  outages:
+    description: Boolean timeseries where `True` indicates an outage
+    dtype: bool
+    default: False
+    resample_method: first
+```
+
+1. It needs a unique name (`remote_node` in the above example).
+1. Ideally, it has a long-form `title` and `description` added.
+   These are not required, but are useful metadata for later reference.
+1. It can specify a `dtype` (data type): `float`, `string`, `bool`, `datetime`, or `date` (default: `string`).
+1. It can have a `default` value that will be used where the lookup is not defined in the input data.
+The default can be a string, numeric value, boolean, or `NaN` (default: `NaN`).
+1. It can specify a `resample_method` (`mean`, `sum`, or `first`) for data aggregation if resampling is applied. Default is `first`.
+1. It can optionally define `one_of` as a list of allowed values that the lookup can take.
+   This is used for pre-validation only.
+1. It can use `pivot_values_to_dim` to pivot lookup values into a new dimension, converting the array to boolean values.
+   For example, if a lookup over `techs` has values `[electricity, gas]` and `pivot_values_to_dim: carriers`, it becomes a boolean array over `[techs, carriers]`.
+1. It can be deactivated by setting `active: false`.
+
+!!! warning
+    Lookups defined in math are metadata only.
+    You still need to provide the actual lookup values through your model's data tables or YAML configuration.
+
 ## Decision variables
 
 Decision variables (called `variables` in Calliope) are the unknown quantities whose values can be chosen by the optimisation algorithm while optimising for the chosen objective (e.g. cost minimisation) under the bounds set by the constraints.
@@ -190,3 +280,85 @@ These expressions do _not_ have comparison operators.
 !!! warning
     You can only have one objective function activated in your math.
     If you have defined multiple objective functions, you can deactivate unwanted ones using `active: false`, or you can set your top-level `where` string on each that leads to only one being valid for your particular problem.
+
+## Postprocessed expressions
+
+Postprocessed expressions allow you to compute additional results after the model has been solved.
+These are similar to [global expressions](#global-expressions) but are calculated using the optimised values of decision variables and global expressions, rather than being part of the optimisation problem itself.
+
+```yaml
+postprocessed:
+  annual_energy:
+    description: Total annual energy output
+    unit: $\frac{\text{energy}}{\text{year}}$
+    foreach: [nodes, techs, carriers]
+    where: flow_out
+    equations:
+      - expression: sum(flow_out, over=timesteps) * timestep_resolution
+```
+
+1. It needs a unique name (`annual_energy` in the above example).
+1. Ideally, it has a long-form `title`, `description` and a `unit` added.
+   These are not required, but are useful metadata for later reference.
+1. It can have a top-level `foreach` list and `where` string.
+   Without a `foreach`, it becomes an un-indexed expression.
+   Without a `where` string, all valid members (according to the `definition_matrix`) based on `foreach` will be included in this expression.
+1. It has [equations](syntax.md#equations) (and, optionally, [sub-expressions](syntax.md#sub-expressions) and [slices](syntax.md#slices)) with corresponding lists of `where`+`expression` dictionaries.
+1. It can be deactivated so that it does not appear in the results by setting `active: false`.
+1. It can take on a `default` value that will be used in calculations to avoid `NaN` values creeping in.
+   This is most useful when using one postprocessed expression as an input to another postprocessed expression.
+1. It can have an `order` defined to reprioritise its calculation.
+  This is often necessary when adding new postprocessed expressions that you will use in other postprocessed expressions since they will need to be calculated _before_ the other postprocessed expressions that refer to them.
+
+!!! note
+    Postprocessed expressions are calculated _after_ the optimisation is complete and do not affect the optimisation problem.
+    They are useful for deriving additional metrics, aggregating results, or computing performance indicators from the optimised solution.
+
+??? example "Re-ordering postprocessed expressions"
+    If you want to calculate capacity factors as a postprocessed expression and then use those to calculate weighted averages:
+
+    ```yaml
+    postprocessed:
+
+      # Use capacity factor in another postprocessed expression
+      weighted_capacity_factor:
+        foreach: [techs]
+        equations:
+          - expression: sum(capacity_factor * flow_cap, over=nodes) / sum(flow_cap, over=nodes)
+
+      # Defined after, but order forces capacity factor to be calculated _first_
+      capacity_factor:
+        order: -1
+        foreach: [nodes, techs]
+        where: flow_cap
+        equations:
+          - expression: sum(flow_out, over=timesteps) / (flow_cap * timestep_resolution)
+    ```
+
+## Checks
+
+Checks are validation rules that ensure your model configuration is valid before building the optimisation problem.
+They can raise errors (which stop model building) or warnings (which alert you to potential issues but allow the model to continue).
+
+```yaml
+checks:
+  unbounded_flow_cap_cost:
+    where: cost_flow_cap<0
+    message: >
+      Technologies with negative `cost_flow_cap` must have `flow_cap_max` defined
+      to avoid unbounded optimization problems.
+    errors: raise
+```
+
+1. It needs a unique name (`unbounded_flow_cap_cost` in the above example).
+1. It requires a `where` string that defines the condition to check.
+   If this condition evaluates to `True` for any model components, the check is triggered.
+1. It requires a `message` string that will be shown to users when the check is triggered.
+   This should clearly explain what the issue is and how to fix it.
+1. It has an `errors` field that determines the severity (default: `raise`):
+    - `raise`: Will raise an error and stop model building.
+    - `warn`: Will issue a warning but allow model building to continue.
+1. It can be deactivated by setting `active: false`.
+
+Checks are evaluated after the model definition is loaded but before the backend optimization problem is built.
+This allows you to catch configuration issues early and provide helpful error messages to users.

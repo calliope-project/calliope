@@ -162,7 +162,6 @@ nav:
       - reference/api/helper_functions.md
       - reference/api/example_models.md
       - reference/api/attrdict.md
-      - reference/api/postprocess.md
       - reference/api/exceptions.md
       - reference/api/logging.md
     - reference/config_schema.md
