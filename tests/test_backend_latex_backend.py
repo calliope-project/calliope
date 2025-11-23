@@ -52,7 +52,7 @@ class TestLatexBackendModel:
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "var" in backend_model.math.parsing_components["where"]["results"]
-        assert "math_string" in backend_model.variables["var"].attrs
+        assert backend_model.math_strings["variables"]["var"]
         assert (
             backend_model.variables["var"].attrs["math_repr"]
             == r"\textbf{var}_\text{node,tech}"
@@ -74,7 +74,7 @@ class TestLatexBackendModel:
             "invalid_var"
             in valid_latex_backend.math.parsing_components["where"]["results"]
         )
-        assert "math_string" not in valid_latex_backend.variables["invalid_var"].attrs
+        assert not valid_latex_backend.math_strings["variables"]["invalid_var"]
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -95,7 +95,7 @@ class TestLatexBackendModel:
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "expr" in backend_model.math.parsing_components["where"]["results"]
-        assert "math_string" in backend_model.global_expressions["expr"].attrs
+        assert backend_model.math_strings["global_expressions"]["expr"]
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -120,7 +120,7 @@ class TestLatexBackendModel:
         assert (
             "var_init_expr" in backend_model.math.parsing_components["where"]["results"]
         )
-        assert "math_string" in backend_model.global_expressions["var_init_expr"].attrs
+        assert backend_model.math_strings["global_expressions"]["var_init_expr"]
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -145,7 +145,7 @@ class TestLatexBackendModel:
         assert "constr" not in set().union(
             *backend_model.math.parsing_components["where"].values()
         )
-        assert "math_string" in backend_model.constraints["constr"].attrs
+        assert backend_model.math_strings["constraints"]["constr"]
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -174,7 +174,7 @@ class TestLatexBackendModel:
             *backend_model.math.parsing_components["where"].values()
         )
 
-        assert "math_string" in backend_model.constraints["var_init_constr"].attrs
+        assert backend_model.math_strings["constraints"]["var_init_constr"]
 
     def test_add_constraint_not_valid(self, valid_latex_backend):
         valid_latex_backend.add_constraint(
@@ -207,7 +207,7 @@ class TestLatexBackendModel:
         )
         assert (
             "multi_dim_expr"
-            not in valid_latex_backend.constraints["valid_constr"].attrs["math_string"]
+            not in valid_latex_backend.math_strings["constraints"]["valid_constr"]
         )
 
     def test_add_objective(self, dummy_latex_backend_model):
@@ -218,7 +218,7 @@ class TestLatexBackendModel:
                 "sense": "minimize",
             },
         )
-        assert dummy_latex_backend_model.objectives["obj"].isnull().all()
+        assert dummy_latex_backend_model.objectives["obj"] == 1.0
         assert (
             "obj" not in dummy_latex_backend_model.math.parsing_components["expression"]
         )
@@ -227,6 +227,40 @@ class TestLatexBackendModel:
         )
 
         assert len(dummy_latex_backend_model.objectives.data_vars) == 1
+
+    @pytest.mark.parametrize(
+        ("component_type", "dummy_def"),
+        [
+            ("global_expression", {"equations": []}),
+            ("constraint", {"equations": []}),
+            ("objective", {"equations": [], "sense": "minimize"}),
+            ("variable", {"bounds": {"min": 0, "max": 1}, "domain": "real"}),
+        ],
+    )
+    def test_skip_deactivated(
+        self, caplog, dummy_latex_backend_model, component_type, dummy_def
+    ):
+        """Skip adding a component if it is deactivated in the math definition."""
+
+        dummy_def["active"] = False
+        with caplog.at_level(logging.DEBUG, logger="calliope.backend.backend_model"):
+            getattr(dummy_latex_backend_model, f"add_{component_type}")(
+                "foo", dummy_def
+            )
+        assert f"{component_type}s:foo | Component deactivated" in caplog.text
+        assert "foo" not in dummy_latex_backend_model._dataset
+
+    def test_skip_deactivated_postprocessed(self, caplog, dummy_latex_backend_model):
+        """Skip adding a postprocessed expression if it is deactivated in the math definition."""
+
+        dummy_def = {"active": False, "equations": []}
+        with caplog.at_level(logging.DEBUG, logger="calliope.backend.backend_model"):
+            da = dummy_latex_backend_model._add_postprocessed(
+                "foo", dummy_def, dummy_latex_backend_model._dataset
+            )
+        assert "postprocessed:foo | Component deactivated" in caplog.text
+        assert "foo" not in dummy_latex_backend_model._dataset
+        assert da.equals(xr.DataArray())
 
     def test_default_objective_set(self, dummy_latex_backend_model):
         assert dummy_latex_backend_model.objective == "min_cost_optimisation"
@@ -244,20 +278,6 @@ class TestLatexBackendModel:
         assert ":foo | Objective activated." in caplog.text
 
     def test_add_piecewise_constraint(self, dummy_latex_backend_model):
-        dummy_latex_backend_model.add_parameter(
-            "piecewise_x",
-            xr.DataArray(data=[0, 5, 10], coords={"breakpoints": [0, 1, 2]}),
-            {},
-        )
-        dummy_latex_backend_model.add_parameter(
-            "piecewise_y",
-            xr.DataArray(data=[0, 1, 5], coords={"breakpoints": [0, 1, 2]}),
-            {},
-        )
-        for param in ["piecewise_x", "piecewise_y"]:
-            dummy_latex_backend_model.inputs[param] = (
-                dummy_latex_backend_model._dataset[param]
-            )
         dummy_latex_backend_model.add_piecewise_constraint(
             "p_constr",
             {
@@ -270,8 +290,8 @@ class TestLatexBackendModel:
                 "description": "FOO",
             },
         )
-        math_string = dummy_latex_backend_model.piecewise_constraints["p_constr"].attrs[
-            "math_string"
+        math_string = dummy_latex_backend_model.math_strings["piecewise_constraints"][
+            "p_constr"
         ]
         assert (
             r"\text{ breakpoint }\negthickspace \in \negthickspace\text{ breakpoints }"
@@ -287,20 +307,6 @@ class TestLatexBackendModel:
         )
 
     def test_add_piecewise_constraint_no_foreach(self, dummy_latex_backend_model):
-        dummy_latex_backend_model.add_parameter(
-            "piecewise_x",
-            xr.DataArray(data=[0, 5, 10], coords={"breakpoints": [0, 1, 2]}),
-            {},
-        )
-        dummy_latex_backend_model.add_parameter(
-            "piecewise_y",
-            xr.DataArray(data=[0, 1, 5], coords={"breakpoints": [0, 1, 2]}),
-            {},
-        )
-        for param in ["piecewise_x", "piecewise_y"]:
-            dummy_latex_backend_model.inputs[param] = (
-                dummy_latex_backend_model._dataset[param]
-            )
         dummy_latex_backend_model.add_piecewise_constraint(
             "p_constr_no_foreach",
             {
@@ -312,16 +318,13 @@ class TestLatexBackendModel:
                 "description": "BAR",
             },
         )
-        math_string = dummy_latex_backend_model.piecewise_constraints[
+        math_string = dummy_latex_backend_model.math_strings["piecewise_constraints"][
             "p_constr_no_foreach"
-        ].attrs["math_string"]
+        ]
         assert (
             r"\text{ breakpoint }\negthickspace \in \negthickspace\text{ breakpoints }"
             in math_string
         )
-
-    def test_create_obj_list(self, dummy_latex_backend_model):
-        assert dummy_latex_backend_model._create_obj_list("var", "variables") is None
 
     @pytest.mark.parametrize(
         ("format", "expected"),
@@ -617,19 +620,7 @@ class TestLatexBackendModel:
         ("kwargs", "expected"),
         [
             (
-                {"sets": ["nodes", "techs"]},
-                textwrap.dedent(
-                    r"""
-                \begin{array}{l}
-                    \forall{}
-                    \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
-                    \text{ tech }\negthickspace \in \negthickspace\text{ techs }
-                    \!\!:\\[2em]
-                \end{array}"""
-                ),
-            ),
-            (
-                {"sense": r"\min{}"},
+                {"sense_string": r"\min{}"},
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
@@ -638,7 +629,7 @@ class TestLatexBackendModel:
                 ),
             ),
             (
-                {"where": r"foo \land bar"},
+                {"where_string": r"foo \land bar"},
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
@@ -647,7 +638,7 @@ class TestLatexBackendModel:
                 ),
             ),
             (
-                {"where": r""},
+                {"where_string": r""},
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
@@ -656,7 +647,7 @@ class TestLatexBackendModel:
             ),
             (
                 {
-                    "equations": [
+                    "equation_strings": [
                         {"expression": "foo", "where": "bar"},
                         {"expression": "foo + 1", "where": ""},
                     ]
@@ -673,9 +664,9 @@ class TestLatexBackendModel:
         ],
     )
     def test_generate_math_string(self, dummy_latex_backend_model, kwargs, expected):
-        da = xr.DataArray()
-        dummy_latex_backend_model._generate_math_string(None, da, **kwargs)
-        assert da.math_string == expected
+        da = xr.DataArray(True, attrs=kwargs)
+        dummy_latex_backend_model._generate_math_string("foo", "bar", da)
+        assert dummy_latex_backend_model.math_strings["foo"]["bar"] == expected
 
     @pytest.mark.parametrize(
         ("instring", "kwargs", "expected"),
@@ -768,3 +759,131 @@ class TestLatexBackendModel:
             **Default**: 100
             """
         )
+
+
+class TestLatexBackendModelPostprocessed:
+    MATH_STRINGS = {
+        "post_expr1": r"""
+            \begin{array}{l}
+                \forall{}
+                \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+                \text{ tech }\negthickspace \in \negthickspace\text{ techs }
+                \!\!:\\[2em]
+                \quad (\textbf{test\_var}_\text{node,tech} \times 2) + \textit{no\_dims}\\
+            \end{array}
+            """,
+        "post_expr2": r"""
+            \begin{array}{l}
+                \forall{}
+                \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+                \text{ tech }\negthickspace \in \negthickspace\text{ techs }
+                \!\!,\\
+                \text{if } (\textbf{test\_expr}_\text{node,tech}\mathord{>}\text{0} \lor \textbf{post\_expr1}_\text{node,tech} + \textbf{test\_var}_\text{node,tech}\mathord{<}\text{10})\!\!:\\[2em]
+                \quad (\textbf{test\_var}_\text{node,tech} \times 2) + \textbf{test\_expr}_\text{node,tech}\\
+            \end{array}
+            """,
+    }
+
+    @pytest.fixture
+    def processed_latex_backend_model(self, temp_dummy_latex_backend_model):
+        temp_dummy_latex_backend_model._load_inputs()
+        # Add a variable
+        temp_dummy_latex_backend_model.add_variable(
+            "test_var",
+            {
+                "foreach": ["nodes", "techs"],
+                "where": "with_inf",
+                "bounds": {"min": 0, "max": 1},
+                "domain": "real",
+            },
+        )
+        temp_dummy_latex_backend_model.add_global_expression(
+            "test_expr",
+            {
+                "foreach": ["nodes", "techs"],
+                "where": "with_inf",
+                "equations": [{"expression": "test_var / with_inf"}],
+            },
+        )
+        # Add a postprocessed expression
+        temp_dummy_latex_backend_model._add_postprocessed(
+            "post_expr1",
+            {
+                "foreach": ["nodes", "techs"],
+                "equations": [{"expression": "test_var * 2 + no_dims"}],
+                "description": "A postprocessed expression",
+            },
+            temp_dummy_latex_backend_model._dataset,
+        )
+        temp_dummy_latex_backend_model._add_postprocessed(
+            "post_expr2",
+            {
+                "foreach": ["nodes", "techs"],
+                "equations": [{"expression": "test_var * 2 + test_expr"}],
+                "where": "test_expr > 0 OR post_expr1 + test_var < 10",
+                "description": "A postprocessed expression with where clause",
+                "default": 0,
+            },
+            temp_dummy_latex_backend_model._dataset,
+        )
+
+        return temp_dummy_latex_backend_model
+
+    @pytest.mark.parametrize("name", ["post_expr1", "post_expr2"])
+    def test_add_postprocessed(self, processed_latex_backend_model, name):
+        """Test that postprocessed math entries are processed correctly by the latex backend."""
+
+        # Verify the postprocessed expression was added
+        assert name in processed_latex_backend_model.postprocessed
+        assert (
+            processed_latex_backend_model.postprocessed[name].attrs["math_repr"]
+            == rf"\textbf{{{name}}}_\text{{node,tech}}"
+        )
+
+        # Verify the math string contains the expected expression
+        math_string = processed_latex_backend_model.math_strings["postprocessed"][name]
+        assert math_string.strip("\n") == textwrap.dedent(
+            self.MATH_STRINGS[name]
+        ).strip("\n").replace(r"\_", "_")
+
+    def test_postprocessed_in_math_doc(self, processed_latex_backend_model):
+        """Test that postprocessed expressions appear correctly in generated math documentation."""
+        # Generate documentation and verify postprocessed section exists
+        doc = processed_latex_backend_model.generate_math_doc(format="md")
+        expected = textwrap.dedent(
+            rf"""
+            ## Postprocessed Statistics
+
+            ### post_expr1
+
+            A postprocessed expression
+
+            **Used in**:
+
+            * [post_expr2](#post_expr2)
+
+            **Uses**:
+
+            * [no_dims](#no_dims)
+            * [test_var](#test_var)
+
+            **Default**: nan
+
+            $${self.MATH_STRINGS["post_expr1"]}$$
+
+            ### post_expr2
+
+            A postprocessed expression with where clause
+
+            **Uses**:
+
+            * [post_expr1](#post_expr1)
+            * [test_expr](#test_expr)
+            * [test_var](#test_var)
+
+            **Default**: 0
+
+            $${self.MATH_STRINGS["post_expr2"]}$$
+        """
+        )
+        assert expected in doc

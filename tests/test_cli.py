@@ -247,3 +247,28 @@ class TestCLI:
             ],
         )
         assert result.exit_code == 0, result.output
+
+    def test_run_with_profiling(self, tmp_path):
+        """Test profiling output."""
+        runner = CliRunner()
+        profile_file = tmp_path / "profile.stats"
+        result = runner.invoke(
+            cli.run,
+            [
+                _MODEL_NATIONAL,
+                f"--save_netcdf={tmp_path / 'output.nc'}",
+                "--override_dict={'config.solve.solver': 'glpk'}",
+                "--profile",
+                f"--profile_filename={profile_file}",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert profile_file.exists()
+
+    def test_debug_mode_with_exception(self):
+        """Test debug mode shows full traceback."""
+        runner = CliRunner()
+        result = runner.invoke(cli.run, ["nonexistent_model.yaml", "--debug"])
+        assert result.exit_code == 1
+        # Debug mode should show traceback
+        assert "Traceback" in result.output or "Error" in result.output

@@ -973,6 +973,16 @@ Technically, you can now define all your data in tables (although we would still
 !!! info "See also"
     `data_tables` [introduction](basic/data_tables.md) and [tutorial][loading-tabular-data].
 
+### Subsetting and resampling other dimensions than `timesteps`
+
+With our [updated configuration syntax](#renaming--moving-configuration-options), you can subset and resample any arbitrary dimension, not only the `timesteps` dimension.
+
+Subsetting ordered dimensions (e.g. timeseries, integer series) is done by slicing (`[0, 3]` or `[2000-01-01, 2000-01-03]` assumes all values in that range).
+Subsetting unordered dimensions, usually string values selects individual values.
+
+Resampling currently only works with datetime dimensions.
+But this means you can have multiple datetime dimensions (e.g., `timesteps` and `yearsteps`) and resample each of them separately.
+
 ### YAML-based math syntax
 
 We have overhauled our internal mathematical formulation to remove the strong link to the Pyomo library.
@@ -984,3 +994,8 @@ When adding your own math, you can add [piecewise linear constraints](user_defin
 
 !!! info "See also"
     Our [pre-defined](basic/modes.md) and [user-defined](user_defined_math/index.md) math documentation.
+
+### Postprocessed arrays
+
+Alongside our [YAML-based math syntax](#yaml-based-math-syntax), we have introduced the option to define math expressions that are computed _after_ optimisation has completed.
+We include a selection of default postprocessed arrays (e.g., curtailment, levelised cost of energy (LCOE), ...) and encourage you to add your own using our YAML math syntax!

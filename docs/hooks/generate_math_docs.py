@@ -178,7 +178,6 @@ def generate_base_math_documentation() -> MathDocumentation:
         MathDocumentation: model math documentation with latex backend.
     """
     model = calliope.read_yaml(file=MODEL_PATH)
-    model.build()
     return MathDocumentation(model)
 
 
@@ -197,7 +196,6 @@ def generate_custom_math_documentation(
         MathDocumentation: model math documentation with latex backend.
     """
     model = calliope.read_yaml(file=MODEL_PATH, scenario=override)
-    model.build()
 
     full_del = []
     expr_del = []
