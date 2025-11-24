@@ -686,7 +686,6 @@ class ModelDataCleaner(ModelDTypeUpdater):
         self.add_colors()
         self.add_link_distances()
         self.update_and_resample_dimensions()
-        self.assign_input_attr()
         self.dataset = self.dataset.assign_coords(
             self._update_dtypes(self.dataset.coords)
         )
@@ -805,17 +804,6 @@ class ModelDataCleaner(ModelDTypeUpdater):
                 "Cannot change time clustering configuration at this stage."
             )
         self.runtime = self.runtime.update(runtime_updater)
-
-    def assign_input_attr(self):
-        """Assign metadata as attributes to each input array."""
-        all_attrs = {
-            **self.math.parameters.model_dump(),
-            **self.math.lookups.model_dump(),
-        }
-        for var_name, var_data in self.dataset.data_vars.items():
-            self.dataset[var_name] = var_data.assign_attrs(all_attrs.get(var_name, {}))
-            # Remove this redundant attribute
-            self.dataset[var_name].attrs.pop("active", None)
 
     @staticmethod
     def _drop_undefined(ds: xr.Dataset, def_matrix: xr.DataArray) -> xr.Dataset:

@@ -1031,16 +1031,6 @@ class TestModelDataCleaner:
             ["#123", "#17344c", "#321", "#456"],
         )
 
-    def test_assign_input_attr(self, model_data_cleaner: ModelDataCleaner, simple_da):
-        model_data_cleaner.dataset["storage_cap_max"] = simple_da
-        model_data_cleaner.dataset["bar"] = xr.DataArray(1)
-        assert model_data_cleaner.dataset.data_vars
-
-        model_data_cleaner.assign_input_attr()
-
-        assert model_data_cleaner.dataset["storage_cap_max"].attrs["default"] == np.inf
-        assert "default" not in model_data_cleaner.dataset["bar"].attrs
-
 
 class TestSubset:
     """Test subsetting of model data."""
