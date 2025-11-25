@@ -998,6 +998,7 @@ class TestModelDataCleaner:
     def test_add_colors_no_init_da(
         self, my_caplog, model_data_cleaner: ModelDataCleaner
     ):
+        model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.add_colors()
         assert "Building technology color" in my_caplog.text
         np.testing.assert_array_equal(
@@ -1008,6 +1009,7 @@ class TestModelDataCleaner:
     def test_add_colors_full_init_da(
         self, my_caplog, model_data_cleaner: ModelDataCleaner
     ):
+        model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.dataset["color"] = xr.DataArray(
             ["#123", "#654", "#321", "#456"], dims=("techs",)
         )
@@ -1019,6 +1021,7 @@ class TestModelDataCleaner:
     def test_add_colors_partial_init_da(
         self, my_caplog, model_data_cleaner: ModelDataCleaner
     ):
+        model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.dataset["color"] = pd.Series(
             ["#123", np.nan, "#321", "#456"],
             index=model_data_cleaner.dataset.techs.to_index(),
