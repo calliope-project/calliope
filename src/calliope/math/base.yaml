@@ -86,13 +86,6 @@ parameters:
       Applied to transmission links only.
     unit: $\frac{\text{cost}}{\text{power}\times\text{distance}}$
 
-  cost_purchase_per_distance:
-    default: 0
-    title: Purchase cost per unit distance for transmission techs.
-    description: >-
-      Cost applied if the binary variable `purchased` is 1 or per unit of the integer variable `units`.
-      Requires the parameter `cap_method` to be `integer`.
-    unit: $\frac{\text{cost}}{\text{unit}\times\text{distance}}$
 
   cost_flow_cap:
     default: 0
@@ -155,14 +148,6 @@ parameters:
     description: >-
       Cost per unit of `flow_out` in each timestep.
     unit: $\frac{\text{cost}}{\text{energy}}$
-
-  cost_purchase:
-    default: 0
-    title: Purchase cost.
-    description: >-
-      Cost applied to the variable `purchased_units`.
-      Requires the parameter `cap_method` to be `integer`.
-    unit: $\frac{\text{cost}}{\text{unit}}$
 
   cost_area_use:
     default: 0
@@ -242,7 +227,6 @@ parameters:
     title: System-wide maximum rated flow capacity.
     description: >-
       Limits the sum of `flow_cap` over all nodes in the model to a maximum.
-      If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
     unit: power or $\frac{\text{power}}{\text{unit}}$
 
   flow_cap_min:
@@ -250,8 +234,6 @@ parameters:
     title: Minimum rated flow capacity.
     description: >-
       Limits `flow_cap` to a minimum.
-      NOTE: this will _force_ `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
-      If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
     unit: power or $\frac{\text{power}}{\text{unit}}$
 
   flow_cap_min_systemwide:
@@ -259,7 +241,6 @@ parameters:
     title: System-wide minimum rated flow capacity.
     description: >-
       Limits the sum of `flow_cap` over all nodes in the model to a minimum.
-      NOTE: this will _force_ the sum of `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
     unit: power.
 
   flow_out_min_relative:
@@ -268,15 +249,7 @@ parameters:
     title: Minimum outflow
     description: >-
       Set to a value between 0 and 1 to force minimum `flow_out` as a fraction of the technology rated capacity.
-      If non-zero and `cap_method` is `continuous`, this will force the technology to operate above its minimum value at every timestep.
     unit: unitless.
-
-  flow_cap_per_unit:
-    default: .inf
-    title: Flow capacity per purchased unit
-    description: >-
-      Set the capacity of each integer unit of a technology purchased, if `cap_method` is `integer`.
-    unit: $\frac{\text{power}}{\text{unit}}$
 
   flow_in_eff:
     default: 1.0
@@ -344,35 +317,6 @@ parameters:
     title: Objective cost class weights.
     description: Weightings for cost classes to apply in the objective function.
     unit: unitless
-
-  purchased_units_min_systemwide:
-    default: 0
-    title: System-wide minimum installed integer units of a technology.
-    description: >-
-      sets the lower bound of the sum across all nodes of the decision variable `units` for a particular technology.
-    unit: integer.
-
-  purchased_units_max_systemwide:
-    default: .inf
-    title: System-wide maximum installed integer units of a technology.
-    description: >-
-      sets the upper bound of the sum across all nodes of the decision variable `units` for a particular technology.
-    unit: integer.
-
-  purchased_units_min:
-    default: 0
-    title:  Minimum number of purchased units
-    description: >-
-      Limits the lower bound of units purchased if `cap_method` is `integer`.
-    unit: integer.
-
-  purchased_units_max:
-    default: .inf
-    title: Maximum number of purchased units.
-    description: >-
-      Limits the upper bound of units purchased if `cap_method` is `integer`.
-      If set to `1`, will effectively set the `purchased_units` to a binary decision variable.
-    unit: integer.
 
   sink_use_min:
     default: 0
@@ -467,13 +411,6 @@ parameters:
       Limit lower bound of `storage_cap` decision variable.
     unit: energy.
 
-  storage_cap_per_unit:
-    default: .inf
-    title: Storage capacity per purchased unit.
-    description: >-
-      Set the storage capacity of each integer unit of a technology purchased.
-    unit: $\frac{\text{energy}}{\text{unit}}$
-
   storage_discharge_depth:
     default: 0
     resample_method: mean
@@ -540,13 +477,6 @@ lookups:
     default: false
     pivot_values_to_dim: carriers
 
-  cap_method:
-    dtype: string
-    default: continuous
-    title: Capacity method switch.
-    description: One of 'continuous' (LP model) or 'integer' (integer/binary unit capacity).
-    one_of: [continuous, integer]
-
   cluster_first_timestep:
     dtype: bool
     default: false
@@ -560,25 +490,11 @@ lookups:
     description: >-
       Whether a technology is defined with particular carriers and at a particular node.
 
-  integer_dispatch:
-    dtype: bool
-    default: false
-    title: Integer dispatch switch.
-    description: |
-      When true, will limit per-timestep out/inflows relative to the number of units of a technology that are in operation.
-      Requires `cap_method=integer`.
-
   include_storage:
     dtype: bool
     default: false
     title: Storage method switch.
     description: When true, math will be triggered to allow discontinuous carrier inflow and outflows across timesteps.
-
-  force_async_flow:
-    dtype: bool
-    default: false
-    title: Force asynchronous out/inflow.
-    description: If True, non-zero `flow_out` and `flow_in` cannot both occur in the same timestep.
 
   cyclic_storage:
     dtype: bool
@@ -587,7 +503,6 @@ lookups:
     description: >
       If true, link storage levels in the last model timestep with the first model timestep.
       `inter_cluster_storage` custom math must be included if using time clustering and setting this to `true`.
-      This must be set to `false` if using `operate` mode.
 
   sink_unit:
     dtype: string
@@ -1285,7 +1200,7 @@ global_expressions:
       depreciation_rate:
         - where: cost_depreciation_rate
           expression: cost_depreciation_rate
-        - where: NOT cost_depreciation_rate AND cost_interest_rate==0
+        - where: NOT cost_depreciation_rate AND (NOT cost_interest_rate OR cost_interest_rate==0)
           expression: 1 / lifetime
         - where: NOT cost_depreciation_rate AND cost_interest_rate>0
           expression: >-
@@ -1434,32 +1349,32 @@ postprocessed:
 
 checks:
   must_have_base:
-    where: not base_tech
+    where: NOT base_tech
     message: An abstract `base_tech` must be defined for every technology at every node.
     errors: raise
 
   distance_only_for_transmission:
-    where: not base_tech==transmission and (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance or cost_purchase_per_distance)
+    where: NOT base_tech==transmission AND (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance)
     message: Only transmission technologies can define `distance` or `..._per_distance`.
     errors: raise
 
   unbounded_flow_cap_cost:
-    where: cost_flow_cap<0 AND not flow_cap_max
+    where: cost_flow_cap<0 AND NOT flow_cap_max
     message: Cannot have a negative `cost_flow_cap` as there is an unset corresponding `flow_cap_max` constraint
     errors: raise
 
   unbounded_storage_cap_cost:
-    where: cost_storage_cap<0 AND not storage_cap_max
+    where: cost_storage_cap<0 AND NOT storage_cap_max
     message: Cannot have a negative `cost_storage_cap` as there is an unset corresponding `storage_cap_max` constraint
     errors: raise
 
   unbounded_area_use_cost:
-    where: cost_area_use<0 AND not area_use_max
+    where: cost_area_use<0 AND NOT area_use_max
     message: Cannot have a negative `cost_area_use` as there is an unset corresponding `area_use_max` constraint
     errors: raise
 
   unbounded_source_use_cost:
-    where: cost_source_cap<0 AND not source_use_max
+    where: cost_source_cap<0 AND NOT source_use_max
     message: Cannot have a negative `cost_source_cap` as there is an unset corresponding `source_use_max` constraint
     errors: raise
 
@@ -1469,33 +1384,18 @@ checks:
     errors: raise
 
   all_or_nothing_lat_lon:
-    where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not (latitude or longitude)
+    where: (any(latitude, over=nodes) or any(longitude, over=nodes)) AND NOT (latitude or longitude)
     message: "Must define node latitude and longitude for _all_ nodes or _no_ nodes."
     errors: raise
 
   export_only_for_outflows:
-    where: carrier_export and not any(carrier_out, over=nodes)
+    where: carrier_export AND NOT any(carrier_out, over=nodes)
     message: "Export carriers must be one of the technology outflow carriers."
     errors: raise
 
   storage_initial_max:
-    where: storage_initial and (storage_initial<0 OR storage_initial>1)
+    where: storage_initial AND (storage_initial<0 OR storage_initial>1)
     message: "storage_initial is a fraction, requiring values within the interval [0, 1]."
-    errors: raise
-
-  unit_commitment_only_for_units:
-    where: integer_dispatch==True AND NOT cap_method==integer
-    message: Cannot use the integer `integer_dispatch` unless the technology is using an integer unit capacities (`cap_method=integer`).
-    errors: raise
-
-  conflicting_flow_caps:
-    where: (flow_cap_max OR flow_cap_min) AND flow_cap_per_unit
-    message: Cannot define both `flow_cap_per_unit` and `flow_cap_max`/`flow_cap_min`
-    errors: raise
-
-  conflicting_storage_caps:
-    where: (storage_cap_max OR storage_cap_min) AND storage_cap_per_unit
-    message: Cannot define both `storage_cap_per_unit` and `storage_cap_max`/`storage_cap_min`
     errors: raise
 
   lat_lons_out_of_range:
@@ -1512,3 +1412,15 @@ checks:
     where: base_tech==demand AND cost_flow_out
     message: "`cost_flow_out` does not apply to `demand` technologies. Use `cost_flow_in` instead."
     errors: warn
+
+  no_storage_discharge_depth_when_clustering:
+    where: storage_discharge_depth AND lookup_cluster_last_timestep
+    message: >-
+      storage_discharge_depth will currently have no effect when time clustering is active.
+    errors: warn
+
+  cyclic_storage_needs_inter_cluster:
+    where: cyclic_storage AND lookup_cluster_last_timestep
+    message: >-
+      Include the `storage_inter_cluster_storage` pre-defined math to allow cyclic storage alongside timeseries clustering.
+    errors: raise

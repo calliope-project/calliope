@@ -206,8 +206,12 @@ class TestGetters:
         return solved_model_cls.backend.get_variable("flow_cap")
 
     @pytest.fixture(scope="class")
-    def parameter(self, solved_model_cls):
+    def parameter_undefined(self, solved_model_cls):
         return solved_model_cls.backend.get_parameter("flow_in_eff")
+
+    @pytest.fixture(scope="class")
+    def parameter_defined(self, solved_model_cls):
+        return solved_model_cls.backend.get_parameter("flow_cap_max")
 
     @pytest.fixture(scope="class")
     def constraint(self, solved_model_cls):
@@ -219,7 +223,7 @@ class TestGetters:
 
     @pytest.fixture(scope="class")
     def lookup(self, solved_model_cls):
-        return solved_model_cls.backend.get_lookup("cap_method")
+        return solved_model_cls.backend.get_lookup("base_tech")
 
     @pytest.mark.parametrize(
         "component_type", ["variable", "global_expression", "parameter", "constraint"]
@@ -243,11 +247,21 @@ class TestGetters:
             "coords_in_name": False,
         }
 
-    def test_get_parameter(self, parameter):
-        """Check a parameter has all expected attributes."""
-        assert parameter.attrs == {
+    def test_get_parameter_undefined(self, parameter_undefined):
+        """Check a parameter that has no data defined has all expected attributes."""
+        assert parameter_undefined.equals(xr.DataArray(np.nan))
+        assert parameter_undefined.attrs == {
             "obj_type": "parameters",
             "references": {"flow_in_inc_eff"},
+            "coords_in_name": False,
+        }
+
+    def test_get_parameter_defined(self, parameter_defined):
+        """Check a parameter that has no data defined has all expected attributes."""
+        assert not parameter_defined.equals(xr.DataArray(np.nan))
+        assert parameter_defined.attrs == {
+            "obj_type": "parameters",
+            "references": {"flow_cap", "force_zero_area_use"},
             "coords_in_name": False,
         }
 
@@ -376,11 +390,29 @@ class TestGetters:
             "coords_in_name": False,
         }
 
-    def test_get_lookup_expected_keys(self, lookup):
-        """Check that a lookup displays its schema attributes."""
+    def test_get_lookup_obj_type(self, lookup):
+        """Check that a lookup has the right object type set."""
         assert lookup.attrs == {
             "obj_type": "lookups",
-            "references": set(),
+            "references": {
+                "storage",
+                "source_cap",
+                "balance_storage",
+                "flow_in_inc_eff",
+                "balance_conversion",
+                "link_flow_cap",
+                "balance_supply_no_storage",
+                "balance_supply_with_storage",
+                "balance_supply_min_use",
+                "balance_transmission",
+                "source_use",
+                "cost_investment_flow_cap",
+                "symmetric_transmission",
+                "flow_out_inc_eff",
+                "balance_demand",
+                "storage_cap",
+                "balance_demand_min_use",
+            },
             "coords_in_name": False,
         }
 

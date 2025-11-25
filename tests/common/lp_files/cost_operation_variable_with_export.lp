@@ -1,7 +1,7 @@
 \* Source Pyomo model name=None *\
 
 min
-objectives(foo)(0):
+objectives(test_obj)(0):
 +0.1 variables(flow_in)(a__test_conversion__gas__2005_01_01_00_00)
 +0.1 variables(flow_in)(a__test_conversion__gas__2005_01_01_01_00)
 +1.0 variables(flow_out)(a__test_conversion_plus__electricity__2005_01_01_00_00)

@@ -1,3 +1,104 @@
+parameters:
+  flow_cap_per_unit:
+    default: .inf
+    title: Flow capacity per purchased unit
+    description: >-
+      Set the capacity of each integer unit of a technology purchased, if `cap_method` is `integer`.
+    unit: $\frac{\text{power}}{\text{unit}}$
+
+  purchased_units_min_systemwide:
+    default: 0
+    title: System-wide minimum installed integer units of a technology.
+    description: >-
+      sets the lower bound of the sum across all nodes of the decision variable `units` for a particular technology.
+    unit: integer.
+
+  purchased_units_max_systemwide:
+    default: .inf
+    title: System-wide maximum installed integer units of a technology.
+    description: >-
+      sets the upper bound of the sum across all nodes of the decision variable `units` for a particular technology.
+    unit: integer.
+
+  purchased_units_min:
+    default: 0
+    title:  Minimum number of purchased units
+    description: >-
+      Limits the lower bound of units purchased if `cap_method` is `integer`.
+    unit: integer.
+
+  purchased_units_max:
+    default: .inf
+    title: Maximum number of purchased units.
+    description: >-
+      Limits the upper bound of units purchased if `cap_method` is `integer`.
+      If set to `1`, will effectively set the `purchased_units` to a binary decision variable.
+    unit: integer.
+
+  storage_cap_per_unit:
+    default: .inf
+    title: Storage capacity per purchased unit.
+    description: >-
+      Set the storage capacity of each integer unit of a technology purchased.
+    unit: $\frac{\text{energy}}{\text{unit}}$
+
+  cost_purchase_per_distance:
+    default: 0
+    title: Purchase cost per unit distance for transmission techs.
+    description: >-
+      Cost applied if the binary variable `purchased` is 1 or per unit of the integer variable `units`.
+      Requires the parameter `cap_method` to be `integer`.
+    unit: $\frac{\text{cost}}{\text{unit}\times\text{distance}}$
+
+  cost_purchase:
+    default: 0
+    title: Purchase cost.
+    description: >-
+      Cost applied to the variable `purchased_units`.
+      Requires the parameter `cap_method` to be `integer`.
+    unit: $\frac{\text{cost}}{\text{unit}}$
+
+  # Override descriptions:
+
+  flow_cap_min:
+    description: >-
+      Limits `flow_cap` to a minimum.
+      NOTE: this will _force_ `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
+      If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
+
+  flow_cap_min_systemwide:
+    description: >-
+      Limits the sum of `flow_cap` over all nodes in the model to a minimum.
+      NOTE: this will _force_ the sum of `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
+
+  flow_out_min_relative:
+    description: >-
+      Set to a value between 0 and 1 to force minimum `flow_out` as a fraction of the technology rated capacity.
+      If non-zero and `cap_method` is `continuous`, this will force the technology to operate above its minimum value at every timestep.
+
+lookups:
+
+  cap_method:
+    dtype: string
+    default: continuous
+    title: Capacity method switch.
+    description: One of 'continuous' (LP model) or 'integer' (integer/binary unit capacity).
+    one_of: [continuous, integer]
+
+  integer_dispatch:
+    dtype: bool
+    default: false
+    title: Integer dispatch switch.
+    description: |
+      When true, will limit per-timestep out/inflows relative to the number of units of a technology that are in operation.
+      Requires `cap_method=integer`.
+
+  force_async_flow:
+    dtype: bool
+    default: false
+    title: Force asynchronous out/inflow.
+    description: If True, non-zero `flow_out` and `flow_in` cannot both occur in the same timestep.
+
 variables:
 
   # MILP specific
@@ -319,6 +420,17 @@ constraints:
       Set the upper bound of a continuous technology's inflow.
     where: "carrier_in AND NOT operating_units"
 
+  flow_capacity_systemwide_min:
+    description: >-
+      Set a lower bound on flow capacity of a technology across all nodes in which the technology exists.
+    foreach: [techs, carriers]
+    where: "flow_cap_min_systemwide"
+    equations:
+      - where: any(purchased_units, over=nodes)
+        expression: sum(flow_cap, over=nodes) >= flow_cap_min_systemwide * sum(purchased_units, over=nodes)
+      - where: NOT any(purchased_units, over=nodes)
+        expression: sum(flow_cap, over=nodes) >= flow_cap_min_systemwide
+
 global_expressions:
 
   # MILP specific
@@ -355,3 +467,24 @@ global_expressions:
           cost_investment_source_cap +
           cost_investment_area_use +
           cost_investment_purchase
+
+checks:
+  distance_only_for_transmission_milp:
+    where: not base_tech==transmission and cost_purchase_per_distance
+    message: Only transmission technologies can define `distance` or `..._per_distance`.
+    errors: raise
+
+  conflicting_flow_caps:
+    where: (flow_cap_max OR flow_cap_min) AND flow_cap_per_unit
+    message: Cannot define both `flow_cap_per_unit` and `flow_cap_max`/`flow_cap_min`
+    errors: raise
+
+  unit_commitment_only_for_units:
+    where: integer_dispatch==True AND NOT cap_method==integer
+    message: Cannot use the integer `integer_dispatch` unless the technology is using an integer unit capacities (`cap_method=integer`).
+    errors: raise
+
+  conflicting_storage_caps:
+    where: (storage_cap_max OR storage_cap_min) AND storage_cap_per_unit
+    message: Cannot define both `storage_cap_per_unit` and `storage_cap_max`/`storage_cap_min`
+    errors: raise

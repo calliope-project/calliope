@@ -1,0 +1,652 @@
+# Base math test configurations
+# Each test validates a specific constraint or set of constraints from the base math
+
+storage_max:
+  description: "Test storage_max constraint"
+  register:
+    constraints: [storage_max]
+    variables: [storage, storage_cap]
+  overrides: {}
+  scenario: simple_storage,two_hours
+  lp_file: storage_max.lp
+
+flow_out_max:
+  description: "Test flow_out_max constraint"
+  register:
+    constraints: [flow_out_max]
+    variables: [flow_out, flow_cap]
+    parameters: [timestep_resolution, flow_out_parasitic_eff]
+    lookups: [carrier_out]
+  overrides: {}
+  scenario: simple_supply,two_hours
+  lp_file: flow_out_max.lp
+
+balance_conversion:
+  description: "Test balance_conversion constraint"
+  register:
+    constraints: [balance_conversion]
+    global_expressions: [flow_out_inc_eff, flow_in_inc_eff]
+    lookups: [base_tech, include_storage]
+    parameters: [flow_in_eff, flow_out_eff]
+  overrides: {}
+  scenario: simple_conversion,two_hours
+  lp_file: balance_conversion.lp
+
+source_max:
+  description: "Test source_max constraint"
+  register:
+    constraints: [source_max]
+    variables: [source_use, source_cap]
+    parameters: [timestep_resolution]
+  overrides: {}
+  scenario: simple_supply_plus,resample_two_days
+  lp_file: source_max.lp
+
+balance_transmission:
+  description: "Test balance_transmission with one-way electricity transmission and two-way heat transmission"
+  register:
+    constraints: [balance_transmission]
+    global_expressions: [flow_out_inc_eff, flow_in_inc_eff]
+     # we don't actually do anything with lat/lon but we need to register them somewhere in this file.
+    lookups: [one_way, latitude, longitude]
+    parameters: [flow_in_eff_per_distance, flow_out_eff_per_distance]
+  overrides:
+    techs.test_link_a_b_elec.one_way: true
+  scenario: simple_conversion,two_hours
+  lp_file: balance_transmission.lp
+
+balance_storage:
+  description: "Test balance_storage with mixed cyclic_storage settings"
+  register:
+    constraints: [balance_storage]
+    variables: [storage, storage_cap]
+    global_expressions: [flow_out_inc_eff, flow_in_inc_eff]
+    parameters: [storage_initial, storage_loss, timestep_resolution]
+    lookups: [base_tech, cluster_first_timestep, cyclic_storage, include_storage, lookup_cluster_last_timestep]
+  overrides:
+    nodes.a.techs.test_storage.cyclic_storage: true
+    nodes.b.techs.test_storage.cyclic_storage: false
+  scenario: simple_storage,two_hours
+  lp_file: balance_storage.lp
+
+flow_capacity_per_storage_capacity_min:
+  description: "Test flow_capacity_per_storage_capacity_min constraint"
+  register:
+    constraints: [flow_capacity_per_storage_capacity_min]
+    variables: [flow_cap, storage_cap]
+    parameters: [flow_cap_per_storage_cap_min]
+  overrides:
+    nodes.a.techs.test_storage.flow_cap_per_storage_cap_min: 0.5
+  scenario: simple_storage,two_hours
+  lp_file: flow_capacity_per_storage_capacity_min.lp
+
+flow_capacity_per_storage_capacity_max:
+  description: "Test flow_capacity_per_storage_capacity_max constraint"
+  register:
+    constraints: [flow_capacity_per_storage_capacity_max]
+    variables: [flow_cap, storage_cap]
+    parameters: [flow_cap_per_storage_cap_max]
+  overrides:
+    nodes.a.techs.test_storage.flow_cap_per_storage_cap_max: 2.0
+  scenario: simple_storage,two_hours
+  lp_file: flow_capacity_per_storage_capacity_max.lp
+
+source_capacity_equals_flow_capacity:
+  description: "Test source_capacity_equals_flow_capacity constraint"
+  register:
+    constraints: [source_capacity_equals_flow_capacity]
+    variables: [source_cap, flow_cap]
+    lookups: [source_cap_equals_flow_cap]
+  overrides:
+    nodes.a.techs.test_supply_plus.source_cap_equals_flow_cap: true
+  scenario: simple_supply_plus,two_hours
+  lp_file: source_capacity_equals_flow_capacity.lp
+
+force_zero_area_use:
+  description: "Test force_zero_area_use constraint"
+  register:
+    constraints: [force_zero_area_use]
+    variables: [area_use]
+    parameters: [flow_cap_max]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_cap_max: 0
+    nodes.a.techs.test_supply_elec.area_use_max: 100
+  scenario: simple_supply,two_hours
+  lp_file: force_zero_area_use.lp
+
+area_use_per_flow_capacity:
+  description: "Test area_use_per_flow_capacity constraint"
+  register:
+    constraints: [area_use_per_flow_capacity]
+    variables: [area_use, flow_cap]
+    parameters: [area_use_per_flow_cap]
+  overrides:
+    nodes.a.techs.test_supply_elec.area_use_per_flow_cap: 1.5
+  scenario: simple_supply,two_hours
+  lp_file: area_use_per_flow_capacity.lp
+
+area_use_capacity_per_loc:
+  description: "Test area_use_capacity_per_loc constraint"
+  register:
+    constraints: [area_use_capacity_per_loc]
+    variables: [area_use]
+    parameters: [available_area]
+  overrides:
+    nodes.a.techs.test_supply_elec.area_use_per_flow_cap: 1.0
+    nodes.a.techs.test_supply_plus.area_use_per_flow_cap: 2.0
+    nodes.a.available_area: 50
+  scenario: simple_supply_and_supply_plus,two_hours
+  lp_file: area_use_capacity_per_loc.lp
+
+flow_capacity_systemwide_max:
+  description: "Test flow_capacity_systemwide_max constraint"
+  register:
+    constraints: [flow_capacity_systemwide_max]
+    variables: [flow_cap]
+    parameters: [flow_cap_max_systemwide]
+  overrides:
+    techs.test_supply_elec.flow_cap_max_systemwide: 15
+  scenario: simple_supply,two_hours
+  lp_file: flow_capacity_systemwide_max.lp
+
+flow_capacity_systemwide_min:
+  description: "Test flow_capacity_systemwide_min constraint"
+  register:
+    constraints: [flow_capacity_systemwide_min]
+    variables: [flow_cap]
+    parameters: [flow_cap_min_systemwide]
+  overrides:
+    techs.test_supply_elec.flow_cap_min_systemwide: 5
+  scenario: simple_supply,two_hours
+  lp_file: flow_capacity_systemwide_min.lp
+
+flow_out_min:
+  description: "Test flow_out_min constraint"
+  register:
+    constraints: [flow_out_min]
+    variables: [flow_out, flow_cap]
+    parameters: [flow_out_min_relative, timestep_resolution]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_out_min_relative: 0.2
+  scenario: simple_supply,two_hours
+  lp_file: flow_out_min.lp
+
+flow_in_max:
+  description: "Test flow_in_max constraint"
+  register:
+    constraints: [flow_in_max]
+    variables: [flow_in, flow_cap]
+    parameters: [timestep_resolution]
+    lookups: [carrier_in]
+  overrides: {}
+  scenario: simple_conversion,two_hours
+  lp_file: flow_in_max.lp
+
+storage_discharge_depth_limit:
+  description: "Test storage_discharge_depth_limit constraint"
+  register:
+    constraints: [storage_discharge_depth_limit]
+    variables: [storage, storage_cap]
+    parameters: [storage_discharge_depth]
+  overrides:
+    nodes.a.techs.test_storage.storage_discharge_depth: 0.2
+  scenario: simple_storage,two_hours
+  lp_file: storage_discharge_depth_limit.lp
+
+system_balance:
+  description: "Test system_balance constraint"
+  register:
+    constraints: [system_balance]
+    variables: [flow_out, flow_in, flow_export, unmet_demand, unused_supply]
+    lookups: [definition_matrix]
+  overrides:
+    config.build.ensure_feasibility: true
+  scenario: simple_supply,two_hours
+  lp_file: system_balance.lp
+
+system_balance_no_unmet:
+  description: "Test system_balance constraint without unmet demand"
+  register:
+    constraints: [system_balance]
+    variables: [flow_out, flow_in, flow_export]
+  overrides:
+    config.build.ensure_feasibility: false
+  scenario: simple_supply,two_hours
+  lp_file: system_balance_no_unmet.lp
+
+balance_demand:
+  description: "Test balance_demand constraint"
+  register:
+    constraints: [balance_demand]
+    global_expressions: [flow_in_inc_eff]
+    variables: [area_use, flow_cap]
+    parameters: [sink_use_equals, sink_use_max]
+    lookups: [base_tech, sink_unit]
+  overrides: {}
+  scenario: simple_supply,two_hours,demand_elec_max
+  lp_file: balance_demand.lp
+
+balance_demand_min_use:
+  description: "Test balance_demand_min_use constraint"
+  register:
+    constraints: [balance_demand_min_use]
+    global_expressions: [flow_in_inc_eff]
+    variables: [area_use, flow_cap]
+    parameters: [sink_use_equals, sink_use_min]
+    lookups: [base_tech, sink_unit]
+  overrides:
+    data_tables.demand_elec.add_dims.parameters: sink_use_min
+  scenario: simple_supply,two_hours
+  lp_file: balance_demand_min_use.lp
+
+balance_supply_no_storage:
+  description: "Test balance_supply_no_storage constraint"
+  register:
+    constraints: [balance_supply_no_storage]
+    global_expressions: [flow_out_inc_eff]
+    variables: [source_use]
+    parameters: [source_eff]
+    lookups: [base_tech, include_storage]
+  overrides: {}
+  scenario: simple_supply,two_hours
+  lp_file: balance_supply_no_storage.lp
+
+balance_supply_with_storage:
+  description: "Test balance_supply_with_storage constraint"
+  register:
+    constraints: [balance_supply_with_storage]
+    variables: [storage, source_use, storage_cap]
+    global_expressions: [flow_out_inc_eff]
+    parameters: [source_eff, storage_initial, storage_loss, timestep_resolution]
+    lookups: [base_tech, cluster_first_timestep, cyclic_storage, lookup_cluster_last_timestep]
+  overrides: {}
+  scenario: simple_supply_plus,two_hours
+  lp_file: balance_supply_with_storage.lp
+
+source_availability_supply:
+  description: "Test source_availability_supply constraint"
+  register:
+    constraints: [source_availability_supply]
+    variables: [source_use, area_use, flow_cap]
+    parameters: [source_use_equals, source_use_max]
+    lookups: [source_unit]
+  overrides: {}
+  scenario: simple_supply_plus,resample_two_days
+  lp_file: source_availability_supply.lp
+
+balance_supply_min_use:
+  description: "Test balance_supply_min_use constraint"
+  register:
+    constraints: [balance_supply_min_use]
+    variables: [source_use, area_use, flow_cap]
+    parameters: [source_use_equals, source_use_min]
+    lookups: [base_tech, source_unit]
+  overrides:
+    nodes.a.techs.test_supply_plus.source_use_min: 5
+  scenario: simple_supply_plus,resample_two_days
+  lp_file: balance_supply_min_use.lp
+
+set_storage_initial:
+  description: "Test set_storage_initial constraint"
+  register:
+    constraints: [set_storage_initial]
+    variables: [storage, storage_cap]
+    parameters: [storage_initial, storage_loss, timestep_resolution]
+    lookups: [cyclic_storage]
+  overrides:
+    nodes.a.techs.test_storage.storage_initial: 0.5
+    nodes.a.techs.test_storage.cyclic_storage: true
+  scenario: simple_storage,two_hours
+  lp_file: set_storage_initial.lp
+
+symmetric_transmission:
+  description: "Test symmetric_transmission constraint"
+  register:
+    constraints: [symmetric_transmission]
+    variables: [flow_cap, link_flow_cap]
+    lookups: [base_tech]
+  overrides: {}
+  scenario: simple_conversion,two_hours
+  lp_file: symmetric_transmission.lp
+
+export_balance:
+  description: "Test export_balance constraint"
+  register:
+    constraints: [export_balance]
+    variables: [flow_out, flow_export]
+    parameters: [export_max]
+    lookups: [carrier_export]
+  overrides:
+    techs.test_supply_elec.carrier_export: electricity
+    nodes.a.techs.test_supply_elec.export_max: 5
+  scenario: simple_supply,two_hours
+  lp_file: export_balance.lp
+
+ramping_up:
+  description: "Test ramping_up constraint"
+  register:
+    constraints: [ramping_up]
+    variables: [flow_out, flow_in, flow_cap]
+    parameters: [flow_ramping, timestep_resolution]
+    lookups: [carrier_in, carrier_out]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_ramping: 0.5
+  scenario: simple_supply,two_hours
+  lp_file: ramping_up.lp
+
+ramping_down:
+  description: "Test ramping_down constraint"
+  register:
+    constraints: [ramping_down]
+    variables: [flow_out, flow_in, flow_cap]
+    parameters: [flow_ramping, timestep_resolution]
+    lookups: [carrier_in, carrier_out]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_ramping: 0.5
+  scenario: simple_supply,two_hours
+  lp_file: ramping_down.lp
+
+balance_demand_sink_use_equals:
+  description: "Test balance_demand constraint with sink_use_equals instead of sink_use_max"
+  register:
+    constraints: [balance_demand]
+    global_expressions: [flow_in_inc_eff]
+    variables: [area_use, flow_cap]
+  overrides:
+  scenario: simple_supply,two_hours
+  lp_file: balance_demand_sink_use_equals.lp
+
+balance_demand_sink_unit_per_cap:
+  description: "Test balance_demand constraint with sink_unit=per_cap"
+  register:
+    constraints: [balance_demand]
+    global_expressions: [flow_in_inc_eff]
+    variables: [area_use, flow_cap]
+  overrides:
+    techs.test_demand_elec.sink_unit: per_cap
+    nodes.a.techs.test_demand_elec.sink_use_max: 0.5
+  scenario: simple_supply,two_hours
+  lp_file: balance_demand_sink_unit_per_cap.lp
+
+balance_demand_sink_unit_per_area:
+  description: "Test balance_demand constraint with sink_unit=per_area"
+  register:
+    constraints: [balance_demand]
+    global_expressions: [flow_in_inc_eff]
+    variables: [area_use, flow_cap]
+  overrides:
+    techs.test_demand_elec.sink_unit: per_area
+    nodes.a.techs.test_demand_elec.sink_use_max: 2.0
+    nodes.a.techs.test_demand_elec.area_use_max: 50
+  scenario: simple_supply,two_hours
+  lp_file: balance_demand_sink_unit_per_area.lp
+
+source_availability_supply_source_use_equals:
+  description: "Test source_availability_supply with source_use_equals instead of source_use_max"
+  register:
+    constraints: [source_availability_supply]
+    variables: [source_use, area_use, flow_cap]
+  overrides:
+    nodes.a.techs.test_supply_plus.source_use_equals: 5
+  scenario: simple_supply_plus,resample_two_days
+  lp_file: source_availability_supply_source_use_equals.lp
+
+source_availability_supply_source_unit_per_cap:
+  description: "Test source_availability_supply with source_unit=per_cap"
+  register:
+    constraints: [source_availability_supply]
+    variables: [source_use, area_use, flow_cap]
+  overrides:
+    techs.test_supply_plus.source_unit: per_cap
+    nodes.a.techs.test_supply_plus.source_use_max: 0.8
+  scenario: simple_supply_plus,resample_two_days
+  lp_file: source_availability_supply_source_unit_per_cap.lp
+
+source_availability_supply_source_unit_per_area:
+  description: "Test source_availability_supply with source_unit=per_area"
+  register:
+    constraints: [source_availability_supply]
+    variables: [source_use, area_use, flow_cap]
+  overrides:
+    techs.test_supply_plus.source_unit: per_area
+    nodes.a.techs.test_supply_plus.source_use_max: 1.5
+    nodes.a.techs.test_supply_plus.area_use_max: 100
+  scenario: simple_supply_plus,resample_two_days
+  lp_file: source_availability_supply_source_unit_per_area.lp
+
+ramping_carrier_in_only:
+  description: "Test ramping constraints with a tech that has carrier_in but not carrier_out"
+  register:
+    constraints: [ramping_up, ramping_down]
+    variables: [flow_out, flow_in, flow_cap]
+  overrides:
+    nodes.a.techs.test_conversion.flow_ramping: 0.5
+  scenario: simple_conversion,two_hours
+  lp_file: ramping_carrier_in_only.lp
+
+ramping_carrier_in_and_out:
+  description: "Test ramping constraints with a tech that has both carrier_in and carrier_out"
+  register:
+    constraints: [ramping_up, ramping_down]
+    variables: [flow_out, flow_in, flow_cap]
+  overrides:
+    nodes.a.techs.test_conversion_plus.flow_ramping: 0.5
+  scenario: conversion_and_conversion_plus,two_hours
+  lp_file: ramping_carrier_in_and_out.lp
+
+balance_supply_with_storage_cyclic:
+  description: "Test balance_supply_with_storage constraint with cyclic_storage=True"
+  register:
+    constraints: [balance_supply_with_storage]
+    variables: [storage, source_use, storage_cap]
+    global_expressions: [flow_out_inc_eff]
+  overrides:
+    nodes.a.techs.test_supply_plus.cyclic_storage: true
+  scenario: simple_supply_plus,two_hours
+  lp_file: balance_supply_with_storage_cyclic.lp
+
+cost_operation_variable:
+  description: check that cost_operation_variable global expr is added correctly
+  register:
+    global_expressions: [cost_operation_variable]
+    parameters: [cost_flow_in, cost_flow_out, cost_source_use, timestep_weights]
+  overrides: &cost_operation_variable_overrides
+    techs.test_conversion_plus.cost_flow_out:
+      data: [1, 2]
+      index: [["electricity", "monetary"], ["heat", "monetary"]]
+      dims: ["carriers", "costs"]
+    techs.test_conversion_plus.cost_flow_in:
+      data: 4
+      index: monetary
+      dims: costs
+    techs.simple_supply.cost_source_use: 10
+  scenario: conversion_and_conversion_plus,var_costs,two_hours
+  lp_file: cost_operation_variable.lp
+  add_objective: true
+
+cost_operation_variable_with_export:
+  description: check that cost_operation_variable global expr is added correctly when including an export carrier
+  register:
+    global_expressions: [cost_operation_variable]
+    parameters: [cost_export, export_min, export_max]
+  overrides:
+    <<: *cost_operation_variable_overrides
+    techs.test_conversion_plus:
+      carrier_export: "heat"
+      cost_export:
+         data: 3
+         index: [["heat", "monetary"]]
+         dims: ["carriers", "costs"]
+    techs.test_supply_elec:
+      carrier_export: "electricity"
+      cost_export:
+         data: 5
+         index: "monetary"
+         dims: "costs"
+  scenario: conversion_and_conversion_plus,var_costs,two_hours
+  lp_file: cost_operation_variable_with_export.lp
+  add_objective: true
+
+cost_investment_flow_cap:
+  description: "Test cost_investment_flow_cap global expression"
+  register:
+    global_expressions: [cost_investment_flow_cap]
+    variables: [flow_cap]
+    parameters: [flow_cap_min, flow_cap_max, cost_flow_cap_per_distance, cost_flow_cap, distance]
+  overrides:
+    techs.test_link_a_b_elec.cost_flow_cap:
+      data: 10
+      index: "monetary"
+      dims: "costs"
+    techs.test_link_a_b_elec.cost_flow_cap_per_distance: 5
+    techs.test_supply_elec.cost_flow_cap: 4
+  scenario: simple_conversion,two_hours
+  lp_file: cost_investment_flow_cap.lp
+  add_objective: true
+
+cost_investment_storage_cap:
+  description: "Test cost_investment_storage_cap global expression"
+  register:
+    global_expressions: [cost_investment_storage_cap]
+    variables: [storage_cap]
+    parameters: [storage_cap_min, storage_cap_max]
+  overrides:
+    techs.test_storage.cost_storage_cap:
+      data: 50
+      index: "monetary"
+      dims: "costs"
+  scenario: simple_storage,two_hours
+  lp_file: cost_investment_storage_cap.lp
+  add_objective: true
+
+cost_investment_source_cap:
+  description: "Test cost_investment_source_cap global expression"
+  register:
+    global_expressions: [cost_investment_source_cap]
+    variables: [source_cap]
+    parameters: [source_cap_min, source_cap_max]
+  overrides:
+    techs.test_supply_plus.cost_source_cap:
+      data: 30
+      index: "monetary"
+      dims: "costs"
+  scenario: simple_supply_plus,two_hours
+  lp_file: cost_investment_source_cap.lp
+  add_objective: true
+
+cost_investment_area_use:
+  description: "Test cost_investment_area_use global expression"
+  register:
+    global_expressions: [cost_investment_area_use]
+    variables: [area_use]
+    parameters: [area_use_min, area_use_max, cost_area_use]
+  overrides:
+    techs.test_supply_elec.area_use_per_flow_cap: 2.0
+    techs.test_supply_elec.cost_area_use:
+      data: 100
+      index: "monetary"
+      dims: "costs"
+  scenario: simple_supply,two_hours
+  lp_file: cost_investment_area_use.lp
+  add_objective: true
+
+cost_investment:
+  description: "Test cost_investment global expression"
+  register:
+    global_expressions: [cost_investment]
+    variables: [flow_cap, storage_cap, source_cap, area_use]
+    parameters: [flow_cap_min, flow_cap_max, storage_cap_min, storage_cap_max, source_cap_min, source_cap_max, area_use_min, area_use_max, cost_source_cap, cost_storage_cap, cost_area_use]
+  overrides:
+    techs.test_supply_plus.cost_flow_cap:
+      data: 10
+      index: "monetary"
+      dims: "costs"
+    techs.test_supply_plus.cost_storage_cap: 50
+    techs.test_supply_plus.cost_source_cap: 30
+    techs.test_supply_plus.area_use_per_flow_cap: 1.0
+    techs.test_supply_plus.cost_area_use: 20
+  scenario: simple_supply_plus,two_hours
+  lp_file: cost_investment.lp
+  add_objective: true
+
+cost_investment_annualised:
+  description: "Test cost_investment_annualised global expression"
+  register:
+    global_expressions: [cost_investment_annualised]
+    variables: [flow_cap]
+    parameters: [lifetime, cost_interest_rate]
+  overrides:
+    techs.test_supply_elec.cost_flow_cap:
+      data: 10
+      index: "monetary"
+      dims: "costs"
+    techs.test_supply_elec.lifetime: 25
+    techs.test_supply_elec.cost_interest_rate: 0.1
+  scenario: simple_supply,two_hours
+  lp_file: cost_investment_annualised.lp
+  add_objective: true
+
+cost_investment_annualised_depreciation_rate:
+  description: "Test cost_investment_annualised global expression with depreciation_rate defined"
+  register:
+    global_expressions: [cost_investment_annualised]
+    variables: [flow_cap]
+    parameters: [cost_depreciation_rate]
+  overrides:
+    techs.test_supply_elec.cost_flow_cap:
+      data: 10
+      index: "monetary"
+      dims: "costs"
+    techs.test_supply_elec.cost_depreciation_rate: 0.2
+  scenario: simple_supply,two_hours
+  lp_file: cost_investment_annualised_depreciation_rate.lp
+  add_objective: true
+
+cost_investment_annualised_no_interest_rate:
+  description: "Test cost_investment_annualised global expression with no interest rate defined"
+  register:
+    global_expressions: [cost_investment_annualised]
+    variables: [flow_cap]
+  overrides:
+    techs.test_supply_elec.cost_flow_cap:
+      data: 10
+      index: "monetary"
+      dims: "costs"
+    techs.test_supply_elec.lifetime: 25
+  scenario: simple_supply,two_hours
+  lp_file: cost_investment_annualised_no_interest_rate.lp
+  add_objective: true
+
+cost_operation_fixed:
+  description: "Test cost_operation_fixed global expression"
+  register:
+    global_expressions: [cost_operation_fixed]
+    variables: [flow_cap]
+    parameters: [cost_om_annual, cost_om_annual_investment_fraction]
+  overrides:
+    techs.test_supply_elec.cost_om_annual:
+      data: 50
+      index: "monetary"
+      dims: "costs"
+    techs.test_supply_elec.cost_om_annual_investment_fraction: 0.1
+  scenario: simple_supply,two_hours
+  lp_file: cost_operation_fixed.lp
+  add_objective: true
+
+cost:
+  description: "Test cost global expression"
+  register:
+    global_expressions: [cost]
+    variables: [flow_cap]
+    parameters: [cost_om_annual, cost_flow_out, lifetime]
+  overrides:
+    techs.test_supply_elec.cost_flow_cap:
+      data: 10
+      index: "monetary"
+      dims: "costs"
+    techs.test_supply_elec.cost_om_annual: 50
+    techs.test_supply_elec.cost_flow_out: 0.5
+    techs.test_supply_elec.lifetime: 25
+  scenario: simple_supply,two_hours
+  lp_file: cost.lp
+  add_objective: true

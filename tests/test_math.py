@@ -2,7 +2,6 @@ import importlib
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-import numpy as np
 import pytest
 from pyomo.repn.tests import lp_diff
 
@@ -20,6 +19,18 @@ MATH_TO_KEEP = [
     "parameters",
     "lookups",
 ]
+MATH_TO_CHECK = [
+    "variables",
+    "global_expressions",
+    "constraints",
+    "objectives",
+    "parameters",
+    "lookups",
+]
+TEST_CONFIGS = {
+    k: io.read_rich_yaml(Path(__file__).parent / "common" / f"{k}_math_tests.yaml")
+    for k in ["base", "milp", "storage_inter_cluster"]
+}
 
 
 # FIXME: ideally, this should be taken from Model.math after init.
@@ -114,13 +125,72 @@ class InternalMathFiles(ABC):
         }
 
     @pytest.mark.order(-1)
-    @pytest.mark.xfail(reason="math tests are not fully defined yet")
     def test_all_math_registered(self):
         """If all the math has been evaluated, `file_math` should be empty."""
-        file_math = model_math._load_internal_math(self.FILENAME)
+        all_math = AttrDict()
+        for math_file in self.EXTRA_MATH or ["base"]:
+            all_math.union(
+                io.read_rich_yaml(
+                    (CALLIOPE_DIR / "math" / math_file).with_suffix(".yaml")
+                ),
+                allow_override=True,
+            )
+
+        for groups_to_ignore in set(all_math.keys()).difference(MATH_TO_CHECK):
+            all_math.del_key(groups_to_ignore)
         for key in self.TEST_REGISTER:
-            file_math.del_key(key)
-        assert not file_math
+            if all_math.get_key(key, None) is not None:
+                all_math.del_key(key)
+        assert not any(all_math.values())
+
+    @abstractmethod
+    @pytest.fixture(scope="class", params=[])
+    def config(self, request):
+        pass
+
+    def test_math(self, full_math, lp_temp_path, barebones_config, config):
+        """Test math using YAML configuration."""
+        # Build custom math from config
+        custom_math = {}
+        for component_type, components in config["register"].items():
+            custom_math[component_type] = {
+                comp: full_math[component_type][comp] for comp in components
+            }
+
+        # For global_expressions tests, we need an objective to use them
+        objective = "dummy_obj"
+        if config.get("add_objective"):
+            objective = "test_obj"
+            # Create custom objective that uses the global expression
+            if "global_expressions" in config["register"]:
+                expr_name = "+".join(config["register"]["global_expressions"])
+                expr = (
+                    f"sum({expr_name}, over=[nodes, techs, costs, carriers, timesteps])"
+                )
+                custom_math["objectives"] = {
+                    objective: {
+                        "equations": [{"expression": expr}],
+                        "sense": "minimise",
+                    }
+                }
+
+        # Build model
+        model = util.build_test_model(
+            config["overrides"],
+            config["scenario"],
+            math_dict=custom_math,
+            **barebones_config,
+        )
+
+        # Generate and compare LP file
+        lp_file = lp_temp_path / config["lp_file"]
+        build_lp_file(model, lp_file, objective)
+
+        for component_type, component_list in config["register"].items():
+            for component_name in component_list:
+                self.TEST_REGISTER.add(f"{component_type}.{component_name}")
+
+        compare_lps_new(lp_file)
 
 
 class TestBaseMath(InternalMathFiles):
@@ -128,163 +198,50 @@ class TestBaseMath(InternalMathFiles):
     TEST_REGISTER = set()
     EXTRA_MATH = []
 
-    def test_storage_max(self, full_math, lp_temp_path, barebones_config):
-        self.TEST_REGISTER.add("constraints.storage_max")
-        custom_math = {
-            "constraints": {"storage_max": full_math.constraints["storage_max"]}
-        }
-        model = util.build_test_model(
-            scenario="simple_storage,two_hours,investment_costs",
-            math_dict=custom_math,
-            **barebones_config,
-        )
-        lp_file = lp_temp_path / "storage_max.lp"
-        build_lp_file(model, lp_file)
-        compare_lps_new(lp_file)
+    @pytest.fixture(scope="class", params=TEST_CONFIGS[FILENAME].keys())
+    def config(self, request):
+        return TEST_CONFIGS[self.FILENAME][request.param]
 
-    def test_flow_out_max(self, full_math, lp_temp_path, barebones_config):
-        self.TEST_REGISTER.add("constraints.flow_out_max")
+    def test_min_cost_optimisation_feasible(
+        self, full_math, lp_temp_path, barebones_config
+    ):
+        """Test the default min_cost_optimisation objective."""
         custom_math = {
-            "constraints": {"flow_out_max": full_math.constraints["flow_out_max"]}
+            "objectives": {
+                "min_cost_optimisation": full_math.objectives["min_cost_optimisation"]
+            }
         }
         model = util.build_test_model(
-            {},
+            {"config.build.ensure_feasibility": True},
             "simple_supply,two_hours,investment_costs",
             math_dict=custom_math,
             **barebones_config,
         )
-
-        lp_file = lp_temp_path / "flow_out_max.lp"
-        build_lp_file(model, lp_file)
+        lp_file = lp_temp_path / "min_cost_optimisation.lp"
+        build_lp_file(model, lp_file, objective="min_cost_optimisation")
+        self.TEST_REGISTER.add("objectives.min_cost_optimisation")
+        self.TEST_REGISTER.add("parameters.bigM")
         compare_lps_new(lp_file)
 
-    def test_balance_conversion(self, full_math, lp_temp_path, barebones_config):
-        self.TEST_REGISTER.add("constraints.balance_conversion")
+    def test_min_cost_optimisation_weighted(
+        self, full_math, lp_temp_path, barebones_config
+    ):
+        """Test the default min_cost_optimisation objective."""
         custom_math = {
-            "constraints": {
-                "balance_conversion": full_math.constraints["balance_conversion"]
+            "objectives": {
+                "min_cost_optimisation": full_math.objectives["min_cost_optimisation"]
             }
-        }
-        model = util.build_test_model(
-            scenario="simple_conversion,two_hours,investment_costs",
-            math_dict=custom_math,
-            **barebones_config,
-        )
-        lp_file = lp_temp_path / "balance_conversion.lp"
-        build_lp_file(model, lp_file)
-        compare_lps_new(lp_file)
-
-    def test_source_max(self, full_math, lp_temp_path, barebones_config):
-        self.TEST_REGISTER.add("constraints.source_max")
-        custom_math = {
-            "constraints": {"my_constraint": full_math.constraints["source_max"]}
         }
         model = util.build_test_model(
             {},
-            "simple_supply_plus,resample_two_days,investment_costs",
+            "simple_supply,two_hours,weighted_costs",
             math_dict=custom_math,
             **barebones_config,
         )
-        lp_file = lp_temp_path / "source_max.lp"
-        build_lp_file(model, lp_file)
-        compare_lps_new(lp_file)
-
-    def test_balance_transmission(self, full_math, lp_temp_path, barebones_config):
-        """Test with the electricity transmission tech being one way only, while the heat transmission tech is the default two-way."""
-        self.TEST_REGISTER.add("constraints.balance_transmission")
-        custom_math = {
-            "constraints": {
-                "my_constraint": full_math.constraints["balance_transmission"]
-            }
-        }
-        model = util.build_test_model(
-            {"techs.test_link_a_b_elec.one_way": True},
-            "simple_conversion,two_hours",
-            math_dict=custom_math,
-            **barebones_config,
-        )
-        lp_file = lp_temp_path / "balance_transmission.lp"
-        build_lp_file(model, lp_file)
-        compare_lps_new(lp_file)
-
-    def test_balance_storage(self, full_math, lp_temp_path, barebones_config):
-        """Test balance storage with one tech having and one tech not having per-tech cyclic storage."""
-        self.TEST_REGISTER.add("constraints.balance_storage")
-        custom_math = {
-            "constraints": {"my_constraint": full_math.constraints["balance_storage"]}
-        }
-        model = util.build_test_model(
-            {
-                "nodes.a.techs.test_storage.cyclic_storage": True,
-                "nodes.b.techs.test_storage.cyclic_storage": False,
-            },
-            "simple_storage,two_hours",
-            math_dict=custom_math,
-            **barebones_config,
-        )
-        lp_file = lp_temp_path / "balance_storage.lp"
-        build_lp_file(model, lp_file)
-        compare_lps_new(lp_file)
-
-    @pytest.mark.parametrize("with_export", [True, False])
-    def test_cost_operation_variable(self, lp_temp_path, barebones_config, with_export):
-        """Test variable costs in the objective."""
-        self.TEST_REGISTER.add("global_expressions.cost_operation_variable")
-        override = {
-            "techs.test_conversion_plus.cost_flow_out": {
-                "data": [1, 2],
-                "index": [["electricity", "monetary"], ["heat", "monetary"]],
-                "dims": ["carriers", "costs"],
-            },
-            "techs.test_conversion_plus.cost_flow_in": {
-                "data": 4,
-                "index": "monetary",
-                "dims": "costs",
-            },
-        }
-        if with_export:
-            override.update(
-                {
-                    "techs.test_conversion_plus": {
-                        "carrier_export": "heat",
-                        "cost_export": {
-                            "data": 3,
-                            "index": [["heat", "monetary"]],
-                            "dims": ["carriers", "costs"],
-                        },
-                    },
-                    "techs.test_supply_elec": {
-                        "carrier_export": "electricity",
-                        "cost_export": {
-                            "data": 5,
-                            "index": "monetary",
-                            "dims": "costs",
-                        },
-                    },
-                }
-            )
-        custom_math = {
-            # need the expression defined in a constraint/objective for it to appear in the LP file bounds
-            "objectives": {
-                "foo": {
-                    "equations": [
-                        {
-                            "expression": "sum(cost_operation_variable, over=[nodes, techs, costs, timesteps])"
-                        }
-                    ],
-                    "sense": "minimise",
-                }
-            }
-        }
-        model = util.build_test_model(
-            override,
-            "conversion_and_conversion_plus,var_costs,two_hours",
-            math_dict=custom_math,
-            **barebones_config,
-        )
-        suffix = "_with_export" if with_export else ""
-        lp_file = lp_temp_path / f"cost_operation_variable{suffix}.lp"
-        build_lp_file(model, lp_file, objective="foo")
+        lp_file = lp_temp_path / "min_cost_optimisation_weighted.lp"
+        build_lp_file(model, lp_file, objective="min_cost_optimisation")
+        self.TEST_REGISTER.add("objectives.min_cost_optimisation")
+        self.TEST_REGISTER.add("parameters.objective_cost_weights")
         compare_lps_new(lp_file)
 
 
@@ -293,59 +250,19 @@ class TestMILPMath(InternalMathFiles):
     TEST_REGISTER = set()
     EXTRA_MATH = [FILENAME]
 
-    @pytest.mark.parametrize(
-        ("variable", "constraint", "overrides"),
-        [
-            ("flow_cap", "flow_capacity_minimum", {}),
-            (
-                "storage_cap",
-                "storage_capacity_minimum",
-                {"techs.test_supply_elec.include_storage": True},
-            ),
-            ("area_use", "area_use_minimum", {}),
-            ("source_cap", "source_capacity_minimum", {}),
-        ],
-    )
-    def test_capacity_variables_and_bounds(
-        self, full_math, lp_temp_path, barebones_config, variable, constraint, overrides
-    ):
-        """Check that variables are initiated with the appropriate bounds,
-        and that the lower bound is updated from zero via a separate constraint if required.
-        """
-        constraint_full = f"constraints.{constraint}"
-        self.TEST_REGISTER.add(f"variables.{variable}")
-        self.TEST_REGISTER.add(constraint_full)
-        # Custom objective ensures that all variables appear in the LP file.
-        # Variables not found in either an objective or constraint will never appear in the LP.
-        sum_in_objective = "[nodes]" if variable != "flow_cap" else "[nodes, carriers]"
-        custom_objective = {
-            "objectives.foo": {
-                "equations": [
-                    {
-                        "expression": f"sum({variable}[techs=test_supply_elec], over={sum_in_objective})"
-                    }
-                ],
-                "sense": "minimise",
-            }
-        }
-        custom_math = AttrDict(
-            {constraint_full: full_math.constraints[constraint], **custom_objective}
-        )
-        model = util.build_test_model(
-            {
-                f"nodes.b.techs.test_supply_elec.{variable}_max": 100,
-                f"nodes.a.techs.test_supply_elec.{variable}_min": 1,
-                f"nodes.a.techs.test_supply_elec.{variable}_max": np.nan,
-                **overrides,
-            },
-            "simple_supply,two_hours,investment_costs",
-            math_dict=custom_math,
-            **barebones_config,
-        )
+    @pytest.fixture(scope="class", params=TEST_CONFIGS[FILENAME].keys())
+    def config(self, request):
+        return TEST_CONFIGS[self.FILENAME][request.param]
 
-        lp_file = lp_temp_path / (variable + ".lp")
-        build_lp_file(model, lp_file, objective="foo")
-        compare_lps_new(lp_file)
+
+class TestInterClusterStorageMath(InternalMathFiles):
+    FILENAME = "storage_inter_cluster"
+    TEST_REGISTER = set()
+    EXTRA_MATH = [FILENAME]
+
+    @pytest.fixture(scope="class", params=TEST_CONFIGS[FILENAME].keys())
+    def config(self, request):
+        return TEST_CONFIGS[self.FILENAME][request.param]
 
 
 class CustomMathExamples(ABC):
@@ -405,17 +322,12 @@ class CustomMathExamples(ABC):
         ):
             custom_math = {}
             if components is not None:
-                for component_group, component_list in components.items():
-                    for component in component_list:
-                        self.TEST_REGISTER.add(f"{component_group}.{component}")
-
                 custom_math = {
                     k: {name: full_math[k][name] for name in v}
                     for k, v in components.items()
                     if k not in MATH_TO_KEEP
                 }
             else:
-                self.TEST_REGISTER.add(f"constraints.{filename}")
                 custom_math = {
                     "constraints": {filename: full_math["constraints"][filename]}
                 }
@@ -442,6 +354,16 @@ class CustomMathExamples(ABC):
             )
             lp_file = lp_temp_path / f"{filename}.lp"
             build_lp_file(model, lp_file, objective)
+
+            # Register components explicitly
+            if components is not None:
+                for component_type in MATH_TO_CHECK:
+                    if component_type in components:
+                        for component_name in components[component_type]:
+                            self.TEST_REGISTER.add(f"{component_type}.{component_name}")
+            else:
+                self.TEST_REGISTER.add(f"constraints.{filename}")
+
             compare_lps_new(lp_file)
 
         return _build_and_compare
@@ -449,10 +371,12 @@ class CustomMathExamples(ABC):
     @pytest.mark.order(-1)
     def test_all_math_registered(self, custom_math):
         """After running all the previous tests in the class, the register should be full, i.e. all math has been tested"""
+        for groups_to_ignore in set(custom_math.keys()).difference(MATH_TO_CHECK):
+            custom_math.del_key(groups_to_ignore)
         for key in self.TEST_REGISTER:
-            if custom_math.get_key(key, default=None) is not None:
+            if custom_math.get_key(key, None) is not None:
                 custom_math.del_key(key)
-        assert not custom_math
+        assert not any(custom_math.values())
 
 
 @pytest.mark.filterwarnings(
