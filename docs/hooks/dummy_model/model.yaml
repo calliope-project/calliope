@@ -24,6 +24,7 @@ overrides:
       spores_slack: 0.1
 
 config.init.name: base
+config.build.ensure_feasibility: true
 
 nodes:
   A.techs: { demand_tech, conversion_tech, supply_tech, storage_tech }

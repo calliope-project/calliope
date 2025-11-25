@@ -1416,8 +1416,8 @@ checks:
   no_storage_discharge_depth_when_clustering:
     where: storage_discharge_depth AND lookup_cluster_last_timestep
     message: >-
-      storage_discharge_depth is currently not allowed when time clustering is active.
-    errors: raise
+      storage_discharge_depth will currently have no effect when time clustering is active.
+    errors: warn
 
   cyclic_storage_needs_inter_cluster:
     where: cyclic_storage AND lookup_cluster_last_timestep

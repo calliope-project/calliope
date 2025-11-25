@@ -200,36 +200,34 @@ def generate_custom_math_documentation(
     full_del = []
     expr_del = []
     for component_group, component_group_dict in model.math.build.model_dump().items():
-        if component_group == "checks":
+        if component_group in ["checks", "dimensions", "parameters", "lookups"]:
             continue
         for name, component_dict in component_group_dict.items():
-            if name in base_documentation.math[component_group]:
+            if name in base_documentation.math[component_group]._active:
                 if not component_dict.get("active", True):
-                    expr_del.append(name)
+                    expr_del.append((component_group, name))
                     component_dict["description"] = "|REMOVED|"
                     component_dict["active"] = True
-                elif (
-                    base_documentation.math[component_group].get(name, {})
-                    != component_dict
-                ):
+                elif base_documentation.math.find(name).model_dump() != component_dict:
                     _add_to_description(component_dict, "|UPDATED|")
                 else:
-                    full_del.append(name)
+                    full_del.append((component_group, name))
             else:
                 _add_to_description(component_dict, "|NEW|")
-
+        model.math = model.math.update(
+            {f"build.{component_group}": component_group_dict}
+        )
     math_documentation = MathDocumentation(model)
-    for key in expr_del:
-        math_documentation.backend._dataset[key].attrs["math_string"] = ""
-    for key in full_del:
+
+    for grp, key in expr_del:
+        math_documentation.backend.math_strings[grp][key] = ""
+    for grp, key in full_del:
         del math_documentation.backend._dataset[key]
     for var in math_documentation.backend._dataset.values():
         var.attrs["references"] = var.attrs["references"].intersection(
             math_documentation.backend._dataset.keys()
         )
         var.attrs["references"] = var.attrs["references"].difference(expr_del)
-
-    logger.info(math_documentation.backend._dataset["carrier_in"].attrs["references"])
 
     return math_documentation
 
