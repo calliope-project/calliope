@@ -5,9 +5,12 @@ from __future__ import annotations
 import logging
 import re
 import textwrap
+from collections import defaultdict
+from collections.abc import Callable
 from typing import Literal
 
 import jinja2
+import numpy as np
 import xarray as xr
 
 from calliope.backend import backend_model, parsing
@@ -77,10 +80,18 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     Decision Variables
     ------------------
+    {% elif component_type == "postprocessed" %}
+
+    Postprocessed Statistics
+    -------------------------
     {% elif component_type == "parameters" %}
 
     Parameters
     ----------
+    {% elif component_type == "lookups" %}
+
+    Lookup Arrays
+    -------------
     {% endif %}
     {% for equation in equations %}
 
@@ -106,15 +117,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     * {{ ref }}
     {% endfor %}
     {% endif %}
-    {% if equation.unit != "" %}
+    {% if 'unit' in equation and equation.unit != "" %}
 
     **Unit**: {{ equation.unit }}
     {% endif %}
-    {% if equation.default is not none %}
+    {% if 'default' in equation and equation.default is not none %}
 
     **Default**: {{ equation.default }}
     {% endif %}
-    {% if equation.dtype is not none %}
+    {% if 'dtype' in equation and equation.dtype is not none %}
 
     **Type**: {{ equation.dtype }}
     {% endif %}
@@ -157,8 +168,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     \section{Where}
     {% elif component_type == "variables" %}
     \section{Decision Variables}
+    {% elif component_type == "postprocessed" %}
+    \section{Postprocessed Statistics}
     {% elif component_type == "parameters" %}
     \section{Parameters}
+    {% elif component_type == "lookups" %}
+    \section{Lookup arrays}
     {% endif %}
     {% for equation in equations %}
 
@@ -189,11 +204,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     \textbf{Unit}: {{ equation.unit }}
     {% endif %}
-    {% if equation.default is not none %}
+    {% if 'default' in equation and equation.default is not none %}
 
     \textbf{Default}: {{ equation.default }}
     {% endif %}
-    {% if equation.dtype is not none %}
+    {% if 'dtype' in equation and equation.dtype is not none %}
 
     \textbf{Type}: {{ equation.dtype }}
     {% endif %}
@@ -226,9 +241,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% elif component_type == "variables" %}
 
     ## Decision Variables
+    {% elif component_type == "postprocessed" %}
+
+    ## Postprocessed Statistics
     {% elif component_type == "parameters" %}
 
     ## Parameters
+    {% elif component_type == "lookups" %}
+
+    ## Lookup Arrays
     {% endif %}
     {% for equation in equations %}
 
@@ -261,15 +282,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {{ "    " if mkdocs_features else "" }}* [{{ ref }}](#{{ ref }})
     {% endfor %}
     {% endif %}
-    {% if equation.unit != "" %}
+    {% if 'unit' in equation and equation.unit != "" %}
 
     **Unit**: {{ equation.unit }}
     {% endif %}
-    {% if equation.default is not none %}
+    {% if 'default' in equation and equation.default is not none %}
 
     **Default**: {{ equation.default }}
     {% endif %}
-    {% if equation.dtype is not none %}
+    {% if 'dtype' in equation and equation.dtype is not none %}
 
     **Type**: {{ equation.dtype }}
     {% endif %}
@@ -300,6 +321,14 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     )
     FORMAT_STRINGS = {"rst": RST_DOC, "tex": TEX_DOC, "md": MD_DOC}
 
+    OBJECTIVE_SENSE_DICT = {
+        "minimize": r"\min{}",
+        "maximize": r"\max{}",
+        "minimise": r"\min{}",
+        "maximise": r"\max{}",
+    }
+    VARIABLE_DOMAIN_DICT = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
+
     def __init__(
         self,
         inputs: xr.Dataset,
@@ -322,180 +351,192 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             raise ValueError(f"Invalid `include` option: {include}")
 
         self.include = include
+        self.math_strings: dict[str, dict] = defaultdict(lambda: defaultdict(str))
 
     def add_parameter(  # noqa: D102, override
         self, name: str, values: xr.DataArray, definition: math_schema.Parameter
     ) -> None:
-        attrs = definition.model_dump() | {
-            "math_repr": rf"\textit{{{name}}}" + self._dims_to_var_string(values)
-        }
-
-        self._add_to_dataset(name, values, "parameters", attrs)
-
-        if name not in self.math["parameters"]:
-            self.math = self.math.update(
-                {f"parameters.{name}": definition.model_dump()}
-            )
+        super().add_parameter(name, values, definition)
+        if not definition.active:
+            return
+        param_da = self.parameters[name]
+        param_da.attrs["math_repr"] = rf"\textit{{{name}}}" + self._dims_to_var_string(
+            values
+        )
 
     def add_lookup(  # noqa: D102, override
         self, name: str, values: xr.DataArray, definition: math_schema.Lookup
     ) -> None:
         super().add_lookup(name, values, definition)
-        self._dataset[name].attrs["math_repr"] = (
-            rf"\textit{{{name}}}" + self._dims_to_var_string(values)
+        if not definition.active:
+            return
+        lookup_da = self.lookups[name]
+        lookup_da.attrs["math_repr"] = rf"\textit{{{name}}}" + self._dims_to_var_string(
+            values
         )
 
     def add_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.Constraint
     ) -> None:
-        equation_strings: list = []
-
-        def _constraint_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> xr.DataArray:
-            self._add_latex_strings(where, element, equation_strings, references)
-            return where.where(where)
-
-        parsed_component = self._add_component(
-            name, definition, _constraint_setter, "constraints", break_early=False
-        )
-
-        self._generate_math_string(
-            parsed_component, self.constraints[name], equations=equation_strings
-        )
+        super().add_constraint(name, definition)
+        if not definition.active:
+            return
+        constraint_da = self.constraints[name]
+        self._generate_math_string("constraints", name, constraint_da)
 
     def add_piecewise_constraint(  # noqa: D102, override
         self, name: str, definition: math_schema.PiecewiseConstraint
     ) -> None:
-        non_where_refs: set = set()
+        references: set[str] = set()
+        constraint_def_with_breakpoints = definition.update(
+            {"foreach": definition.foreach + ["breakpoints"]}
+        )
 
-        def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
-            return where.where(where)
+        parsed_component = parsing.ParsedBackendComponent(
+            "piecewise_constraints",
+            name,
+            constraint_def_with_breakpoints,
+            self.math.parsing_components,
+        )
+        component_da = self._eval_top_level_where(
+            self._dataset, references, parsed_component
+        )
 
         math_parts = {}
         for val in ["x_expression", "y_expression", "x_values", "y_values"]:
             val_name = definition[val]
+            dummy_expression_dict = {"equations": [{"expression": val_name}]}
             parsed_val = parsing.ParsedBackendComponent(
                 "piecewise_constraints",
                 name,
-                math_schema.GlobalExpression.model_validate(
-                    {"equations": [{"expression": val_name}]}
-                ),
+                math_schema.GlobalExpression.model_validate(dummy_expression_dict),
                 self.math.parsing_components,
             )
             eq = parsed_val.parse_equations()
             math_parts[val] = eq[0].evaluate_expression(
-                self, return_type="math_string", references=non_where_refs
+                self.inputs,
+                self._dataset,
+                self.math,
+                return_type="math_string",
+                references=references,
             )
 
         equation = {
             "expression": rf"{math_parts['y_expression']}\mathord{{=}}{math_parts['y_values']}",
             "where": rf"{math_parts['x_expression']}\mathord{{=}}{math_parts['x_values']}",
         }
-
-        constraint_def_with_breakpoints = definition.update(
-            {"foreach": definition.foreach + ["breakpoints"]}
-        )
-
-        parsed_component = self._add_component(
+        self._add_to_dataset(
             name,
-            constraint_def_with_breakpoints,
-            _constraint_setter,
+            component_da,
             "piecewise_constraints",
-            break_early=False,
+            definition.model_dump(),
+            references=references,
         )
-        self._update_references(name, non_where_refs)
         self._generate_math_string(
-            parsed_component, self.piecewise_constraints[name], equations=[equation]
+            "piecewise_constraints",
+            name,
+            self.piecewise_constraints[name].assign_attrs(
+                {"equation_strings": [equation]}
+            ),
         )
 
     def add_global_expression(  # noqa: D102, override
         self, name: str, definition: math_schema.GlobalExpression
     ) -> None:
-        equation_strings: list = []
-
-        def _expression_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> xr.DataArray:
-            self._add_latex_strings(where, element, equation_strings, references)
-            return where.where(where)
-
-        parsed_component = self._add_component(
-            name,
-            definition,
-            _expression_setter,
-            "global_expressions",
-            break_early=False,
-        )
+        super().add_global_expression(name, definition)
+        if not definition.active:
+            return
         expr_da = self.global_expressions[name]
+
         expr_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
             expr_da
         )
-
-        self._generate_math_string(
-            parsed_component, expr_da, equations=equation_strings
-        )
+        self._generate_math_string("global_expressions", name, expr_da)
 
     def add_variable(  # noqa: D102, override
         self, name: str, definition: math_schema.Variable
     ) -> None:
-        domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
-        bound_refs: set = set()
-
-        def _variable_setter(where: xr.DataArray, references: set) -> xr.DataArray:
-            return where.where(where)
-
-        parsed_component = self._add_component(
-            name, definition, _variable_setter, "variables", break_early=False
-        )
+        super().add_variable(name, definition)
+        if name not in self.variables:
+            return
         var_da = self.variables[name]
+
         var_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
             var_da
         )
+        bound_refs: set = set()
 
-        domain = domain_dict[definition.domain]
+        domain = self.VARIABLE_DOMAIN_DICT[definition.domain]
         lb, ub = self._get_variable_bounds_string(name, definition.bounds, bound_refs)
         self._update_references(name, bound_refs.difference(name))
 
         self._generate_math_string(
-            parsed_component, var_da, equations=[lb, ub], sense=r"\in" + domain
+            "variables",
+            name,
+            var_da.assign_attrs(
+                {"equation_strings": [lb, ub], "sense_string": r"\in" + domain}
+            ),
         )
 
     def add_objective(  # noqa: D102, override
         self, name: str, definition: math_schema.Objective
     ) -> None:
-        sense_dict = {
-            "minimize": r"\min{}",
-            "maximize": r"\max{}",
-            "minimise": r"\min{}",
-            "maximise": r"\max{}",
-        }
-        equation_strings: list = []
+        super().add_objective(name, definition)
+        if not definition.active:
+            return
 
-        def _objective_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> None:
-            self._add_latex_strings(where, element, equation_strings, references)
-
-        parsed_component = self._add_component(
-            name, definition, _objective_setter, "objectives", break_early=False
-        )
+        obj_da = self.objectives[name]
 
         self._generate_math_string(
-            parsed_component,
-            self.objectives[name],
-            equations=equation_strings,
-            sense=sense_dict[definition.sense],
+            "objectives",
+            name,
+            obj_da.assign_attrs(
+                {"sense_string": self.OBJECTIVE_SENSE_DICT[definition.sense]}
+            ),
         )
+
+    def _add_postprocessed(  # noqa: D102, override
+        self,
+        name: str,
+        definition: math_schema.PostprocessedExpression,
+        dataset: xr.Dataset,
+    ) -> xr.DataArray:
+        expr_da = super()._add_postprocessed(name, definition, dataset)
+        if not definition.active:
+            return expr_da
+
+        self._add_to_dataset(
+            name,
+            expr_da,
+            "postprocessed",
+            definition.model_dump(),
+            references=expr_da.attrs["references"],
+        )
+        expr_da = self.postprocessed[name]
+        expr_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
+            expr_da
+        )
+        self._generate_math_string("postprocessed", name, expr_da)
+        return expr_da
+
+    @property
+    def postprocessed(self):
+        """Slice of backend dataset to show only built postprocessed expressions."""
+        return self._dataset.filter_by_attrs(obj_type="postprocessed")
 
     def set_objective(self, name: str):  # noqa: D102, override
         self.objective = name
         self.log("objectives", name, "Objective activated.", level="info")
 
-    def _create_obj_list(  # noqa: D102, override
-        self, key: str, component_type: backend_model.ALL_COMPONENTS_T
-    ) -> None:
-        return None
+    def _add_component_passthrough(
+        self, name: str, where: xr.DataArray, *args, **kwargs
+    ):
+        """Generic passthrough for _add_* methods that just return where.where(where)."""
+        return where.where(where)
+
+    _add_variable = _add_global_expression = _add_constraint = _add_objective = (
+        _add_component_passthrough
+    )
 
     def delete_component(  # noqa: D102, override
         self, key: str, component_type: backend_model.ALL_COMPONENTS_T
@@ -536,22 +577,19 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         components = {
             objtype: [
                 {
-                    "expression": da.attrs.get("math_string", ""),
+                    "expression": math_string,
                     "name": name,
-                    "description": da.attrs.get("description", ""),
                     "used_in": sorted(
                         list(da.attrs.get("references", set()) - set([name]))
                     ),
                     "uses": sorted(list(uses[name] - set([name]))),
-                    "default": da.attrs.get("default", None),
-                    "dtype": da.attrs.get("dtype", None),
-                    "unit": da.attrs.get("unit", ""),
                     "yaml_snippet": to_yaml(
                         self.math[objtype][name].model_dump(exclude_defaults=True)
                     ),
+                    **self.math[objtype][name].model_dump(),
                 }
                 for name, da in sorted(getattr(self, objtype).data_vars.items())
-                if ("math_string" in da.attrs)
+                if (math_string := self.math_strings[objtype][name]) != ""
                 or (objtype in ["parameters", "lookups"] and da.attrs["references"])
             ]
             for objtype in [
@@ -560,6 +598,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 "piecewise_constraints",
                 "global_expressions",
                 "variables",
+                "postprocessed",
                 "parameters",
                 "lookups",
             ]
@@ -574,52 +613,105 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 objective["name"] += " (active)"
             else:
                 objective["name"] += " (inactive)"
-
         return self._render(
             doc_template, mkdocs_features=mkdocs_features, components=components
         )
 
-    def _add_latex_strings(
+    def _eval_top_level_where(
         self,
-        where: xr.DataArray,
-        element: parsing.ParsedBackendEquation,
-        equation_strings: list,
-        references: set,
+        dataset: xr.Dataset,
+        references: set[str],
+        parsed_component: parsing.ParsedBackendComponent,
+    ) -> xr.DataArray:
+        top_level_where = parsed_component.generate_top_level_where_array(
+            self.inputs,
+            dataset,
+            self.math,
+            self.config,
+            align_to_foreach_sets=True,
+            break_early=False,
+            references=references,
+        )
+        top_level_where_latex = parsed_component.evaluate_where(
+            self.inputs, dataset, self.math, self.config, return_type="math_string"
+        )
+        top_level_where.attrs["where_string"] = top_level_where_latex
+        return top_level_where
+
+    def _eval_equations(
+        self,
+        name: str,
+        parsed_component: parsing.ParsedBackendComponent,
+        dataset: xr.Dataset,
+        top_level_where: xr.DataArray,
+        component_setter: Callable,
+        references: set[str],
     ):
-        expr = element.evaluate_expression(
-            self, return_type="math_string", references=references
+        component_da = (
+            xr.DataArray(attrs=top_level_where.attrs)
+            .where(parsed_component.drop_dims_not_in_foreach(top_level_where))
+            .astype(np.dtype("O"))
         )
+        equation_strings = []
+        equations = parsed_component.parse_equations()
+        for equation in equations:
+            expr = equation.evaluate_expression(
+                self.inputs,
+                dataset,
+                self.math,
+                return_type="math_string",
+                references=references,
+            )
 
-        where_latex = element.evaluate_where(
-            self, return_type="math_string", references=references
-        )
+            where = equation.evaluate_where(
+                self.inputs,
+                dataset,
+                self.math,
+                self.config,
+                initial_where=top_level_where,
+                references=references,
+            )
+            where_latex = equation.evaluate_where(
+                self.inputs,
+                dataset,
+                self.math,
+                self.config,
+                return_type="math_string",
+                references=references,
+            )
+            if self.include == "all" or (self.include == "valid" and where.any()):
+                equation_strings.append({"expression": expr, "where": where_latex})
+                component_da = component_da.fillna(where.where(where))
 
-        if self.include == "all" or (self.include == "valid" and where.any()):
-            equation_strings.append({"expression": expr, "where": where_latex})
+        component_da.attrs["equation_strings"] = equation_strings
+        return component_da
 
-    def _generate_math_string(
-        self,
-        parsed_component: parsing.ParsedBackendComponent | None,
-        where_array: xr.DataArray,
-        equations: list[dict[str, str]] | None = None,
-        sense: str | None = None,
-        where: str | None = None,
-        sets: list[str] | None = None,
-    ) -> None:
-        if parsed_component is not None:
-            where = parsed_component.evaluate_where(self, return_type="math_string")
-            sets = parsed_component.sets
+    def _generate_math_string(self, group: str, name: str, da: xr.DataArray) -> None:
+        """If the component meets the conditions to be included, create a math string for it.
+
+        Args:
+            group (str): The component group (e.g., "constraints", "variables", etc.) the DataArray belongs to.
+            name (str): The name of the component.
+            da (xr.DataArray): The array to evaluate, whose attributes contain the component parts to build the string.
+        """
         if self.include == "all" or (
-            self.include == "valid" and where_array.fillna(0).any()
+            self.include == "valid"
+            and da.fillna(0).astype(bool).any()
+            and self.math[group][name].active
         ):
+            where = da.attrs.pop("where_string", None)
+            equations = da.attrs.pop("equation_strings", [])
+            sense = da.attrs.pop("sense_string", None)
             equation_element_string = self._render(
                 self.LATEX_EQUATION_ELEMENT,
-                equations=equations if equations is not None else [],
+                equations=equations,
                 sense=sense,
                 where=where,
-                sets=sets,
+                sets=list(da.dims),
             )
-            where_array.attrs.update({"math_string": equation_element_string})
+        else:
+            equation_element_string = ""
+        self.math_strings[group][name] = equation_element_string
 
     def _render(self, template: str, **kwargs) -> str:
         text_starter = r"\\text(?:bf|it)?"  # match one of `\text`, `\textit`, `\textbf`
@@ -672,7 +764,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         return tuple(
             {
                 "expression": eq.evaluate_expression(
-                    self, return_type="math_string", references=references
+                    self.inputs,
+                    self._dataset,
+                    self.math,
+                    return_type="math_string",
+                    references=references,
                 )
             }
             for eq in equations

@@ -323,3 +323,53 @@ class TestResampling:
             model.inputs.sink_use_equals.sel(nodes="a").fillna(0)
             == model.inputs.sink_use_equals.sel(nodes="b").fillna(0) / 4
         ).all()
+
+
+class TestMissingTimeData:
+    """Test detection of missing timeseries data."""
+
+    def test_warn_missing_timeseries_data(self):
+        """Test warning when timeseries has gaps."""
+        import numpy as np
+        import xarray as xr
+
+        ds = xr.Dataset(
+            {"demand": (["timesteps", "nodes"], [[1, 2], [np.nan, 4], [5, 6]])},
+            coords={"timesteps": pd.date_range("2005-01-01", periods=3, freq="h")},
+        )
+
+        with pytest.warns(match="Possibly missing data on the timesteps dimension"):
+            time._check_missing_data(ds, "timesteps")
+
+    def test_no_warn_all_data_present(self):
+        """Test no warning when all data present."""
+        import xarray as xr
+
+        ds = xr.Dataset(
+            {"demand": (["timesteps", "nodes"], [[1, 2], [3, 4], [5, 6]])},
+            coords={"timesteps": pd.date_range("2005-01-01", periods=3, freq="h")},
+        )
+
+        # Should not raise warning - use context manager to verify
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            time._check_missing_data(ds, "timesteps")
+
+
+class TestDatetimeConversion:
+    """Test datetime format conversion."""
+
+    @pytest.mark.parametrize(
+        ("time_format", "expected"),
+        [
+            ("ISO8601", pd.Timestamp("2005-01-01")),
+            ("%Y-%m-%d", pd.Timestamp("2005-01-01")),
+        ],
+    )
+    def test_datetime_index_formats(self, time_format, expected):
+        """Test _datetime_index handles different formats."""
+        index = pd.Index(["2005-01-01"])
+        result = time._datetime_index(index, time_format)
+        assert result[0] == expected

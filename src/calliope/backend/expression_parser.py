@@ -35,18 +35,16 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import replace
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import Any, Literal, overload
 
 import numpy as np
 import pandas as pd
 import pyparsing as pp
 import xarray as xr
 
+from calliope.backend.eval_attrs import EvalAttrs
 from calliope.backend.helper_functions import ParsingHelperFunction
 from calliope.exceptions import BackendError
-
-if TYPE_CHECKING:
-    from calliope.backend.parsing import EvalAttrs
 
 pp.ParserElement.enablePackrat()
 

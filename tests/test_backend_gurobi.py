@@ -286,9 +286,10 @@ class TestNewBackend:
 
     def test_set_warmstart(self, simple_supply_gurobi):
         simple_supply_gurobi.solve(force=True, warmstart=True)
-        assert simple_supply_gurobi.backend._instance.Params.LPWarmStart == 1
 
-        # warmstart = 1 is the Gurobi default, so no change if warmstart=True
+        # default warmstart = 1 (<v13), = -1 (>=v13)
+        # TODO: Remove `1` check when dropping support for gurobi<13
+        assert simple_supply_gurobi.backend._instance.Params.LPWarmStart in [-1, 1]
         assert (
             "LPWarmStart"
             not in simple_supply_gurobi.backend._instance.Params._getChangeList()
@@ -477,3 +478,18 @@ class TestPiecewiseConstraints:
             excinfo,
             "Gurobi backend can only build piecewise constraints using decision variables.",
         )
+
+
+class TestGurobiImportHandling:
+    """Test handling of Gurobi import failures."""
+
+    def test_gurobi_backend_requires_gurobi(self, monkeypatch):
+        """Test that building with gurobi backend fails gracefully without gurobipy."""
+        import sys
+
+        # Mock gurobipy as unavailable
+        monkeypatch.setitem(sys.modules, "gurobipy", None)
+
+        m = build_model({}, "simple_supply,two_hours")
+        with pytest.raises(ImportError, match="Install the `gurobipy` package"):
+            m.build(backend="gurobi")

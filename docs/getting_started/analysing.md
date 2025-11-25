@@ -29,7 +29,7 @@ A model which solved successfully has two primary [xarray.Dataset][]s with data 
 
 * `model.inputs`: contains all input data, such as renewable resource capacity factors.
 * `model.results`: contains all results data, such as dispatch decisions and installed capacities.
-  It also includes [results calculated in postprocessing](../reference/api/postprocess.md), such as levelised cost of electricity (LCOE) and capacity factor.
+  It also includes [results calculated in postprocessing][postprocessed-statistics], such as levelised cost of electricity (LCOE) and capacity factor.
 
 Both of these are an  [xarray.Dataset][] and can be further processed with Python.
 

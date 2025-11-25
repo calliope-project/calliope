@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope.backend import backend_model, parsing
+from calliope.backend import backend_model
 from calliope.backend.backend_model import ALL_COMPONENTS_T
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
@@ -29,13 +29,16 @@ LOGGER = logging.getLogger(__name__)
 class GurobiBackendModel(backend_model.BackendModel):
     """gurobipy-specific backend functionality."""
 
-    OBJECTIVE_SENSE_DICT: dict[str, int]
     if importlib.util.find_spec("gurobipy") is not None:
         OBJECTIVE_SENSE_DICT = {
             "minimize": gurobipy.GRB.MINIMIZE,
             "minimise": gurobipy.GRB.MINIMIZE,
             "maximize": gurobipy.GRB.MAXIMIZE,
             "maximise": gurobipy.GRB.MAXIMIZE,
+        }
+        VARIABLE_DOMAIN_DICT = domain_dict = {
+            "real": gurobipy.GRB.CONTINUOUS,
+            "integer": gurobipy.GRB.INTEGER,
         }
     else:
         # As of Gurobi v11, these are the correct integer values for the above constants
@@ -45,6 +48,7 @@ class GurobiBackendModel(backend_model.BackendModel):
             "maximize": -1,
             "maximise": -1,
         }
+        VARIABLE_DOMAIN_DICT = domain_dict = {"real": "C", "integer": "I"}
 
     def __init__(
         self,
@@ -83,69 +87,46 @@ class GurobiBackendModel(backend_model.BackendModel):
                 {f"parameters.{name}": definition.model_dump()}
             )
 
-    def add_constraint(  # noqa: D102, override
-        self, name: str, definition: math_schema.Constraint
-    ) -> None:
-        def _constraint_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> xr.DataArray:
-            expr = element.evaluate_expression(self, where=where, references=references)
-            to_fill = self._apply_func(self._instance.addConstr, where, 1, expr)
+    def _add_variable(  # noqa: D102, override
+        self,
+        name: str,
+        where: xr.DataArray,
+        references: set,
+        domain_type: str,
+        bounds: math_schema.Bounds,
+    ) -> xr.DataArray:
+        lb = self._get_variable_bound(bounds.min, name, references)
+        ub = self._get_variable_bound(bounds.max, name, references)
+        var = self._apply_func(
+            self._instance.addVar, where, 1, lb, ub, vtype=domain_type
+        )
 
-            return to_fill
+        return var.fillna(value=np.nan)
 
-        self._add_component(name, definition, _constraint_setter, "constraints")
+    def _add_global_expression(  # noqa: D102, override
+        self, name: str, where: xr.DataArray, expression: xr.DataArray
+    ) -> xr.DataArray:
+        expression = expression.squeeze(drop=True)
+        self._clean_arrays(expression)
+        to_fill = expression.where(where)
 
-    def add_global_expression(  # noqa: D102, override
-        self, name: str, definition: math_schema.GlobalExpression
-    ) -> None:
-        def _expression_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> xr.DataArray:
-            expr = element.evaluate_expression(self, where=where, references=references)
-            expr = expr.squeeze(drop=True)
-            to_fill = expr.where(where)
-            self._clean_arrays(expr)
-            return to_fill
+        return to_fill
 
-        self._add_component(name, definition, _expression_setter, "global_expressions")
+    def _add_constraint(  # noqa: D102, override
+        self, name: str, where: xr.DataArray, expression: xr.DataArray
+    ) -> xr.DataArray:
+        to_fill = self._apply_func(self._instance.addConstr, where, 1, expression)
 
-    def add_variable(  # noqa: D102, override
-        self, name: str, definition: math_schema.Variable
-    ) -> None:
-        domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
+        return to_fill
 
-        def _variable_setter(where: xr.DataArray, references: set):
-            domain_type = domain_dict[definition.domain]
-
-            bounds = definition.bounds
-            lb = self._get_variable_bound(bounds.min, name, references)
-            ub = self._get_variable_bound(bounds.max, name, references)
-            var = self._apply_func(
-                self._instance.addVar, where, 1, lb, ub, vtype=domain_type
-            )
-            return var.fillna(value=np.nan)
-
-        self._add_component(name, definition, _variable_setter, "variables")
-
-    def add_objective(  # noqa: D102, override
-        self, name: str, definition: math_schema.Objective
-    ) -> None:
-        sense = self.OBJECTIVE_SENSE_DICT[definition.sense]
-
-        def _objective_setter(
-            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
-        ) -> xr.DataArray:
-            expr = element.evaluate_expression(self, references=references)
-
-            if name == self.objective:
-                self._instance.setObjective(expr.item(), sense=sense)
-                self.objective = name
-                self.log("objectives", name, "Objective activated.")
-
-            return xr.DataArray(expr)
-
-        self._add_component(name, definition, _objective_setter, "objectives")
+    def _add_objective(  # noqa: D102, override
+        self, name: str, where: xr.DataArray, expression: xr.DataArray, sense: int
+    ) -> xr.DataArray:
+        if name == self.objective:
+            self._instance.setObjective(expression.item(), sense=sense)
+            self.objective = name
+            self.log("objectives", name, "Objective activated.")
+        return expression
 
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         to_set = self.objectives[name]
@@ -254,7 +235,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         termination = self._instance.status
 
         if termination == gurobipy.GRB.OPTIMAL:
-            results = self.load_results()
+            results = self.load_results(solve_config.postprocessing_active)
         else:
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
             results = xr.Dataset()
@@ -302,9 +283,6 @@ class GurobiBackendModel(backend_model.BackendModel):
         if Path(path).suffix != ".lp":
             raise ValueError("File extension must be `.lp`")
         self._instance.write(str(path))
-
-    def _create_obj_list(self, key: str, component_type: ALL_COMPONENTS_T) -> None:
-        pass
 
     def delete_component(self, key: str, component_type: ALL_COMPONENTS_T) -> None:
         """Delete object from the backend model object linked to a component.
