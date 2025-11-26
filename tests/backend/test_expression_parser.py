@@ -11,7 +11,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.backend import eval_attrs, expression_parser, helper_functions
 
-from .common.util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
 

@@ -1,11 +1,12 @@
 import pandas as pd
 import pytest  # noqa: F401
+import xarray as xr
 
 from calliope import exceptions
 from calliope.io import read_rich_yaml
 from calliope.preprocess import time
 
-from .common.util import build_test_model
+from ..common.util import build_test_model
 
 
 class TestTimeFormat:
@@ -373,3 +374,20 @@ class TestDatetimeConversion:
         index = pd.Index(["2005-01-01"])
         result = time._datetime_index(index, time_format)
         assert result[0] == expected
+
+
+class TestAddInferredTimeParams:
+    def test_single_timestep(self):
+        """Test that warning is raised on using 1 timestep, that timestep resolution will
+        be inferred to be 1 hour
+        """
+        dataset = xr.Dataset().assign_coords(
+            timesteps=pd.date_range("2005-01-01", periods=1, freq="H")
+        )
+        # check in output error that it points to: 07/01/2005 10:00:00
+        with pytest.warns(
+            exceptions.ModelWarning,
+            match=r"Only one timestep defined. Inferring timestep resolution to be 1 hour",
+        ):
+            updated_dataset = time.add_inferred_time_params(dataset)
+        assert (updated_dataset.timestep_resolution == 1).all()

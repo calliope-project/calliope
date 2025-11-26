@@ -4,7 +4,7 @@ import pytest
 
 from calliope.postprocess import MathDocumentation
 
-from .common.util import build_test_model, check_error_or_warning
+from ..common.util import build_test_model, check_error_or_warning
 
 
 class TestMathDocumentation:

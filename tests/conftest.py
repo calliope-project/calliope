@@ -44,11 +44,6 @@ def default_config():
 
 
 @pytest.fixture(scope="session")
-def data_source_dir():
-    return Path(__file__).parent / "common" / "test_model" / "data_tables"
-
-
-@pytest.fixture(scope="session")
 def simple_supply():
     m = build_model({}, "simple_supply,two_hours,investment_costs")
     m.build()
@@ -66,30 +61,6 @@ def simple_supply_build_func():
 @pytest.fixture(scope="session")
 def supply_milp():
     m = build_model({}, "supply_milp,two_hours,investment_costs")
-    m.build()
-    m.solve()
-    return m
-
-
-@pytest.fixture(scope="session")
-def storage_milp():
-    m = build_model({}, "storage_milp,two_hours,investment_costs")
-    m.build()
-    m.solve()
-    return m
-
-
-@pytest.fixture(scope="session")
-def conversion_plus_milp():
-    m = build_model({}, "conversion_plus_milp,two_hours,investment_costs")
-    m.build()
-    m.solve()
-    return m
-
-
-@pytest.fixture(scope="session")
-def supply_and_supply_plus_milp():
-    m = build_model({}, "supply_and_supply_plus_milp,two_hours,investment_costs")
     m.build()
     m.solve()
     return m
@@ -130,40 +101,8 @@ def simple_conversion():
 
 
 @pytest.fixture(scope="session")
-def supply_export():
-    m = build_model({}, "supply_export,two_hours,investment_costs")
-    m.build()
-    m.solve()
-    return m
-
-
-@pytest.fixture(scope="session")
 def supply_purchase():
     m = build_model({}, "supply_purchase,two_hours,investment_costs")
-    m.build()
-    m.solve()
-    return m
-
-
-@pytest.fixture(scope="session")
-def conversion_plus_purchase():
-    m = build_model({}, "conversion_plus_purchase,two_hours,investment_costs")
-    m.build()
-    m.solve()
-    return m
-
-
-@pytest.fixture(scope="session")
-def storage_purchase():
-    m = build_model({}, "storage_purchase,two_hours,investment_costs")
-    m.build()
-    m.solve()
-    return m
-
-
-@pytest.fixture(scope="session")
-def simple_conversion_plus():
-    m = build_model({}, "simple_conversion_plus,two_hours,investment_costs")
     m.build()
     m.solve()
     return m

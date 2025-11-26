@@ -18,8 +18,8 @@ from calliope.backend.pyomo_backend_model import (
 )
 from calliope.exceptions import BackendError
 
-from .common.util import build_test_model as build_model
-from .common.util import check_error_or_warning
+from ..common.util import build_test_model as build_model
+from ..common.util import check_error_or_warning
 
 
 class TestLogging:

@@ -6,7 +6,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.backend import eval_attrs, helper_functions
 
-from .common.util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 
 @pytest.fixture(scope="module")

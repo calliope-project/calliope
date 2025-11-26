@@ -8,7 +8,7 @@ from calliope import exceptions
 from calliope.backend import latex_backend_model
 from calliope.schemas import math_schema
 
-from .common.util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 
 @pytest.fixture

@@ -4,8 +4,8 @@ from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml
 from calliope.preprocess.model_definition import TemplateSolver
 
-from .common.util import build_test_model as build_model
-from .common.util import check_error_or_warning
+from ..common.util import build_test_model as build_model
+from ..common.util import check_error_or_warning
 
 
 class TestScenarioOverrides:

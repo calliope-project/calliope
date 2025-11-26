@@ -1,7 +1,5 @@
 import os
 
-import xarray as xr
-
 import calliope
 
 
@@ -44,38 +42,3 @@ def check_error_or_warning(error_warning, test_string_or_strings):
         result = test_string_or_strings in output
 
     return result
-
-
-def check_variable_exists(
-    expr_or_constr: xr.DataArray | None, variable: str, slices: dict | None = None
-) -> bool:
-    """
-    Search for existence of a decision variable in a Pyomo constraint.
-    Args:
-        backend_interface :
-        constraint :
-        variable : str, string to search in the list of variables to check if existing
-
-    Args:
-        expr_or_constr (Optional[xr.DataArray]): Array of math expression objects.
-        variable (str): Name of variable to search for
-        slices (Optional[dict], optional):
-            If not None, slice `expr_or_constr` array according to provided key:val pairs.
-            `key` is an array dimension name and `val` is a dimension index item or iterable of index items.
-            Defaults to None.
-
-    Returns:
-        bool: If the variable exists in any of the array expressions (after slicing), returns True.
-    """
-    if expr_or_constr is None:
-        return False
-
-    try:
-        var_exists = expr_or_constr.body.astype(str).str.find(variable) > -1
-    except (AttributeError, KeyError):
-        var_exists = expr_or_constr.astype(str).str.find(variable) > -1
-
-    if slices is not None:
-        var_exists = var_exists.sel(**slices)
-
-    return var_exists.any()

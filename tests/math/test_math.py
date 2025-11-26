@@ -8,7 +8,7 @@ from pyomo.repn.tests import lp_diff
 from calliope import AttrDict, Model, io
 from calliope.preprocess import model_math
 
-from .common import util
+from ..common import util
 
 CALLIOPE_DIR: Path = importlib.resources.files("calliope")  # type: ignore
 
@@ -28,7 +28,7 @@ MATH_TO_CHECK = [
     "lookups",
 ]
 TEST_CONFIGS = {
-    k: io.read_rich_yaml(Path(__file__).parent / "common" / f"{k}_math_tests.yaml")
+    k: io.read_rich_yaml(Path(__file__).parent / f"{k}_math_tests.yaml")
     for k in ["base", "milp", "storage_inter_cluster"]
 }
 
@@ -86,7 +86,7 @@ def _diff_files(file1, file2):
 
 
 def compare_lps_new(generated_lp: Path):
-    expected_file = Path(__file__).parent / "common" / "lp_files" / generated_lp.name
+    expected_file = Path(__file__).parent / "lp_files" / generated_lp.name
     diff_ordered = lp_diff.load_and_compare_lp_baseline(
         generated_lp.as_posix(), expected_file.as_posix()
     )
