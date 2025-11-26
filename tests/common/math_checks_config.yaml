@@ -102,6 +102,7 @@ base:
     scenario: simple_storage,inter_cluster_storage
     override_dict:
       nodes.a.techs.test_storage.storage_discharge_depth: 0.2
+      techs.test_storage.cyclic_storage: false
 
   - check_name: cyclic_storage_needs_inter_cluster
     scenario: simple_storage,inter_cluster_storage
