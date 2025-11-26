@@ -1,0 +1,154 @@
+# Configuration for triggering math checks in tests
+base:
+  - check_name: must_have_base
+    scenario: simple_supply,two_hours
+    override_dict:
+      techs.test_tech_no_base:
+        name: Tech without base_tech
+        carrier_out: electricity
+      nodes.a.techs.test_tech_no_base: {}
+
+  - check_name: distance_only_for_transmission
+    scenario: simple_supply,two_hours
+    override_dict:
+      techs.test_supply_elec.distance: 100
+
+  - check_name: distance_only_for_transmission
+    scenario: simple_supply,two_hours
+    override_dict:
+      techs.test_supply_elec.flow_in_eff_per_distance: 0.99
+
+  - check_name: unbounded_flow_cap_cost
+    scenario: simple_supply,two_hours
+    override_dict:
+      techs.test_supply_elec.cost_flow_cap:
+        data: -10
+        index: monetary
+        dims: costs
+      techs.test_supply_elec.flow_cap_max: .inf
+
+  - check_name: unbounded_storage_cap_cost
+    scenario: simple_storage,two_hours
+    override_dict:
+      techs.test_storage.cost_storage_cap:
+        data: -50
+        index: monetary
+        dims: costs
+      techs.test_storage.storage_cap_max: .inf
+
+  - check_name: unbounded_area_use_cost
+    scenario: simple_supply,two_hours
+    override_dict:
+      techs.test_supply_elec.area_use_per_flow_cap: 1.0
+      techs.test_supply_elec.cost_area_use:
+        data: -100
+        index: monetary
+        dims: costs
+      techs.test_supply_elec.area_use_max: .inf
+
+  - check_name: unbounded_source_use_cost
+    scenario: simple_supply_plus,two_hours
+    override_dict:
+      techs.test_supply_plus.cost_source_cap:
+        data: -30
+        index: monetary
+        dims: costs
+      techs.test_supply_plus.source_cap_max: .inf
+
+  - check_name: finite_source_use
+    scenario: simple_supply_plus,two_hours
+    override_dict:
+      data_tables.supply_plus_resource.add_dims.parameters: source_use_equals
+      nodes.a.techs.test_supply_plus.source_use_equals: .inf
+
+  - check_name: finite_source_use
+    scenario: simple_supply,two_hours
+    override_dict:
+      data_tables.demand_elec.add_dims.parameters: sink_use_equals
+      nodes.a.techs.test_demand_elec.sink_use_equals: .inf
+
+  - check_name: export_only_for_outflows
+    scenario: simple_supply,two_hours
+    override_dict:
+      techs.test_demand_elec.carrier_export: electricity
+
+  - check_name: storage_initial_max
+    scenario: simple_storage,two_hours
+    override_dict:
+      nodes.a.techs.test_storage.storage_initial: 1.5
+
+  - check_name: storage_initial_max
+    scenario: simple_storage,two_hours
+    override_dict:
+      nodes.a.techs.test_storage.storage_initial: -0.1
+
+  - check_name: flow_in_for_supply_tech
+    scenario: simple_supply,two_hours
+    override_dict:
+      techs.test_supply_elec.cost_flow_in:
+        data: 0.1
+        index: monetary
+        dims: costs
+
+  - check_name: flow_out_for_demand_tech
+    scenario: simple_supply,two_hours
+    override_dict:
+      techs.test_demand_elec.cost_flow_out:
+        data: 0.1
+        index: monetary
+        dims: costs
+
+  - check_name: no_storage_discharge_depth_when_clustering
+    scenario: simple_storage,inter_cluster_storage
+    override_dict:
+      nodes.a.techs.test_storage.storage_discharge_depth: 0.2
+      techs.test_storage.cyclic_storage: false
+
+  - check_name: cyclic_storage_needs_inter_cluster
+    scenario: simple_storage,inter_cluster_storage
+    override_dict:
+      nodes.a.techs.test_storage.cyclic_storage: true
+
+milp:
+  - check_name: distance_only_for_transmission_milp
+    scenario: supply_milp,two_hours
+    override_dict:
+      techs.test_supply_elec.cost_purchase_per_distance: 100
+
+  - check_name: conflicting_flow_caps
+    scenario: supply_milp,two_hours
+    override_dict:
+      techs.test_supply_elec.flow_cap_max: 10
+      techs.test_supply_elec.flow_cap_per_unit: 1
+
+  - check_name: conflicting_flow_caps
+    scenario: supply_milp,two_hours
+    override_dict:
+      techs.test_supply_elec.flow_cap_min: 10
+      techs.test_supply_elec.flow_cap_per_unit: 1
+
+  - check_name: unit_commitment_only_for_units
+    scenario: supply_milp,two_hours
+    override_dict:
+      nodes.a.techs.test_supply_elec.cap_method: continuous
+
+  - check_name: conflicting_storage_caps
+    scenario: supply_milp,two_hours
+    override_dict:
+      techs.test_supply_elec.include_storage: true
+      techs.test_supply_elec.storage_cap_max: 10
+      techs.test_supply_elec.storage_cap_per_unit: 1
+
+  - check_name: conflicting_storage_caps
+    scenario: supply_milp,two_hours
+    override_dict:
+      techs.test_supply_elec.include_storage: true
+      techs.test_supply_elec.storage_cap_min: 10
+      techs.test_supply_elec.storage_cap_per_unit: 1
+
+operate:
+  - check_name: operate_mode_cyclic_storage
+    scenario: simple_supply,operate
+    override_dict:
+      techs.test_supply_elec.include_storage: true
+      techs.test_supply_elec.cyclic_storage: true
