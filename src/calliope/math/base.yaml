@@ -368,7 +368,7 @@ parameters:
     resample_method: sum
     title: Maximum bound on source.
     description: >-
-      Maximum sink use to add a carrier to the system (e.g., biofuel, coal, rainfall, wind flow).
+      Maximum source use to add a carrier to the system (e.g., biofuel, coal, rainfall, wind flow).
       Unit dictated by `source_unit`.
     unit: energy | $\frac{\text{energy}}{\text{power}}$ | $\frac{\text{energy}}{\text{area}}$
 
