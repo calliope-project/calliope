@@ -1179,6 +1179,10 @@ class TestDataTableBuilding:
         ],
     )
     def diff_dim_tables(self, request, minimal_test_model_path, config, math):
+        """
+        Create a ModelDataBuilder with data tables that have parameters defined over different dimensions,
+        to test that loading works correctly regardless of the order in which they are defined.
+        """
         techs_and_nodes = pd.DataFrame(
             {("test_supply_elec", "a", "dummy_param"): 5},
             index=pd.to_datetime(["2005-01-01 00", "2005-01-01 01", "2005-01-01 02"]),
