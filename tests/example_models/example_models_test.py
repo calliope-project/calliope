@@ -8,7 +8,7 @@ import calliope
 from calliope.io import read_rich_yaml
 from calliope.postprocess.math_documentation import MathDocumentation
 
-from .common.util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 approx = pytest.approx
 
@@ -107,10 +107,7 @@ class TestNationalScaleExampleModelSenseChecks:
             header=[0, 1, 2, 3],
         )
         model = calliope.read_yaml(
-            Path(__file__).parent
-            / "common"
-            / "national_scale_from_data_tables"
-            / "model.yaml",
+            Path(__file__).parent / "national_scale_from_data_tables" / "model.yaml",
             data_table_dfs={"time_varying_df": df},
             subset={"timesteps": ["2005-01-01", "2005-01-01"]},
         )

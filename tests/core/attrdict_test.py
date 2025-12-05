@@ -2,7 +2,7 @@ import pytest
 
 from calliope.attrdict import _MISSING, AttrDict
 
-from .common.util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 
 class TestAttrDict:

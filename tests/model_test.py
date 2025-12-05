@@ -6,9 +6,11 @@ import numpy.testing
 import pandas as pd
 import pytest
 import xarray as xr
+from pydantic import ValidationError
 
 import calliope
 import calliope.backend
+import calliope.exceptions as exceptions
 import calliope.preprocess
 from calliope.model import Model, read_dict, read_netcdf, read_yaml
 from calliope.schemas import CalliopeAttrs
@@ -173,6 +175,30 @@ class TestModelSolve:
             "total_levelised_cost",
         ]:
             assert setting == (postprocess in model.results)
+
+
+class TestChecks:
+    @pytest.mark.parametrize(
+        "top_level_key", ["init", "build", "solve", "build.operate", "solve.spores"]
+    )
+    def test_unrecognised_config_keys(self, top_level_key):
+        """Check that no extra keys are allowed in the configuration."""
+        override = {f"config.{top_level_key}.nonsensical_key": "random_string"}
+
+        with pytest.raises(ValidationError):
+            build_model(override_dict=override, scenario="simple_supply")
+
+    def test_model_version_mismatch(self):
+        """Model config says config.init.calliope_version = 0.1, which is not what we
+        are running, so we want a warning.
+        """
+        override = {"config.init.calliope_version": "0.1"}
+
+        with pytest.warns(
+            exceptions.ModelWarning,
+            match=r"Model configuration specifies calliope version",
+        ):
+            build_model(override_dict=override, scenario="simple_supply,one_day")
 
 
 class TestOperateMode:

@@ -6,8 +6,8 @@ import xarray as xr
 
 import calliope.exceptions as exceptions
 
-from .common.util import build_test_model as build_model
-from .common.util import check_error_or_warning
+from ..common.util import build_test_model as build_model
+from ..common.util import check_error_or_warning
 
 
 class TestNewBackend:

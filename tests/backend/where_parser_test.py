@@ -14,7 +14,7 @@ from calliope.backend import (
 )
 from calliope.exceptions import BackendError
 
-from .common.util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
 
