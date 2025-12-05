@@ -42,11 +42,11 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 #     carrier_out: electricity
 #     flow_cap_max: 10
 #     source_use_max:
-#       table: [10, 2]
+#       data: [10, 2]
 #       index: ["2020-01-01 00:00", "2020-01-01 01:00"]
 #       dims: timesteps
 #     cost_flow_cap:
-#       table: 2
+#       data: 2
 #       index: monetary
 #       dims: costs
 #
@@ -57,11 +57,11 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 #     flow_cap_max: 6
 #     storage_cap_max: 7
 #     cost_storage_cap:
-#       table: 5
+#       data: 5
 #       index: monetary
 #       dims: costs
 #     cost_flow_out:
-#       table: 0.1
+#       data: 0.1
 #       index: monetary
 #       dims: costs
 #
@@ -69,7 +69,7 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 #     base_tech: demand
 #     carrier_in: electricity
 #     sink_use_equals:
-#       table: [4, 5]
+#       data: [4, 5]
 #       index: ["2020-01-01 00:00", "2020-01-01 01:00"]
 #       dims: timesteps
 #
@@ -100,11 +100,11 @@ techs:
     carrier_out: electricity
     flow_cap_max: 10
     source_use_max:
-      table: [10, 2]
+      data: [10, 2]
       index: ["2020-01-01 00:00", "2020-01-01 01:00"]
       dims: timesteps
     cost_flow_cap:
-      table: 2
+      data: 2
       index: monetary
       dims: costs
 
@@ -115,11 +115,11 @@ techs:
     flow_cap_max: 6
     storage_cap_max: 7
     cost_storage_cap:
-      table: 5
+      data: 5
       index: monetary
       dims: costs
     cost_flow_out:
-      table: 0.1
+      data: 0.1
       index: monetary
       dims: costs
 
@@ -127,7 +127,7 @@ techs:
     base_tech: demand
     carrier_in: electricity
     sink_use_equals:
-      table: [4, 5]
+      data: [4, 5]
       index: ["2020-01-01 00:00", "2020-01-01 01:00"]
       dims: timesteps
 
@@ -455,7 +455,7 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #     carrier_out: electricity
 #     flow_cap_max: 10
 #     cost_flow_cap:
-#       table: 2
+#       data: 2
 #       index: monetary
 #       dims: costs
 #
@@ -466,11 +466,11 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #     flow_cap_max: 6
 #     storage_cap_max: 7
 #     cost_storage_cap:
-#       table: 5
+#       data: 5
 #       index: monetary
 #       dims: costs
 #     cost_flow_out:
-#       table: 0.1
+#       data: 0.1
 #       index: monetary
 #       dims: costs
 #
