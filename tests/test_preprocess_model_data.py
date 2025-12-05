@@ -1158,12 +1158,34 @@ class TestSubset:
 
 
 class TestDataTableBuilding:
-    @pytest.fixture(scope="class")
-    def diff_dim_tables(self, minimal_test_model_path, config, math):
+    @pytest.fixture(
+        scope="class",
+        params=[
+            [
+                "techs_nodes_parameters_timeseries",
+                "techs_and_nodes_no_ts",
+                "techs_parameters_timeseries",
+            ],
+            [
+                "techs_parameters_timeseries",
+                "techs_and_nodes_no_ts",
+                "techs_nodes_parameters_timeseries",
+            ],
+            [
+                "techs_and_nodes_no_ts",
+                "techs_parameters_timeseries",
+                "techs_nodes_parameters_timeseries",
+            ],
+        ],
+    )
+    def diff_dim_tables(self, request, minimal_test_model_path, config, math):
         techs_and_nodes = pd.DataFrame(
             {("test_supply_elec", "a", "dummy_param"): 5},
             index=pd.to_datetime(["2005-01-01 00", "2005-01-01 01", "2005-01-01 02"]),
         ).rename_axis(columns=["techs", "nodes", "parameters"])
+        techs_and_nodes_no_ts = pd.DataFrame(
+            {("test_supply_elec", "a"): 10}, index=["dummy_param_2"]
+        ).rename_axis(columns=["techs", "nodes"], index="parameters")
         techs_only = pd.DataFrame(
             {
                 ("test_supply_plus", "dummy_param"): 1,
@@ -1171,32 +1193,29 @@ class TestDataTableBuilding:
             },
             index=pd.to_datetime(["2005-01-01 00", "2005-01-01 01", "2005-01-01 02"]),
         ).rename_axis(columns=["techs", "parameters"])
-        techs_and_nodes_no_ts = pd.DataFrame(
-            {("test_supply_elec", "a"): 10}, index=["dummy_param_2"]
-        ).rename_axis(columns=["techs", "nodes"], index="parameters")
-        data_table_def = CalliopeDataTables.model_validate(
-            {
-                "techs_nodes_parameters_timeseries": {
-                    "columns": ["techs", "nodes", "parameters"],
-                    "data": "techs_and_nodes",
-                    "rows": "timesteps",
-                },
-                "techs_and_nodes_no_ts": {
-                    "columns": ["techs", "nodes"],
-                    "data": "techs_and_nodes_no_ts",
-                    "rows": "parameters",
-                },
-                "techs_parameters_timeseries": {
-                    "columns": ["techs", "parameters"],
-                    "data": "techs_only",
-                    "rows": "timesteps",
-                },
-            }
-        )
+        data_table_dict = {
+            "techs_nodes_parameters_timeseries": {
+                "columns": ["techs", "nodes", "parameters"],
+                "data": "techs_and_nodes",
+                "rows": "timesteps",
+            },
+            "techs_and_nodes_no_ts": {
+                "columns": ["techs", "nodes"],
+                "data": "techs_and_nodes_no_ts",
+                "rows": "parameters",
+            },
+            "techs_parameters_timeseries": {
+                "columns": ["techs", "parameters"],
+                "data": "techs_only",
+                "rows": "timesteps",
+            },
+        }
+        ordered_dict = {key: data_table_dict[key] for key in request.param}
+        data_table_def = CalliopeDataTables.model_validate(ordered_dict)
         data_table_dfs = {
             "techs_and_nodes": techs_and_nodes,
-            "techs_only": techs_only,
             "techs_and_nodes_no_ts": techs_and_nodes_no_ts,
+            "techs_only": techs_only,
         }
         model_def = prepare_model_definition(
             io.read_rich_yaml(minimal_test_model_path),
@@ -1209,7 +1228,6 @@ class TestDataTableBuilding:
             )
             for table, table_dict in data_table_def.root.items()
         ]
-
         return ModelDataBuilder(
             config.init,
             AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
