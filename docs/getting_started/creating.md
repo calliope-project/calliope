@@ -191,11 +191,11 @@ To read such a file into our model, we specify the file we want to load and how 
 ```yaml
 data_tables:
   pv_capacity_factor_data:
-    data: data_tables/solar_resource.csv
+    table: data_tables/solar_resource.csv
     rows: timesteps
     add_dims:
       techs: pv
-      parameters: source_use_equals
+      inputs: source_use_equals
 ```
 
 More detail on how to use this powerful feature and how to structure your CSV files is in the [data tables documentation](../basic/data_tables.md).

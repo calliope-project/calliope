@@ -1,4 +1,4 @@
-techs,parameters,
+techs,inputs,
 demand_tech,lifetime,25
 demand_tech,sink_use_min,0.2
 conversion_tech,include_storage,1.0

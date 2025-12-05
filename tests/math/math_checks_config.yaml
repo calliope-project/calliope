@@ -58,13 +58,13 @@ base:
   - check_name: finite_source_use
     scenario: simple_supply_plus,two_hours
     override_dict:
-      data_tables.supply_plus_resource.add_dims.parameters: source_use_equals
+      data_tables.supply_plus_resource.add_dims.inputs: source_use_equals
       nodes.a.techs.test_supply_plus.source_use_equals: .inf
 
   - check_name: finite_source_use
     scenario: simple_supply,two_hours
     override_dict:
-      data_tables.demand_elec.add_dims.parameters: sink_use_equals
+      data_tables.demand_elec.add_dims.inputs: sink_use_equals
       nodes.a.techs.test_demand_elec.sink_use_equals: .inf
 
   - check_name: export_only_for_outflows
