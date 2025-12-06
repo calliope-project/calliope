@@ -46,3 +46,18 @@ piecewise_constraints:
     x_values: piecewise_cost_investment_x
     y_expression: piecewise_cost_investment
     y_values: piecewise_cost_investment_y
+
+global_expressions:
+  # Update this global expression from the base math to include piecewise costs
+  cost_investment:
+    where: >
+      (cost_investment_flow_cap OR cost_investment_storage_cap
+      OR cost_investment_source_cap OR cost_investment_area_use
+      OR piecewise_cost_investment)
+    equations:
+      - expression: >
+          sum(cost_investment_flow_cap, over=carriers) +
+          cost_investment_storage_cap +
+          cost_investment_source_cap +
+          cost_investment_area_use +
+          sum(piecewise_cost_investment, over=carriers)
