@@ -235,7 +235,7 @@ balance_demand_min_use:
     parameters: [sink_use_equals, sink_use_min]
     lookups: [base_tech, sink_unit]
   overrides:
-    data_tables.demand_elec.add_dims.parameters: sink_use_min
+    data_tables.demand_elec.add_dims.inputs: sink_use_min
   scenario: simple_supply,two_hours
   lp_file: balance_demand_min_use.lp
 

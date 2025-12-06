@@ -290,24 +290,24 @@ tech_cost_data
 # ```yaml
 # data_tables:
 #   tech_data:
-#     data: outputs/loading_tabular_data/tech_data.csv
-#     rows: parameters
+#     table: outputs/loading_tabular_data/tech_data.csv
+#     rows: inputs
 #     columns: techs
 #   tech_node_data:
-#     data: outputs/loading_tabular_data/tech_node_data.csv
-#     rows: [techs, nodes, parameters]
+#     table: outputs/loading_tabular_data/tech_node_data.csv
+#     rows: [techs, nodes, inputs]
 #   tech_timestep_data:
-#     data: outputs/loading_tabular_data/tech_timestep_data.csv
+#     table: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
-#     columns: [techs, parameters]
+#     columns: [techs, inputs]
 #   tech_carrier_data:
-#     data: outputs/loading_tabular_data/tech_carrier_data.csv
-#     rows: [techs, parameters]
+#     table: outputs/loading_tabular_data/tech_carrier_data.csv
+#     rows: [techs, inputs]
 #     add_dims:
 #       carriers: electricity
 #   tech_cost_data:
-#     data: outputs/loading_tabular_data/tech_cost_data.csv
-#     rows: parameters
+#     table: outputs/loading_tabular_data/tech_cost_data.csv
+#     rows: inputs
 #     columns: techs
 #     add_dims:
 #       costs: monetary
@@ -328,24 +328,24 @@ model_def = read_rich_yaml(
     """
 data_tables:
   tech_data:
-    data: outputs/loading_tabular_data/tech_data.csv
-    rows: parameters
+    table: outputs/loading_tabular_data/tech_data.csv
+    rows: inputs
     columns: techs
   tech_node_data:
-    data: outputs/loading_tabular_data/tech_node_data.csv
-    rows: [techs, nodes, parameters]
+    table: outputs/loading_tabular_data/tech_node_data.csv
+    rows: [techs, nodes, inputs]
   tech_timestep_data:
-    data: outputs/loading_tabular_data/tech_timestep_data.csv
+    table: outputs/loading_tabular_data/tech_timestep_data.csv
     rows: timesteps
-    columns: [techs, parameters]
+    columns: [techs, inputs]
   tech_carrier_data:
-    data: outputs/loading_tabular_data/tech_carrier_data.csv
-    rows: [techs, parameters]
+    table: outputs/loading_tabular_data/tech_carrier_data.csv
+    rows: [techs, inputs]
     add_dims:
       carriers: electricity
   tech_cost_data:
-    data: outputs/loading_tabular_data/tech_cost_data.csv
-    rows: parameters
+    table: outputs/loading_tabular_data/tech_cost_data.csv
+    rows: inputs
     columns: techs
     add_dims:
       costs: monetary
@@ -366,24 +366,24 @@ model_def = read_rich_yaml(
     """
 data_tables:
   tech_data:
-    data: tech_data_df
-    rows: parameters
+    table: tech_data_df
+    rows: inputs
     columns: techs
   tech_node_data:
-    data: tech_node_data_df
-    rows: [techs, nodes, parameters]
+    table: tech_node_data_df
+    rows: [techs, nodes, inputs]
   tech_timestep_data:
-    data: tech_timestep_data_df
+    table: tech_timestep_data_df
     rows: timesteps
-    columns: [techs, parameters]
+    columns: [techs, inputs]
   tech_carrier_data:
-    data: tech_carrier_data_df
-    rows: [techs, parameters]
+    table: tech_carrier_data_df
+    rows: [techs, inputs]
     add_dims:
       carriers: electricity
   tech_cost_data:
-    data: tech_cost_data_df
-    rows: parameters
+    table: tech_cost_data_df
+    rows: inputs
     columns: techs
     add_dims:
       costs: monetary
@@ -446,9 +446,9 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 # ```yaml
 # data_tables:
 #   tech_timestep_data:
-#     data: outputs/loading_tabular_data/tech_timestep_data.csv
+#     table: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
-#     columns: [techs, parameters]
+#     columns: [techs, inputs]
 # techs:
 #   supply_tech:
 #     base_tech: supply
@@ -501,12 +501,12 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 # ```yaml
 # data_tables:
 #   tech_timestep_data:
-#     data: outputs/loading_tabular_data/tech_timestep_data.csv
+#     table: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
-#     columns: [techs, parameters]
+#     columns: [techs, inputs]
 #   tech_cost_data:
-#     data: outputs/loading_tabular_data/tech_cost_data.csv
-#     rows: parameters
+#     table: outputs/loading_tabular_data/tech_cost_data.csv
+#     rows: inputs
 #     columns: techs
 #     add_dims:
 #       costs: monetary
@@ -556,24 +556,24 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 # ```yaml
 # data_tables:
 #   tech_data:
-#     data: outputs/loading_tabular_data/tech_data.csv
-#     rows: parameters
+#     table: outputs/loading_tabular_data/tech_data.csv
+#     rows: inputs
 #     columns: techs
 #   tech_node_data:
-#     data: outputs/loading_tabular_data/tech_node_data.csv
-#     rows: [techs, nodes, parameters]
+#     table: outputs/loading_tabular_data/tech_node_data.csv
+#     rows: [techs, nodes, inputs]
 #   tech_timestep_data:
-#     data: outputs/loading_tabular_data/tech_timestep_data.csv
+#     table: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
-#     columns: [techs, parameters]
+#     columns: [techs, inputs]
 #   tech_carrier_data:
-#     data: outputs/loading_tabular_data/tech_carrier_data.csv
-#     rows: [techs, parameters]
+#     table: outputs/loading_tabular_data/tech_carrier_data.csv
+#     rows: [techs, inputs]
 #     add_dims:
 #       carriers: electricity
 #   tech_cost_data:
-#     data: outputs/loading_tabular_data/tech_cost_data.csv
-#     rows: parameters
+#     table: outputs/loading_tabular_data/tech_cost_data.csv
+#     rows: inputs
 #     columns: techs
 #     add_dims:
 #       costs: monetary
@@ -594,24 +594,24 @@ model_def = read_rich_yaml(
     """
 data_tables:
   tech_data:
-    data: outputs/loading_tabular_data/tech_data.csv
-    rows: parameters
+    table: outputs/loading_tabular_data/tech_data.csv
+    rows: inputs
     columns: techs
   tech_node_data:
-    data: outputs/loading_tabular_data/tech_node_data.csv
-    rows: [techs, nodes, parameters]
+    table: outputs/loading_tabular_data/tech_node_data.csv
+    rows: [techs, nodes, inputs]
   tech_timestep_data:
-    data: outputs/loading_tabular_data/tech_timestep_data.csv
+    table: outputs/loading_tabular_data/tech_timestep_data.csv
     rows: timesteps
-    columns: [techs, parameters]
+    columns: [techs, inputs]
   tech_carrier_data:
-    data: outputs/loading_tabular_data/tech_carrier_data.csv
-    rows: [techs, parameters]
+    table: outputs/loading_tabular_data/tech_carrier_data.csv
+    rows: [techs, inputs]
     add_dims:
       carriers: electricity
   tech_cost_data:
-    data: outputs/loading_tabular_data/tech_cost_data.csv
-    rows: parameters
+    table: outputs/loading_tabular_data/tech_cost_data.csv
+    rows: inputs
     columns: techs
     add_dims:
       costs: monetary
@@ -642,24 +642,24 @@ pd.concat([flow_cap_old, flow_cap_new], axis=1, keys=["old", "new"])
 # ```yaml
 # data_tables:
 #   tech_data:
-#     data: outputs/loading_tabular_data/tech_data.csv
-#     rows: parameters
+#     table: outputs/loading_tabular_data/tech_data.csv
+#     rows: inputs
 #     columns: techs
 #   tech_node_data:
-#     data: outputs/loading_tabular_data/tech_node_data.csv
-#     rows: [techs, nodes, parameters]
+#     table: outputs/loading_tabular_data/tech_node_data.csv
+#     rows: [techs, nodes, inputs]
 #   tech_timestep_data:
-#     data: outputs/loading_tabular_data/tech_timestep_data.csv
+#     table: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
-#     columns: [techs, parameters]
+#     columns: [techs, inputs]
 #   tech_carrier_data:
-#     data: outputs/loading_tabular_data/tech_carrier_data.csv
-#     rows: [techs, parameters]
+#     table: outputs/loading_tabular_data/tech_carrier_data.csv
+#     rows: [techs, inputs]
 #     add_dims:
 #       carriers: electricity
 #   tech_cost_data:
-#     data: outputs/loading_tabular_data/tech_cost_data.csv
-#     rows: parameters
+#     table: outputs/loading_tabular_data/tech_cost_data.csv
+#     rows: inputs
 #     columns: techs
 #     add_dims:
 #       costs: monetary
@@ -680,24 +680,24 @@ model_def = read_rich_yaml(
     """
 data_tables:
   tech_data:
-    data: outputs/loading_tabular_data/tech_data.csv
-    rows: parameters
+    table: outputs/loading_tabular_data/tech_data.csv
+    rows: inputs
     columns: techs
   tech_node_data:
-    data: outputs/loading_tabular_data/tech_node_data.csv
-    rows: [techs, nodes, parameters]
+    table: outputs/loading_tabular_data/tech_node_data.csv
+    rows: [techs, nodes, inputs]
   tech_timestep_data:
-    data: outputs/loading_tabular_data/tech_timestep_data.csv
+    table: outputs/loading_tabular_data/tech_timestep_data.csv
     rows: timesteps
-    columns: [techs, parameters]
+    columns: [techs, inputs]
   tech_carrier_data:
-    data: outputs/loading_tabular_data/tech_carrier_data.csv
-    rows: [techs, parameters]
+    table: outputs/loading_tabular_data/tech_carrier_data.csv
+    rows: [techs, inputs]
     add_dims:
       carriers: electricity
   tech_cost_data:
-    data: outputs/loading_tabular_data/tech_cost_data.csv
-    rows: parameters
+    table: outputs/loading_tabular_data/tech_cost_data.csv
+    rows: inputs
     columns: techs
     add_dims:
       costs: monetary

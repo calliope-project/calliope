@@ -110,20 +110,20 @@ supply_file.csv:
     ```yaml
     data_tables:
       demand_data:
-        data: demand_file.csv
+        table: demand_file.csv
         rows: timesteps
         columns: nodes
         add_dims:
           techs: demand_tech
-          parameters: sink_equals
+          inputs: sink_equals
 
       supply_data:
-        data: supply_file.csv
+        table: supply_file.csv
         rows: timesteps
         columns: nodes
         add_dims:
           techs: supply_tech
-          parameters: source_max
+          inputs: source_max
     ```
 
 !!! info "See also"

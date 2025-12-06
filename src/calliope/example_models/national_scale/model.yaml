@@ -42,14 +42,14 @@ data_definitions:
 # --8<-- [start:data-tables]
 data_tables:
   time_varying_parameters:
-    data: data_tables/time_varying_params.csv
+    table: data_tables/time_varying_params.csv
     rows: timesteps
-    columns: [comment, nodes, techs, parameters]
+    columns: [comment, nodes, techs, inputs]
     drop: comment
   cost_parameters:
-    data: data_tables/costs.csv
+    table: data_tables/costs.csv
     rows: techs
-    columns: [parameters, comment]
+    columns: [inputs, comment]
     drop: comment
     add_dims:
       costs: monetary

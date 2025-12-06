@@ -3,7 +3,7 @@
 The full syntax from loading tabular data can be found in the associated [schema][data-table-schema].
 In brief it is:
 
-* **data**: path to file or reference name for an in-memory object.
+* **table**: path to tabular data in file or reference name for an in-memory object.
 * **rows**: the dimension(s) in your table defined per row.
 * **columns**: the dimension(s) in your table defined per column.
 * [**select**](#selecting-dimension-values-and-dropping-dimensions): values within dimensions that you want to select from your tabular data, discarding the rest.
@@ -12,9 +12,9 @@ In brief it is:
 * [**rename_dims**](#renaming-dimensions-on-load): dimension names to map from those defined in the data table (e.g `time`) to those used in the Calliope model (e.g. `timesteps`).
 
 When we refer to "dimensions", we mean the sets over which data is indexed in the model: `nodes`, `techs`, `timesteps`, `carriers`, `costs`.
-In addition, when loading from file, there is the _required_ dimension `parameters`.
+In addition, when loading from file, there is the _required_ dimension `inputs`.
 This is a placeholder to point Calliope to the parameter name(s) that your tabular data is referring to.
-The values assigned as parameters will become the array names in your loaded model dataset ([`model.inputs`][calliope.Model.inputs]).
+The values assigned as inputs will become the array names in your loaded model dataset ([`model.inputs`][calliope.Model.inputs]).
 
 ## Structuring your CSV files
 
@@ -121,11 +121,11 @@ In this section we will show some examples of loading data and provide the equiv
     ```yaml
     data_tables:
       pv_capacity_factor_data:
-        data: data_tables/pv_resource.csv
+        table: data_tables/pv_resource.csv
         rows: timesteps
         add_dims:
           techs: pv
-          parameters: source_use_equals
+          inputs: source_use_equals
     ```
 
 === "YAML"
@@ -154,7 +154,7 @@ In this section we will show some examples of loading data and provide the equiv
 
     <div class="annotate" markdown>
 
-    | techs | parameters            | values (1)  |
+    | techs | inputs                | values (1)  |
     | ----: | --------------------: | :---------- |
     | tech1 | base_tech             | supply      |
     | tech1 | flow_cap_max          | 100         |
@@ -176,8 +176,8 @@ In this section we will show some examples of loading data and provide the equiv
     ```yaml
     data_tables:
       tech_data:
-        data: data_tables/tech_data.csv
-        rows: [techs, parameters]
+        table: data_tables/tech_data.csv
+        rows: [techs, inputs]
     ```
 
 === "YAML"
@@ -219,8 +219,8 @@ In this section we will show some examples of loading data and provide the equiv
     ```yaml
     data_tables:
       tech_data:
-        data: data_tables/tech_data.csv
-        rows: [techs, parameters]
+        table: data_tables/tech_data.csv
+        rows: [techs, inputs]
         add_dims:
           costs: monetary
     ```
@@ -274,7 +274,7 @@ For instance:
 
 Data in file:
 
-| techs | parameters | node1 | node2 | node3 |
+| techs | inputs     | node1 | node2 | node3 |
 | ----: | ---------: | :---- | :---- | :---- |
 | tech1 | parameter1 | 100   | 200   | 300   |
 | tech2 | parameter1 | 0.1   | 0.3   | 0.5   |
@@ -285,8 +285,8 @@ YAML definition to load only data from nodes 1 and 2:
 ```yaml
 data_tables:
   tech_data:
-    data: data_tables/tech_data.csv
-    rows: [techs, parameters]
+    table: data_tables/tech_data.csv
+    rows: [techs, inputs]
     columns: nodes
     select:
       nodes: [node1, node2]
@@ -296,7 +296,7 @@ You may also want to store scenarios in your file.
 When you load in the data, you can select your scenario.
 You will also need to `drop` the dimension so that it doesn't appear in the final calliope model dataset:
 
-| techs | parameters | scenario1 | scenario2 |
+| techs | inputs     | scenario1 | scenario2 |
 | ----: | ---------: | :-------- | :-------- |
 | tech1 | parameter1 | 100       | 200       |
 | tech2 | parameter1 | 0.1       | 0.3       |
@@ -307,8 +307,8 @@ YAML definition to load only data from scenario 1:
 ```yaml
 data_tables:
   tech_data:
-    data: data_tables/tech_data.csv
-    rows: [techs, parameters]
+    table: data_tables/tech_data.csv
+    rows: [techs, inputs]
     columns: scenarios
     select:
       scenarios: scenario1
@@ -343,8 +343,8 @@ For example, to define costs for the parameter `cost_flow_cap`:
     ```yaml
     data_tables:
       tech_data:
-        data: data_tables/tech_data.csv
-        rows: [techs, costs, parameters]
+        table: data_tables/tech_data.csv
+        rows: [techs, costs, inputs]
         columns: nodes
     ```
 
@@ -359,12 +359,12 @@ For example, to define costs for the parameter `cost_flow_cap`:
     ```yaml
     data_tables:
       tech_data:
-        data: data_tables/tech_data.csv
+        table: data_tables/tech_data.csv
         rows: techs
         columns: nodes
         add_dims:
           costs: monetary
-          parameters: cost_flow_cap
+          inputs: cost_flow_cap
     ```
 
 Or to define the same timeseries source data for two technologies at different nodes:
@@ -379,9 +379,9 @@ Or to define the same timeseries source data for two technologies at different n
     ```yaml
     data_tables:
       tech_data:
-        data: data_tables/tech_data.csv
+        table: data_tables/tech_data.csv
         rows: timesteps
-        columns: [nodes, techs, parameters]
+        columns: [nodes, techs, inputs]
     ```
 
 === "With `add_dims`"
@@ -394,19 +394,19 @@ Or to define the same timeseries source data for two technologies at different n
     ```yaml
     data_tables:
       tech_data_1:
-        data: data_tables/tech_data.csv
+        table: data_tables/tech_data.csv
         rows: timesteps
         add_dims:
           techs: tech1
           nodes: node1
-          parameters: source_use_max
+          inputs: source_use_max
       tech_data_2:
-        data: data_tables/tech_data.csv
+        table: data_tables/tech_data.csv
         rows: timesteps
         add_dims:
           techs: tech2
           nodes: node2
-          parameters: source_use_max
+          inputs: source_use_max
     ```
 
 ## Using a template
@@ -426,19 +426,19 @@ To assign the same input timeseries data for (tech1, node1) and (tech2, node2) u
     ```yaml
     data_tables:
       tech_data_1:
-        data: data_tables/tech_data.csv
+        table: data_tables/tech_data.csv
         rows: timesteps
         add_dims:
           techs: tech1
           nodes: node1
-          parameters: source_use_max
+          inputs: source_use_max
       tech_data_2:
-        data: data_tables/tech_data.csv
+        table: data_tables/tech_data.csv
         rows: timesteps
         add_dims:
           techs: tech2
           nodes: node2
-          parameters: source_use_max
+          inputs: source_use_max
     ```
 
 === "With `template`"
@@ -451,10 +451,10 @@ To assign the same input timeseries data for (tech1, node1) and (tech2, node2) u
     ```yaml
     templates:
       common_data_options:
-        data: data_tables/tech_data.csv
+        table: data_tables/tech_data.csv
         rows: timesteps
         add_dims:
-          parameters: source_use_max
+          inputs: source_use_max
     data_tables:
       tech_data_1:
         template: common_data_options
@@ -489,9 +489,9 @@ For example, if we have the `time` dimension in file, we can map it to the Calli
     ```yaml
     data_sources:
       pv_capacity_factor_data:
-        source: data_sources/pv_resource.csv
+        table: data_sources/pv_resource.csv
         rows: timesteps
-        columns: parameters
+        columns: inputs
         add_dims:
           techs: pv
     ```
@@ -510,9 +510,9 @@ For example, if we have the `time` dimension in file, we can map it to the Calli
     ```yaml
     data_sources:
       pv_capacity_factor_data:
-        source: data_sources/pv_resource.csv
+        table: data_sources/pv_resource.csv
         rows: timesteps
-        columns: parameters
+        columns: inputs
         add_dims:
           techs: pv
         rename_dims:
@@ -543,10 +543,10 @@ And then you point to those dictionary keys in the `data` for your data table:
 ```yaml
 data_tables:
   ds1:
-    data: data_source_1
+    table: data_source_1
     ...
   ds2:
-    data: data_source_2
+    table: data_source_2
     ...
 ```
 
@@ -561,7 +561,7 @@ data_tables:
 
 To get the expected results when loading tabular data, here are some things to note:
 
-1. You must always have a `parameters` dimension.
+1. You must always have a `inputs` dimension.
 This could be defined in `rows`, `columns`, or `add_dims`.
 2. The order of events for `select`, `drop`, `add_dims` is:
     1. `select` from dimensions;

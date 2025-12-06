@@ -935,13 +935,13 @@ class TestNetImportShare(CustomMathExamples):
         "data_definitions.net_import_share": 1.5,
         "data_tables": {
             "demand_heat": {
-                "data": "data_tables/demand_heat.csv",
+                "table": "data_tables/demand_heat.csv",
                 "rows": "timesteps",
                 "columns": "nodes",
                 "select": {"nodes": "a"},
                 "drop": "nodes",
                 "add_dims": {
-                    "parameters": "sink_use_equals",
+                    "inputs": "sink_use_equals",
                     "techs": "test_demand_heat",
                     "nodes": "c",
                 },

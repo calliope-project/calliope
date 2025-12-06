@@ -29,10 +29,10 @@ config:
     time_cluster: cluster_days_param
 data_tables:
   cluster_days:
-    data: /path/to/cluster_days.csv
+    table: /path/to/cluster_days.csv
     rows: timesteps
     add_dims:
-      parameters: cluster_days_param
+      inputs: cluster_days_param
 ```
 
 When using representative days, you may want to enable a number of additional constraints to improve how carriers are stored between representative days, based on the study undertaken by [Kotzur et al.](https://doi.org/10.1016/j.apenergy.2018.01.023).
@@ -92,9 +92,9 @@ We were previously using this in our internal clustering.
     cluster_days.to_csv("/absolute_path/to/clusters.csv")
     data_table_definition = {
         "cluster_days": {
-            "data": "cluster_days",
+            "table": "cluster_days",
             "rows": "timesteps",
-            "add_dims": {"parameters": "cluster_days_param"}
+            "add_dims": {"inputs": "cluster_days_param"}
         }
     }
 

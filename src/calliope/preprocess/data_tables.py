@@ -58,10 +58,10 @@ class DataTable:
 
         self.protected_params = load_config("protected_parameters.yaml")
 
-        if ".csv" in Path(self.input.data).suffixes:
+        if ".csv" in Path(self.input.table).suffixes:
             df = self._read_csv()
         else:
-            df = self.dfs[self.input.data]
+            df = self.dfs[self.input.table]
 
         self.dataset = self._df_to_ds(df)
 
@@ -218,7 +218,7 @@ class DataTable:
         Returns:
             pd.DataFrame: Loaded data without any processing.
         """
-        filename = self.input.data
+        filename = self.input.table
 
         if self.columns is None:
             self._log(
@@ -241,7 +241,7 @@ class DataTable:
 
         Returns:
             xr.Dataset:
-                `parameters` dimension in `df` are data variables and all other dimensions are data coordinates.
+                `inputs` dimension in `df` are data variables and all other dimensions are data coordinates.
         """
         if not isinstance(df, pd.DataFrame):
             self._raise_error(
@@ -296,10 +296,10 @@ class DataTable:
         self._check_processed_tdf(tdf)
         self._check_for_protected_params(tdf)
 
-        if tdf.index.names == ["parameters"]:  # unindexed parameters
+        if tdf.index.names == ["inputs"]:  # unindexed input data
             ds = xr.Dataset(tdf.to_dict())
         else:
-            ds = tdf.unstack("parameters").infer_objects().to_xarray()
+            ds = tdf.unstack("inputs").infer_objects().to_xarray()
 
         self._log(f"Loaded arrays:\n{ds}")
         return ds
@@ -328,14 +328,14 @@ class DataTable:
         return df
 
     def _check_for_protected_params(self, tdf: pd.Series):
-        """Raise an error if any defined parameters are in a pre-configured set of _protected_ parameters.
+        """Raise an error if any defined inputs are in a pre-configured set of _protected_ inputs.
 
-        See keys of `self.protected_params` for list of protected parameters.
+        See keys of `self.protected_params` for list of protected inputs.
 
         Args:
-            tdf (pd.Series): Tidy dataframe in which to search for parameters (within the `parameters` index level).
+            tdf (pd.Series): Tidy dataframe in which to search for inputs (within the `inputs` index level).
         """
-        invalid_params = tdf.index.get_level_values("parameters").intersection(
+        invalid_params = tdf.index.get_level_values("inputs").intersection(
             list(self.protected_params.keys())
         )
         if not invalid_params.empty:
@@ -345,9 +345,9 @@ class DataTable:
             )
 
     def _check_processed_tdf(self, tdf: pd.Series):
-        if "parameters" not in tdf.index.names:
+        if "inputs" not in tdf.index.names:
             self._raise_error(
-                "The `parameters` dimension must exist in on of `rows`, `columns`, or `add_dims`."
+                "The `inputs` dimension must exist in on of `rows`, `columns`, or `add_dims`."
             )
 
         duplicated_index = tdf.index.duplicated()

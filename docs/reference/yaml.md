@@ -303,20 +303,20 @@ To streamline data entry, any section can inherit common data from a `template` 
             rows: timesteps
             columns: nodes
             add_dims:
-              parameters: source_use_max
+              inputs: source_use_max
         data_tables:
           pv_data:
-            data: /path/to/pv_timeseries.csv
+            table: /path/to/pv_timeseries.csv
             template: common_data_options
             add_dims:
               techs: pv
           wind_data:
-            data: /path/to/wind_timeseries.csv
+            table: /path/to/wind_timeseries.csv
             template: common_data_options
             add_dims:
               techs: wind
           hydro_data:
-            data: /path/to/hydro_timeseries.csv
+            table: /path/to/hydro_timeseries.csv
             template: common_data_options
             add_dims:
               techs: hydro
@@ -326,25 +326,25 @@ To streamline data entry, any section can inherit common data from a `template` 
         ```yaml
         data_tables:
           pv_data:
-            data: /path/to/pv_timeseries.csv
+            table: /path/to/pv_timeseries.csv
             rows: timesteps
             columns: nodes
             add_dims:
-              parameters: source_use_max
+              inputs: source_use_max
               techs: pv
           wind_data:
-            data: /path/to/wind_timeseries.csv
+            table: /path/to/wind_timeseries.csv
             rows: timesteps
             columns: nodes
             add_dims:
-              parameters: source_use_max
+              inputs: source_use_max
               techs: wind
           hydro_data:
-            data: /path/to/hydro_timeseries.csv
+            table: /path/to/hydro_timeseries.csv
             rows: timesteps
             columns: nodes
             add_dims:
-              parameters: source_use_max
+              inputs: source_use_max
               techs: hydro
         ```
 

@@ -13,7 +13,7 @@ class TestCalliopeDataTable:
     @pytest.fixture
     def full_data_table_config(self):
         return read_rich_yaml("""
-    data: time_varying_df
+    table: time_varying_df
     rows: timesteps
     columns: [comment, nodes, techs]
     select:
@@ -21,7 +21,7 @@ class TestCalliopeDataTable:
         techs: pv
     drop: comment
     add_dims:
-        parameters: something
+        inputs: something
         costs: monetary
     rename_dims:
         location: nodes
@@ -36,7 +36,7 @@ class TestCalliopeDataTable:
         with pytest.raises(ValidationError, match="validation error for Data table"):
             CalliopeDataTable(**data_table)
 
-    @pytest.mark.parametrize("data_table", [{"data": "foo"}])
+    @pytest.mark.parametrize("data_table", [{"table": "foo"}])
     def test_incomplete_column_or_row(self, data_table):
         """Not providing either rows or columns is invalid."""
         with pytest.raises(ValidationError) as excinfo:
@@ -56,7 +56,7 @@ class TestCalliopeDataTable:
     def test_row_column_overlap(self, rows, columns):
         """Rows and columns must not share any similar values."""
         with pytest.raises(ValidationError) as excinfo:
-            CalliopeDataTable(data="foobar", rows=rows, columns=columns)
+            CalliopeDataTable(table="foobar", rows=rows, columns=columns)
         assert check_error_or_warning(excinfo, "Rows and columns must not overlap.")
 
     @pytest.mark.parametrize(
@@ -64,7 +64,9 @@ class TestCalliopeDataTable:
     )
     def test_add_dims_overlap(self, rows, columns, add_dims):
         with pytest.raises(ValidationError) as excinfo:
-            CalliopeDataTable(data="foo", rows=rows, columns=columns, add_dims=add_dims)
+            CalliopeDataTable(
+                table="foo", rows=rows, columns=columns, add_dims=add_dims
+            )
         assert check_error_or_warning(
             excinfo, "Added dimensions must not be in columns or rows."
         )

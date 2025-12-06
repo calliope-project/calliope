@@ -11,10 +11,10 @@ overrides:
       extra_math: ["storage_inter_cluster"]
     data_tables:
       cluster_days:
-        data: cluster_days.csv
+        table: cluster_days.csv
         rows: timesteps
         add_dims:
-          parameters: cluster_days
+          inputs: cluster_days
   spores:
     config:
       init.name: SPORES mode
@@ -40,28 +40,28 @@ techs:
 
 data_tables:
   techs:
-    data: techs.csv
-    rows: [techs, parameters]
+    table: techs.csv
+    rows: [techs, inputs]
 
   nodes:
-    data: nodes.csv
-    rows: parameters
+    table: nodes.csv
+    rows: inputs
     add_dims:
       nodes: [A, B]
 
   tech_carrier:
-    data: tech_carrier.csv
-    rows: [techs, carriers, parameters]
+    table: tech_carrier.csv
+    rows: [techs, carriers, inputs]
 
   costs:
-    data: costs.csv
-    rows: [techs, parameters]
+    table: costs.csv
+    rows: [techs, inputs]
     add_dims:
       costs: monetary
 
   time_varying:
-    data: time_varying.csv
+    table: time_varying.csv
     rows: timesteps
     add_dims:
-      parameters: sink_use_max
+      inputs: sink_use_max
       techs: demand_tech

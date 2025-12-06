@@ -21,8 +21,8 @@ class TestTimeFormat:
             """
             config.init.datetime_format: "%d/%m/%Y %H:%M"
             data_tables:
-                demand_elec.data: data_tables/demand_heat_diff_dateformat.csv
-                demand_heat.data: data_tables/demand_heat_diff_dateformat.csv
+                demand_elec.table: data_tables/demand_heat_diff_dateformat.csv
+                demand_heat.table: data_tables/demand_heat_diff_dateformat.csv
         """
         )
         model = build_test_model(override_dict=override, scenario="simple_conversion")
@@ -34,7 +34,7 @@ class TestTimeFormat:
     def test_incorrect_date_format_one(self):
         # should fail: wrong dateformat input for one file
         override = read_rich_yaml(
-            "data_tables.demand_elec.data: data_tables/demand_heat_diff_dateformat.csv"
+            "data_tables.demand_elec.table: data_tables/demand_heat_diff_dateformat.csv"
         )
 
         with pytest.raises(exceptions.ModelError):
@@ -50,7 +50,7 @@ class TestTimeFormat:
     def test_incorrect_date_format_one_value_only(self):
         """All time formatted values should be checked against the configured ISO."""
         override = read_rich_yaml(
-            "data_tables.demand_elec.data: data_tables/demand_heat_wrong_dateformat.csv"
+            "data_tables.demand_elec.table: data_tables/demand_heat_wrong_dateformat.csv"
         )
         with pytest.raises(
             exceptions.ModelError,
@@ -116,16 +116,16 @@ class TestClustering:
             "override_dict": {
                 "data_tables": {
                     "clustering": {
-                        "data": f"data_tables/{request.param}.csv",
+                        "table": f"data_tables/{request.param}.csv",
                         "rows": "datesteps",
-                        "add_dims": {"parameters": request.param},
+                        "add_dims": {"inputs": request.param},
                     }
                 }
             },
         }
         if "diff_dateformat" in request.param:
             cluster_init["override_dict"]["data_tables.demand_elec"] = {
-                "data": "data_tables/demand_heat_diff_dateformat.csv"
+                "table": "data_tables/demand_heat_diff_dateformat.csv"
             }
             cluster_init["datetime_format"] = "%d/%m/%Y %H:%M"
             cluster_init["date_format"] = "%d/%m/%Y"
@@ -186,9 +186,9 @@ class TestResamplingAndCluster:
             time_cluster="cluster_days_param",
             override_dict={
                 "data_tables.cluster_days": {
-                    "data": "data_tables/cluster_days.csv",
+                    "table": "data_tables/cluster_days.csv",
                     "rows": "datesteps",
-                    "add_dims": {"parameters": "cluster_days_param"},
+                    "add_dims": {"inputs": "cluster_days_param"},
                 }
             },
         )
@@ -223,7 +223,7 @@ class TestResampling:
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
         override = read_rich_yaml(
-            "data_tables.demand_elec.data: data_tables/demand_elec_15mins.csv"
+            "data_tables.demand_elec.table: data_tables/demand_elec_15mins.csv"
         )
 
         model = build_test_model(
@@ -250,7 +250,7 @@ class TestResampling:
         CSV has daily timeseries varying from 15min to 2h resolution, resample all to 2h
         """
         override = read_rich_yaml(
-            "data_tables.demand_elec.data: data_tables/demand_elec_15T_to_2h.csv"
+            "data_tables.demand_elec.table: data_tables/demand_elec_15T_to_2h.csv"
         )
 
         model = build_test_model(
@@ -289,13 +289,13 @@ class TestResampling:
                     select:
                         nodes: a
                 demand_elec_15m:
-                    data: data_tables/demand_elec_15mins.csv
+                    table: data_tables/demand_elec_15mins.csv
                     rows: timesteps
                     columns: nodes
                     select:
                         nodes: b
                     add_dims:
-                        parameters: sink_use_equals
+                        inputs: sink_use_equals
                         techs: test_demand_elec
             """
         )
