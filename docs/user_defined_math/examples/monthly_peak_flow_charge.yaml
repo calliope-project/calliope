@@ -1,7 +1,7 @@
 # title: Monthly peak flow charge
 #
 # description: |
-#   Apply a cost in each month of the year linked to technology the peak outflow in that month.
+#   Apply a cost in each month of the year linked to the peak technology outflow in that month.
 #   NOTE: this is only suitable for small models otherwise the number of dimensions on the `set_peak_month_flow` constraint will lead to a very large memory footprint.
 #   One option to mitigate this is to define a separate constraint per month.
 #

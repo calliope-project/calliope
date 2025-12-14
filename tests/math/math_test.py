@@ -1019,6 +1019,14 @@ class TestNetImportShare(CustomMathExamples):
 
 
 class TestPeakMonthCost(CustomMathExamples):
+    """Test monthly peak flow charge constraint and cost calculation.
+
+    Note that this is a simplified test case using only a few timesteps within a single day.
+    The math doesn't actually see the month of the timestep, it takes the month allocations in `lookup_month` as given.
+    The purpose is to verify that the constraint and cost calculation are correctly implemented,
+    rather than to model a realistic scenario.
+    """
+
     YAML_FILEPATH = "monthly_peak_flow_charge.yaml"
     shared_overrides = {
         "config.init.subset.timesteps": ["2005-01-01 00:00:00", "2005-01-01 03:00:00"],
