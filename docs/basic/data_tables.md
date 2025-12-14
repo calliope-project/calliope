@@ -13,7 +13,7 @@ In brief it is:
 
 When we refer to "dimensions", we mean the sets over which data is indexed in the model: `nodes`, `techs`, `timesteps`, `carriers`, `costs`.
 In addition, when loading from file, there is the _required_ dimension `inputs`.
-This is a placeholder to point Calliope to the parameter name(s) that your tabular data is referring to.
+This is a placeholder to point Calliope to the parameter or lookup name(s) that your tabular data is referring to.
 The values assigned as inputs will become the array names in your loaded model dataset ([`model.inputs`][calliope.Model.inputs]).
 
 ## Structuring your CSV files
