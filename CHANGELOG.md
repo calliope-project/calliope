@@ -4,6 +4,8 @@
 
 |new| user-defined math example introducing monthly peak charges (#727).
 
+|fixed| parameters loaded in from multiple data tables indexed over different dimensions broadcast across `nodes` and `techs` correctly (#806).
+
 |new| YAML math section for creating data arrays after solving a model, using expressions combining inputs and/or results (#638).
 
 |new| Dimensions can now be referenced in math `where` and `expression` strings and arithmetic can be used when making comparisons and using helper functions in `where` strings (#733).

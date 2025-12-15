@@ -180,7 +180,11 @@ class ModelDataBuilder(ModelDTypeUpdater):
                     lookup_dict = data_table.lookup_dict_from_param(param, lookup_dim)
                     self.tech_data_from_tables.union(lookup_dict)
                     data_table.drop(param)
-
+        # Pre-populate the dataset with model nodes and techs
+        self.dataset = self.dataset.assign_coords(
+            nodes=list(self.model_definition["nodes"]),
+            techs=list(self.model_definition["techs"]),
+        )
         for data_table in data_tables:
             self._add_to_dataset(
                 data_table.dataset, f"(data_tables, {data_table.name})"
