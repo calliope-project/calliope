@@ -150,7 +150,7 @@ class Build(CalliopeBaseModel):
 
     model_config = {"title": "Model build configuration"}
 
-    backend: Literal["pyomo", "gurobi"] = Field(default="pyomo")
+    backend: Literal["pyomo", "gurobi", "highs"] = Field(default="pyomo")
     """Module with which to build the optimisation problem."""
 
     ensure_feasibility: bool = Field(default=False)

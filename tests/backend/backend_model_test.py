@@ -15,10 +15,12 @@ from ..common.util import build_test_model as build_model
 from ..common.util import check_error_or_warning
 
 
-@pytest.fixture(scope="class", params=["pyomo", "gurobi"])
+@pytest.fixture(scope="class", params=["pyomo", "gurobi", "highs"])
 def backend(request) -> str:
     if request.param == "gurobi":
         pytest.importorskip("gurobipy")
+    if request.param == "highs":
+        pytest.importorskip("highspy")
     return request.param
 
 
@@ -899,14 +901,10 @@ class TestUpdateParameter:
             "built_model_func" + model_suffix
         )
         # TODO: update once we have a `get_objective` method that is backend-agnostic
-        if isinstance(model.backend, calliope.backend.GurobiBackendModel):
-            objective_string = str(
-                model.backend.objectives.min_cost_optimisation.item()
-            )
-        elif isinstance(model.backend, calliope.backend.PyomoBackendModel):
-            objective_string = str(
-                model.backend.objectives.min_cost_optimisation.item().expr
-            )
+        obj = model.backend.objectives.min_cost_optimisation.item()
+        if isinstance(model.backend, calliope.backend.PyomoBackendModel):
+            obj = obj.expr
+        objective_string = str(obj)
         if model_suffix.endswith("updated_cost_flow_cap"):
             assert "test_demand_elec" in objective_string
         else:
@@ -947,7 +945,6 @@ class TestUpdateVariable:
         bound_vals = solved_model_func.backend.get_variable_bounds("flow_out")[
             translator[bound]
         ]
-
         assert (bound_vals == dummy_int).where(bound_vals.notnull()).all()
 
     def test_update_variable_bounds_single_val(self, solved_model_func, dummy_int):
@@ -1054,6 +1051,10 @@ class TestPiecewiseConstraints:
 
     @pytest.fixture(scope="class")
     def working_model(self, backend, working_params, working_math, add_math):
+        if backend == "highs":
+            # no piecewise constraints in HiGHS yet
+            pytest.skip()
+
         m = build_model(
             working_params,
             "simple_supply,two_hours,investment_costs",

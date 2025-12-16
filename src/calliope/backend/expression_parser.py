@@ -230,7 +230,7 @@ class EvalOperatorOperand(EvalArrayOrMath):
             case "*":
                 val = val * evaluated_operand
             case "/":
-                val = val / evaluated_operand
+                val = val * (1 / evaluated_operand)
             case "+":
                 val = val + evaluated_operand
             case "-":
