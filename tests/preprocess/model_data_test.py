@@ -13,6 +13,7 @@ from calliope.preprocess import (
     model_math,
     prepare_model_definition,
 )
+from calliope.schemas.data_table_schema import CalliopeDataTables
 from calliope.util import DATETIME_DTYPE
 
 from ..common.util import build_test_model as build_model
@@ -998,6 +999,7 @@ class TestModelDataCleaner:
     def test_add_colors_no_init_da(
         self, my_caplog, model_data_cleaner: ModelDataCleaner
     ):
+        model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.add_colors()
         assert "Building technology color" in my_caplog.text
         np.testing.assert_array_equal(
@@ -1008,6 +1010,7 @@ class TestModelDataCleaner:
     def test_add_colors_full_init_da(
         self, my_caplog, model_data_cleaner: ModelDataCleaner
     ):
+        model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.dataset["color"] = xr.DataArray(
             ["#123", "#654", "#321", "#456"], dims=("techs",)
         )
@@ -1019,6 +1022,7 @@ class TestModelDataCleaner:
     def test_add_colors_partial_init_da(
         self, my_caplog, model_data_cleaner: ModelDataCleaner
     ):
+        model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.dataset["color"] = pd.Series(
             ["#123", np.nan, "#321", "#456"],
             index=model_data_cleaner.dataset.techs.to_index(),
@@ -1151,6 +1155,103 @@ class TestSubset:
         assert (
             "Skipping subsetting for undefined dimension: undefined" in my_caplog.text
         )
+
+
+class TestDataTableBuilding:
+    @pytest.fixture(
+        scope="class",
+        params=[
+            [
+                "techs_nodes_parameters_timeseries",
+                "techs_and_nodes_no_ts",
+                "techs_parameters_timeseries",
+            ],
+            [
+                "techs_parameters_timeseries",
+                "techs_and_nodes_no_ts",
+                "techs_nodes_parameters_timeseries",
+            ],
+            [
+                "techs_and_nodes_no_ts",
+                "techs_parameters_timeseries",
+                "techs_nodes_parameters_timeseries",
+            ],
+        ],
+    )
+    def diff_dim_tables(self, request, minimal_test_model_path, config, math):
+        """
+        Create a ModelDataBuilder with data tables that have parameters defined over different dimensions,
+        to test that loading works correctly regardless of the order in which they are defined.
+        """
+        techs_and_nodes = pd.DataFrame(
+            {("test_supply_elec", "a", "dummy_param"): 5},
+            index=pd.to_datetime(["2005-01-01 00", "2005-01-01 01", "2005-01-01 02"]),
+        ).rename_axis(columns=["techs", "nodes", "inputs"])
+        techs_and_nodes_no_ts = pd.DataFrame(
+            {("test_supply_elec", "a"): 10}, index=["dummy_param_2"]
+        ).rename_axis(columns=["techs", "nodes"], index="inputs")
+        techs_only = pd.DataFrame(
+            {
+                ("test_supply_plus", "dummy_param"): 1,
+                ("test_demand_elec", "dummy_param_2"): 2,
+            },
+            index=pd.to_datetime(["2005-01-01 00", "2005-01-01 01", "2005-01-01 02"]),
+        ).rename_axis(columns=["techs", "inputs"])
+        data_table_dict = {
+            "techs_nodes_parameters_timeseries": {
+                "columns": ["techs", "nodes", "inputs"],
+                "table": "techs_and_nodes",
+                "rows": "timesteps",
+            },
+            "techs_and_nodes_no_ts": {
+                "columns": ["techs", "nodes"],
+                "table": "techs_and_nodes_no_ts",
+                "rows": "inputs",
+            },
+            "techs_parameters_timeseries": {
+                "columns": ["techs", "inputs"],
+                "table": "techs_only",
+                "rows": "timesteps",
+            },
+        }
+        ordered_dict = {key: data_table_dict[key] for key in request.param}
+        data_table_def = CalliopeDataTables.model_validate(ordered_dict)
+        data_table_dfs = {
+            "techs_and_nodes": techs_and_nodes,
+            "techs_and_nodes_no_ts": techs_and_nodes_no_ts,
+            "techs_only": techs_only,
+        }
+        model_def = prepare_model_definition(
+            io.read_rich_yaml(minimal_test_model_path),
+            scenario="simple_supply_and_supply_plus,two_hours",
+            definition_path=minimal_test_model_path,
+        )
+        data_tables_ = [
+            data_tables.DataTable(
+                table, table_dict, data_table_dfs, minimal_test_model_path
+            )
+            for table, table_dict in data_table_def.root.items()
+        ]
+        return ModelDataBuilder(
+            config.init,
+            AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
+            math,
+            tables=data_tables_,
+        )
+
+    def test_different_dims_ts_in_both(self, diff_dim_tables):
+        """When loading the same parameter for different techs in different files, one indexed over nodes and the other expected to be broadcast over all nodes, the data is loaded correctly."""
+        to_check = diff_dim_tables.dataset.dummy_param
+        assert (to_check.sel(techs="test_supply_elec", nodes="a") == 5).all()
+        assert to_check.sel(techs="test_supply_elec", nodes="b").isnull().all()
+        assert (to_check.sel(techs="test_supply_plus") == 1).all()
+
+    def test_different_dims_ts_in_one(self, diff_dim_tables):
+        """When loading the same parameter with and without timeseries data, data is broadcast as expected."""
+        to_check = diff_dim_tables.dataset.dummy_param_2
+        assert (to_check.sel(techs="test_supply_elec", nodes="a") == 10).all()
+        assert (to_check.sel(techs="test_supply_elec", nodes="b").isnull()).all()
+        assert (to_check.sel(techs="test_demand_elec") == 2).all()
 
 
 class TestResample:

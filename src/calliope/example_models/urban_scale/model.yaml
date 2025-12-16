@@ -43,27 +43,27 @@ data_definitions:
 # --8<-- [start:data-tables]
 data_tables:
   demand:
-    data: data_tables/demand.csv
+    table: data_tables/demand.csv
     rows: timesteps
     columns: [techs, nodes]
     add_dims:
-      parameters: sink_use_equals
+      inputs: sink_use_equals
   pv_resource:
-    data: data_tables/pv_resource.csv
+    table: data_tables/pv_resource.csv
     rows: timesteps
     columns: [comment, scaler]
     add_dims:
-      parameters: source_use_equals
+      inputs: source_use_equals
       techs: pv
     select:
       scaler: per_area
     drop: [comment, scaler]
   export_power:
-    data: data_tables/export_power.csv
+    table: data_tables/export_power.csv
     rows: timesteps
     columns: nodes
     add_dims:
-      parameters: cost_export
+      inputs: cost_export
       techs: chp
       costs: monetary
       carriers: electricity

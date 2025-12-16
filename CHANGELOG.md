@@ -4,6 +4,12 @@
 
 |fixed| Time clustering method, to handle cases where floating point errors can lead to index mismatches and dropped clusters (#826).
 
+|new| user-defined math example introducing monthly peak charges (#727).
+
+|changed| data table key `data` → `table` and `parameters` → `inputs`, to avoid confusion with math components (#814).
+
+|fixed| parameters loaded in from multiple data tables indexed over different dimensions broadcast across `nodes` and `techs` correctly (#806).
+
 |new| YAML math section for creating data arrays after solving a model, using expressions combining inputs and/or results (#638).
 
 |new| Dimensions can now be referenced in math `where` and `expression` strings and arithmetic can be used when making comparisons and using helper functions in `where` strings (#733).
@@ -18,6 +24,8 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 |fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
 
 ### Internal changes
+
+|fixed| example user-defined math tests that were missing global expressions in the resulting LP files.
 
 |changed| refactoring of backend model class to separate out logic to add different component types to the backend.
 

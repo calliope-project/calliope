@@ -319,6 +319,7 @@ class CustomMathExamples(ABC):
             scenario: str,
             overrides: dict | None = None,
             components: dict[list[str]] | None = None,
+            add_objective: bool = False,
         ):
             custom_math = {}
             if components is not None:
@@ -338,6 +339,23 @@ class CustomMathExamples(ABC):
             objective = "dummy_obj"
             if "objectives" in custom_math:
                 objective = list(custom_math["objectives"].keys())[0]
+
+            elif (
+                add_objective
+                and components is not None
+                and "global_expressions" in components
+            ):
+                objective = "test_obj"
+                expr_name = "+".join(components["global_expressions"])
+                expr = (
+                    f"sum({expr_name}, over=[nodes, techs, costs, carriers, timesteps])"
+                )
+                custom_math["objectives"] = {
+                    objective: {
+                        "equations": [{"expression": expr}],
+                        "sense": "minimise",
+                    }
+                }
 
             model = util.build_test_model(
                 {
@@ -720,6 +738,7 @@ class TestPiecewiseCosts(CustomMathExamples):
             "supply_purchase,two_hours",
             overrides,
             components=all_custom_components,
+            add_objective=True,
         )
 
 
@@ -752,6 +771,7 @@ class TestSOS2PiecewiseCosts(CustomMathExamples):
             "supply_purchase,two_hours",
             overrides,
             components=all_custom_components,
+            add_objective=True,
         )
 
 
@@ -935,13 +955,13 @@ class TestNetImportShare(CustomMathExamples):
         "data_definitions.net_import_share": 1.5,
         "data_tables": {
             "demand_heat": {
-                "data": "data_tables/demand_heat.csv",
+                "table": "data_tables/demand_heat.csv",
                 "rows": "timesteps",
                 "columns": "nodes",
                 "select": {"nodes": "a"},
                 "drop": "nodes",
                 "add_dims": {
-                    "parameters": "sink_use_equals",
+                    "inputs": "sink_use_equals",
                     "techs": "test_demand_heat",
                     "nodes": "c",
                 },
@@ -995,4 +1015,52 @@ class TestNetImportShare(CustomMathExamples):
                 "global_expressions": ["flow_out_transmission_techs"],
                 "parameters": ["net_import_share"],
             },
+        )
+
+
+class TestPeakMonthCost(CustomMathExamples):
+    """Test monthly peak flow charge constraint and cost calculation.
+
+    Note that this is a simplified test case using only a few timesteps within a single day.
+    The math doesn't actually see the month of the timestep, it takes the month allocations in `lookup_month` as given.
+    The purpose is to verify that the constraint and cost calculation are correctly implemented,
+    rather than to model a realistic scenario.
+    """
+
+    YAML_FILEPATH = "monthly_peak_flow_charge.yaml"
+    shared_overrides = {
+        "config.init.subset.timesteps": ["2005-01-01 00:00:00", "2005-01-01 03:00:00"],
+        "data_definitions": {
+            "monthly_peak_mode": {
+                "data": True,
+                "index": [["a", "test_supply_elec"]],
+                "dims": ["nodes", "techs"],
+            },
+            "lookup_month": {
+                "data": True,
+                "index": [
+                    [1, "2005-01-01 00:00"],
+                    [1, "2005-01-01 01:00"],
+                    [2, "2005-01-01 02:00"],
+                    [2, "2005-01-01 03:00"],
+                ],
+                "dims": ["months", "timesteps"],
+            },
+            "cost_month_peak": {"data": 15, "index": "monetary", "dims": "costs"},
+        },
+    }
+
+    def test_net_import_share_max(self, build_and_compare):
+        build_and_compare(
+            "monthly_peak_flow_charge",
+            "simple_supply",
+            self.shared_overrides,
+            components={
+                "constraints": ["set_peak_month_flow"],
+                "global_expressions": ["cost_operation_fixed"],
+                "variables": ["flow_peak_month"],
+                "parameters": ["cost_month_peak"],
+                "lookups": ["monthly_peak_mode", "lookup_month"],
+            },
+            add_objective=True,
         )
