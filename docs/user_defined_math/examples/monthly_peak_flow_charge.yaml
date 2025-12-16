@@ -1,0 +1,71 @@
+# title: Monthly peak flow charge
+#
+# description: |
+#   Apply a cost in each month of the year linked to the peak technology outflow in that month.
+#   NOTE: this is only suitable for small models otherwise the number of dimensions on the `set_peak_month_flow` constraint will lead to a very large memory footprint.
+#   One option to mitigate this is to define a separate constraint per month.
+#
+#   Helper functions used:
+#
+#   - `sum` (expression)
+#
+# ---
+
+dimensions:
+  months:
+    dtype: integer
+    ordered: true
+    iterator: month
+
+parameters:
+  cost_month_peak:
+    default: 0
+    title: Monthly peak usage charge.
+    description: >-
+      Cost per unit power that is applied based on peak carrier outflow in each month.
+    unit: $\frac{\text{cost}}{\text{power}}$
+
+lookups:
+  monthly_peak_mode:
+    description: >-
+      Table specifying whether a node-tech-carrier combination should have its peak monthly flow tracked
+    dtype: bool
+
+  lookup_month:
+    description: Table linking timesteps to months
+    dtype: bool
+
+constraints:
+  set_peak_month_flow:
+    description: >-
+      Set `flow_peak_month` as the peak outflow across all timesteps in each month
+    foreach: [nodes, techs, carriers, timesteps, months]
+    equations:
+      - where: monthly_peak_mode AND lookup_month
+        expression: flow_out <= flow_peak_month
+
+variables:
+  flow_peak_month:
+    title: Monthly Peak Flow Out
+    description: >-
+      The peak flow out for each month.
+      Useful for applying a monthly peak use cost (i.e. utility rate demand charges).
+    default: 0
+    unit: power
+    foreach: [nodes, techs, carriers, months]
+    where: monthly_peak_mode
+    bounds:
+      min: 0
+      max: flow_cap_max
+
+global_expressions:
+  # Update the base math fixed operation cost global expression to include monthly costs.
+  cost_operation_fixed:
+    where: (cost_om_annual AND flow_cap) OR (cost_investment AND cost_om_annual_investment_fraction) OR (cost_month_peak AND flow_peak_month)
+    equations:
+      - expression: >-
+          $annualisation_weight * (
+            sum(cost_om_annual * flow_cap, over=carriers) +
+            cost_investment * cost_om_annual_investment_fraction
+          ) +
+          sum(cost_month_peak * flow_peak_month, over=[carriers, months])

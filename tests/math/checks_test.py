@@ -4,7 +4,7 @@ Tests for all math checks defined in base.yaml.
 Each test validates that the appropriate error or warning is raised
 when the check condition is triggered.
 
-Test configurations are defined in tests/common/base_math_checks_config.yaml
+Test configurations are defined in tests/math/math_checks_config.yaml
 and loaded via parametrization for maintainability.
 """
 
