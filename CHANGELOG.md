@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Time clustering method, to handle cases where floating point errors can lead to index mismatches and dropped clusters (#826).
+
 |new| user-defined math example introducing monthly peak charges (#727).
 
 |changed| data table key `data` → `table` and `parameters` → `inputs`, to avoid confusion with math components (#814).

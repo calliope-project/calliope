@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import pytest  # noqa: F401
 import xarray as xr
@@ -106,6 +107,97 @@ class TestSubsetTime:
 
 
 class TestClustering:
+    @pytest.fixture(scope="class", params=["datetime", "string"])
+    def cluster_dtype(self, request):
+        """The method should be able to handle datetime and string lookup data"""
+        return request.param
+
+    @pytest.fixture(scope="class")
+    def dummy_model_to_cluster(self, dummy_int, cluster_dtype):
+        """Create a dummy model with a parameter to cluster 3 years of data into 5 representative days."""
+        ts = pd.date_range(
+            "2025-01-01", "2028-01-01", freq="h", inclusive="left", name="timesteps"
+        )
+        da = pd.Series(dummy_int, index=ts).to_xarray()
+        cluster_ts = pd.date_range(
+            "2025-01-01", "2028-01-01", freq="1d", inclusive="left", name="datesteps"
+        )
+        if cluster_dtype == "string":
+            cluster_ts = cluster_ts.strftime("%Y-%m-%d")
+
+        random_sample = np.random.choice(
+            cluster_ts.to_series().sample(5).index, len(cluster_ts)
+        )
+        cluster_da = pd.Series(random_sample, index=cluster_ts).to_xarray()
+        ds = xr.Dataset(
+            {
+                "ts_data": da,
+                "clustering_param": cluster_da,
+                "non_ts_data": xr.DataArray(42),
+            }
+        )
+        return ds
+
+    @pytest.fixture(scope="class")
+    def dummy_clustered_model(self, dummy_model_to_cluster):
+        return time.cluster(
+            dummy_model_to_cluster,
+            clustering_param="clustering_param",
+            time_format="ISO8601",
+        )
+
+    def test_has_clustering_lookup_arrays(self, dummy_clustered_model):
+        """Check that all expected clustering lookup arrays are present, along with the original data"""
+        expected = [
+            "ts_data",
+            "clustering_param",
+            "timestep_cluster",
+            "timestep_weights",
+            "cluster_first_timestep",
+            "lookup_cluster_last_timestep",
+            "lookup_datestep_cluster",
+            "lookup_datestep_last_cluster_timestep",
+            "non_ts_data",
+        ]
+        assert not set(dummy_clustered_model.data_vars.keys()).symmetric_difference(
+            expected
+        )
+
+    def test_has_clusters(self, dummy_clustered_model):
+        """Check that the correct number of clusters have been created"""
+        expected = pd.Index([0, 1, 2, 3, 4], name="clusters")
+        pd.testing.assert_index_equal(
+            dummy_clustered_model.clusters.to_index(), expected
+        )
+
+    def test_has_reduced_timeseries(self, dummy_clustered_model):
+        """Check that the timesteps dimension has been reduced correctly"""
+        assert len(dummy_clustered_model.timesteps) == 120  # 5 days * 24 hours
+
+    def test_clustered_timestep_weights(self, dummy_clustered_model, cluster_dtype):
+        """Check that the timestep weights have been calculated correctly based on the number of days each clustered day represents"""
+        timestep_idx = dummy_clustered_model.timesteps.to_index()
+        dates = (
+            timestep_idx.date
+            if cluster_dtype == "datetime"
+            else timestep_idx.strftime("%Y-%m-%d")
+        )
+        expected = (
+            dummy_clustered_model.clustering_param.to_series().value_counts().loc[dates]
+        )
+        expected.index = timestep_idx
+        expected_da = (
+            expected.rename_axis(index="timesteps")
+            .rename("timestep_weights")
+            .to_xarray()
+        )
+        assert dummy_clustered_model.timestep_weights.equals(expected_da)
+
+    def test_data_preserved(self, dummy_clustered_model, dummy_int):
+        """Check that input data is preserved in the clustered model"""
+        assert dummy_clustered_model.non_ts_data.item() == 42
+        assert (dummy_clustered_model.ts_data == dummy_int).all()
+
     @pytest.fixture(
         scope="class", params=["cluster_days", "cluster_days_diff_dateformat"]
     )
