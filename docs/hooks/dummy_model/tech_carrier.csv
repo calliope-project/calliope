@@ -1,4 +1,4 @@
-techs,carriers,parameters,
+techs,carriers,inputs,
 demand_tech,foo,carrier_in,1.0
 conversion_tech,foo,carrier_out,1.0
 conversion_tech,bar,carrier_in,1.0

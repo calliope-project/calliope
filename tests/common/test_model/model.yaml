@@ -25,11 +25,11 @@ data_definitions:
 
 data_tables:
   demand_elec:
-    data: data_tables/demand_elec.csv
+    table: data_tables/demand_elec.csv
     rows: timesteps
     columns: nodes
     add_dims:
-      parameters: sink_use_equals
+      inputs: sink_use_equals
       techs: test_demand_elec
 
 nodes:

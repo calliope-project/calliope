@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| data table key `data` → `table` and `parameters` → `inputs`, to avoid confusion with math components (#814).
+
 |fixed| parameters loaded in from multiple data tables indexed over different dimensions broadcast across `nodes` and `techs` correctly (#806).
 
 |new| YAML math section for creating data arrays after solving a model, using expressions combining inputs and/or results (#638).
