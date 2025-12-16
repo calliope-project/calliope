@@ -19,7 +19,7 @@ class CalliopeDataTable(CalliopeBaseModel):
 
     model_config = {"title": "Data table schema"}
 
-    data: str
+    table: str
     """
     Absolute or relative filepath.
     Relative paths are based on the model config file used to initialise the model.
@@ -52,7 +52,7 @@ class CalliopeDataTable(CalliopeBaseModel):
     add_dims: None | dict[AttrStr, AttrStr | list[AttrStr]] = None
     """
     Data dimensions to add after loading in the array.
-    These allow you to use the same file to assign values to different parameters/dimension index items
+    These allow you to use the same file to assign values to different input/dimension index items
     (e.g., setting `flow_cap_min` and `flow_cap_max` to the same value),
     or to add a dimension which would otherwise be a column containing the same information in each row
     (e.g., assigning the cost class to monetary for a file containing cost data).

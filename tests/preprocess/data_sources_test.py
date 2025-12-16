@@ -25,10 +25,10 @@ def generate_data_table_dict(data_dir):
         df.rename_axis(index=rows).to_csv(filepath)
         return data_table_schema.CalliopeDataTable.model_validate(
             {
-                "data": filepath.as_posix(),
+                "table": filepath.as_posix(),
                 "rows": rows,
                 "columns": columns,
-                "add_dims": {"parameters": "test_param"},
+                "add_dims": {"inputs": "test_param"},
             }
         )
 
@@ -162,7 +162,7 @@ class TestDataTableInitOneLevel:
     )
     def test_load_from_df(self, request, data_table_ref):
         expected_df, table_dict = request.getfixturevalue(data_table_ref)
-        table_dict = table_dict.update({"data": data_table_ref})
+        table_dict = table_dict.update({"table": data_table_ref})
         ds = data_tables.DataTable(
             "ds_name", table_dict, data_table_dfs={data_table_ref: expected_df}
         )
@@ -174,7 +174,7 @@ class TestDataTableInitOneLevel:
 
     def test_load_from_df_must_be_df(self, multi_row_no_col_data):
         expected_df, table_dict = multi_row_no_col_data
-        table_dict = table_dict.update({"data": "foo"})
+        table_dict = table_dict.update({"table": "foo"})
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             data_tables.DataTable(
                 "ds_name", table_dict, data_table_dfs={"foo": expected_df}
@@ -280,9 +280,9 @@ class TestDataTableSelectDropAdd:
             )
             table_dict = data_table_schema.CalliopeDataTable.model_validate(
                 {
-                    "data": "df",
+                    "table": "df",
                     "rows": ["test_row1", "test_row2"],
-                    "columns": "parameters",
+                    "columns": "inputs",
                     **table_dict_kwargs,
                 }
             )
@@ -365,10 +365,10 @@ class TestDataTableRenameDims:
             ).to_csv(filepath)
             table_dict = data_table_schema.CalliopeDataTable.model_validate(
                 {
-                    "data": filepath.as_posix(),
+                    "table": filepath.as_posix(),
                     "rows": new_idx,
                     "columns": new_cols,
-                    "add_dims": {"parameters": "test_param"},
+                    "add_dims": {"inputs": "test_param"},
                     "rename_dims": mapping,
                 }
             )
@@ -424,7 +424,7 @@ class TestDataTableMalformed:
                 }
             )
             table_dict = data_table_schema.CalliopeDataTable.model_validate(
-                {"data": "df", "rows": ["test_row1", "test_row2"], **table_dict_kwargs}
+                {"table": "df", "rows": ["test_row1", "test_row2"], **table_dict_kwargs}
             )
             ds = data_tables.DataTable("ds_name", table_dict, data_table_dfs={"df": df})
             return ds
@@ -434,18 +434,18 @@ class TestDataTableMalformed:
     def test_check_processed_tdf_no_parameters_dim(self, table_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             table_obj()
-        assert check_error_or_warning(excinfo, "The `parameters` dimension must exist")
+        assert check_error_or_warning(excinfo, "The `inputs` dimension must exist")
 
     def test_check_processed_tdf_duplicated_idx(self, table_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            table_obj(drop="test_row2", add_dims={"parameters": "test_param"})
+            table_obj(drop="test_row2", add_dims={"inputs": "test_param"})
         assert check_error_or_warning(excinfo, "Duplicate index items found:")
 
     def test_check_processed_tdf_duplicated_dim_name(self, table_obj):
         with pytest.raises(
             ValidationError, match="Added dimensions must not be in columns or rows."
         ):
-            table_obj(add_dims={"test_row2": "foo", "parameters": "test_param"})
+            table_obj(add_dims={"test_row2": "foo", "inputs": "test_param"})
 
     def test_too_many_called_cols(self, table_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
@@ -462,7 +462,7 @@ class TestDataTableMalformed:
 
     def test_check_for_protected_params(self, table_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            table_obj(add_dims={"parameters": "definition_matrix"})
+            table_obj(add_dims={"inputs": "definition_matrix"})
         assert check_error_or_warning(
             excinfo, "`definition_matrix` is a protected array"
         )
@@ -479,7 +479,7 @@ class TestDataTableLookupDictFromParam:
         )
         table_dict = (
             calliope.schemas.data_table_schema.CalliopeDataTable.model_validate(
-                {"data": "df", "rows": ["techs", "carriers"], "columns": "parameters"}
+                {"table": "df", "rows": ["techs", "carriers"], "columns": "inputs"}
             )
         )
         ds = data_tables.DataTable("ds_name", table_dict, data_table_dfs={"df": df})
@@ -512,7 +512,7 @@ class TestDataTableTechDict:
             df = pd.DataFrame(df_dict)
             table_dict = (
                 calliope.schemas.data_table_schema.CalliopeDataTable.model_validate(
-                    {"data": "df", "rows": rows, "columns": "parameters"}
+                    {"table": "df", "rows": rows, "columns": "inputs"}
                 )
             )
             ds = data_tables.DataTable("ds_name", table_dict, data_table_dfs={"df": df})
@@ -579,7 +579,7 @@ class TestDataTableNodeDict:
         def _table_obj(df_dict, rows=["nodes", "techs"]):
             df = pd.DataFrame(df_dict)
             table_dict = data_table_schema.CalliopeDataTable.model_validate(
-                {"data": "df", "rows": rows, "columns": "parameters"}
+                {"table": "df", "rows": rows, "columns": "inputs"}
             )
             ds = data_tables.DataTable("ds_name", table_dict, data_table_dfs={"df": df})
             return ds

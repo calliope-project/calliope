@@ -1186,31 +1186,31 @@ class TestDataTableBuilding:
         techs_and_nodes = pd.DataFrame(
             {("test_supply_elec", "a", "dummy_param"): 5},
             index=pd.to_datetime(["2005-01-01 00", "2005-01-01 01", "2005-01-01 02"]),
-        ).rename_axis(columns=["techs", "nodes", "parameters"])
+        ).rename_axis(columns=["techs", "nodes", "inputs"])
         techs_and_nodes_no_ts = pd.DataFrame(
             {("test_supply_elec", "a"): 10}, index=["dummy_param_2"]
-        ).rename_axis(columns=["techs", "nodes"], index="parameters")
+        ).rename_axis(columns=["techs", "nodes"], index="inputs")
         techs_only = pd.DataFrame(
             {
                 ("test_supply_plus", "dummy_param"): 1,
                 ("test_demand_elec", "dummy_param_2"): 2,
             },
             index=pd.to_datetime(["2005-01-01 00", "2005-01-01 01", "2005-01-01 02"]),
-        ).rename_axis(columns=["techs", "parameters"])
+        ).rename_axis(columns=["techs", "inputs"])
         data_table_dict = {
             "techs_nodes_parameters_timeseries": {
-                "columns": ["techs", "nodes", "parameters"],
-                "data": "techs_and_nodes",
+                "columns": ["techs", "nodes", "inputs"],
+                "table": "techs_and_nodes",
                 "rows": "timesteps",
             },
             "techs_and_nodes_no_ts": {
                 "columns": ["techs", "nodes"],
-                "data": "techs_and_nodes_no_ts",
-                "rows": "parameters",
+                "table": "techs_and_nodes_no_ts",
+                "rows": "inputs",
             },
             "techs_parameters_timeseries": {
-                "columns": ["techs", "parameters"],
-                "data": "techs_only",
+                "columns": ["techs", "inputs"],
+                "table": "techs_only",
                 "rows": "timesteps",
             },
         }
