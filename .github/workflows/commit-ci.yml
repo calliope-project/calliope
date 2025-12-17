@@ -34,6 +34,7 @@ jobs:
           -f requirements/dev.txt
           python=3.11
           coin-or-cbc
+          highspy
           gurobi::gurobi
         post-cleanup: all
         cache-environment: true
