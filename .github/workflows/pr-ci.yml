@@ -53,6 +53,7 @@ jobs:
           curl
           python=3.${{ matrix.py3version }}
           coin-or-cbc
+          highspy
           gurobi::gurobi
         post-cleanup: all
         cache-environment: true
