@@ -4,7 +4,7 @@ The most basic way to run a model programmatically from within a Python interpre
 
 ```python
 import calliope
-model = calliope.Model('path/to/model.yaml')
+model = calliope.read_yaml("path/to/model.yaml")
 model.build()
 model.solve()
 ```
@@ -16,7 +16,7 @@ model.solve()
 Other ways to load a model in Python are:
 
 * Passing an [calliope.AttrDict][] or standard Python dictionary to the [calliope.Model][] constructor, with the same nested format as the YAML model configuration (top-level keys: `config`, `data_definitions`, `data_tables`, `nodes`, `techs`, etc.).
-* Loading a previously saved model from a NetCDF file with `#!python model = calliope.read_netcdf('path/to/saved_model.nc')`.
+* Loading a previously saved model from a NetCDF file with `#!python model = calliope.read_netcdf("path/to/saved_model.nc")`.
 This can either be a pre-processed model saved before its `build` method was called - which will include input data only - or a completely solved model, which will include input and result data.
 
 After instantiating the [calliope.Model][] object, and before calling the `build()` method, it is possible to manually inspect and adjust the configuration of the model.
@@ -36,15 +36,15 @@ There are two ways to override a base model when running in Python which are ana
 1. By setting the `scenario` argument, e.g.:
 
     ```python
-    model = calliope.Model('model.yaml', scenario='milp')
+    model = calliope.read_yaml("model.yaml", scenario="milp")
     ```
 
 2. By passing the `override_dict` argument, which is a Python dictionary, a [calliope.AttrDict][], or a YAML string of overrides:
 
     ```python
-    model = calliope.Model(
-        'model.yaml',
-        override_dict={'config.solve.solver': 'gurobi'}
+    model = calliope.read_yaml(
+        "model.yaml",
+        override_dict={"config.solve.solver"": "gurobi"}
     )
     ```
 

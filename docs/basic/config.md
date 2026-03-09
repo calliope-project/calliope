@@ -12,7 +12,7 @@ You do this by providing additional keyword arguments on calling `calliope.Model
 
 ```python
 # Overriding `config.init` items in `calliope.Model`
-model = calliope.Model("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
+model = calliope.read_yaml("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
 # Overriding `config.build` items in `calliope.Model.build`
 model.build(ensure_feasibility=True)
 # Overriding `config.solve` items in `calliope.Model.solve`

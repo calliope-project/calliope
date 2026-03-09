@@ -124,7 +124,7 @@ To write a LaTeX, reStructuredText, or Markdown file that includes only the math
 ```python
 from calliope.postprocess.math_documentation import MathDocumentation
 
-model = calliope.Model("path/to/model.yaml")
+model = calliope.read_yaml("path/to/model.yaml")
 model.build()
 
 math_documentation = MathDocumentation(model, include="valid")

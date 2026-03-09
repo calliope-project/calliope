@@ -7,7 +7,7 @@
 `config.init.subset` allows you to specify a subset of dimensions to be used.
 This can be useful for debugging purposes as it can dramatically speed up model solution times.
 Usually, we recommend you subset the time dimensions (`timesteps`) as it is often the largest dimension.
-The timestep subset can be specified as `[startdate, enddate]`, e.g. `config.init.subset.timesteps: ['2005-01-01', '2005-01-31']`.
+A subset can be specified as `[start, end]`, e.g. for timesteps, `config.init.subset.timesteps: ['2005-01-01', '2005-01-31']`.
 The subsets are processed before building the model and applying time resolution adjustments, so time resolution reduction functions will only see the reduced set of data.
 
 ### Retaining logs and temporary files
