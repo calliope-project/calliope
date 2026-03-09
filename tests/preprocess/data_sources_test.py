@@ -646,6 +646,14 @@ class TestDataTableNodeDict:
 
         assert node_dict == {}
 
+    def test_node_dict_skips_inactive_tech(self, table_obj):
+        """Techs in the data table but missing from techs_incl_inheritance because of active=False should be skipped."""
+        df_dict = {"available_area": {("foo1", "bar1"): 1, ("foo1", "bar2"): 2}}
+        tech_dict = calliope.AttrDict({"bar1": {}})  # bar2 is inactive / filtered out
+        node_dict = table_obj(df_dict).node_dict(tech_dict)
+
+        assert node_dict == {"foo1": {"techs": {"bar1": None}}}
+
     def test_transmission_tech_with_nodes(self, table_obj):
         df_dict = {"param": {("foo1", "bar1"): 1, ("foo2", "bar2"): 2}}
         tech_dict = calliope.AttrDict(

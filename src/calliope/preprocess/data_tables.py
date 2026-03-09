@@ -125,6 +125,8 @@ class DataTable:
             except KeyError:
                 continue
             for tech in techs_this_node:
+                if tech not in techs_incl_inheritance:
+                    continue
                 if (
                     techs_incl_inheritance[tech].get("base_tech", None)
                     == "transmission"
