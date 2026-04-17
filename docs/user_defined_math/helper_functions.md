@@ -46,6 +46,11 @@ nodes:
 
 Using `sum(..., over=)` in an expression allows you to sum over one or more dimensions of your component array (be it a parameter, decision variable, or global expression).
 
+!!! note
+    Array default values may enter into the summation if there are NaN values in the array that are not masked by the `where` string.
+    For instance, if you sum `flow_cap`, which has `inf` as the default value, you risk having a summation returning `inf`.
+    If this occurs, consider masking these values by applying the [`where`](#where) helper function to first strip out unwanted entries before the `sum` function is applied.
+
 ## select_from_lookup_arrays
 
 Some of our arrays in [`model.inputs`][calliope.Model.inputs] are not data arrays, but "lookup" arrays.

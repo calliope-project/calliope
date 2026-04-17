@@ -92,6 +92,40 @@ class EvalArrayOrMath(EvalString):
         The purpose of this is to be able to access the string/number value whether we query the array name or its data.
         """
 
+    def _apply_default(self, array: xr.DataArray) -> xr.DataArray:
+        """Apply default values to an array where relevant.
+
+        Derived arrays (e.g., the result of applying arithmetic) no longer have the original array name, so they do not trigger default value application.
+
+        Args:
+            array (xr.DataArray): Array to apply default values to.
+
+        Returns:
+            xr.DataArray: Array with default values applied, if the array name is defined in the math schema.
+        """
+        try:
+            default = self.eval_attrs.math.find(array.name)["default"]
+            if array.isnull().any() and pd.notna(default):
+                array = array.fillna(default)
+        except KeyError:
+            pass
+        return array
+
+    def _apply_where_array(self, array: xr.DataArray) -> xr.DataArray:
+        """Util function to apply where arrays to non-latex strings.
+
+        Args:
+            array (xr.DataArray): The array to apply the where array to.
+
+        Returns:
+            xr.DataArray:
+                `array` with NaNs filled with defaults, where array applied,
+                and dimensions broadcast against the where array (to ensure consistent array shapes).
+        """
+        where_array = self.eval_attrs.where_array
+        arr = self._apply_default(array).broadcast_like(where_array).where(where_array)
+        return arr
+
     # Math strings evaluate to strings.
     @overload
     def eval(
@@ -202,16 +236,6 @@ class EvalOperatorOperand(EvalArrayOrMath):
             except StopIteration:
                 break
 
-    def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
-        """Util function to apply where arrays to non-latex strings."""
-        where_array = self.eval_attrs.where_array
-        try:
-            evaluated = evaluated.where(where_array)
-        except AttributeError:
-            evaluated = evaluated.broadcast_like(where_array).where(where_array)
-
-        return evaluated
-
     def _skip_component_on_conditional(self, component: str, operator_: str) -> bool:
         """Conditional to skip adding to math string if element evaluates to zero.
 
@@ -306,7 +330,7 @@ class EvalSignOp(EvalArrayOrMath):
         return self.sign + self._eval("math_string")
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        evaluated = self._eval("array")
+        evaluated = self._apply_where_array(self._eval("array"))
         if self.sign == "-":
             evaluated = -1 * evaluated
         return evaluated
@@ -368,8 +392,8 @@ class EvalComparisonOp(EvalArrayOrMath):
                 raise self.error_msg(
                     f"The {side}-hand side of the equation is indexed over dimensions not present in `foreach`: {extra_dims}"
                 )
-        lhs_where = lhs.broadcast_like(where)
-        rhs_where = rhs.broadcast_like(where)
+        lhs_where = self._apply_where_array(lhs)
+        rhs_where = self._apply_where_array(rhs)
 
         match self.op:
             case "==":
@@ -808,10 +832,6 @@ class EvalUnslicedComponent(EvalArrayOrMath):
                     f"Trying to access a math component that is not yet defined: {self.name}. "
                     "If the referenced component is a global expression, set its `order` to have it defined first."
                 )
-        if evaluated.isnull().any() and pd.notna(
-            default := self.eval_attrs.math.find(self.name)["default"]
-        ):
-            evaluated = evaluated.fillna(default)
 
         self.eval_attrs.references.add(self.name)
         return evaluated

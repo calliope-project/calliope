@@ -395,7 +395,7 @@ class Sum(ParsingHelperFunction):
                 the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
         filtered_over = set(self._to_str_list(over)).intersection(array.dims)
-        return array.sum(filtered_over, min_count=1, skipna=True)
+        return array.sum(filtered_over, min_count=1, skipna=True, keep_attrs=True)
 
 
 class ReduceCarrierDim(ParsingHelperFunction):
@@ -635,7 +635,7 @@ class Roll(ParsingHelperFunction):
             * foo      (foo) <U1 'A' 'B' 'C'
         """
         roll_kwargs_int: Mapping = {k: int(v) for k, v in roll_kwargs.items()}
-        return array.roll(roll_kwargs_int)
+        return array.roll(**roll_kwargs_int)
 
 
 class Where(ParsingHelperFunction):
@@ -774,8 +774,12 @@ class GroupSum(ParsingHelperFunction):
         for group_name, array_subset in groups:
             grouped[group_name] = array_subset.sum("_stacked", min_count=1, skipna=True)
 
-        array = xr.concat(
-            grouped.values(), dim=pd.Index(grouped.keys(), name=group_dim.name)
+        array = (
+            xr.concat(
+                grouped.values(), dim=pd.Index(grouped.keys(), name=group_dim.name)
+            )
+            .assign_attrs(array.attrs)
+            .rename(array.name)
         )
         return array
 
@@ -940,5 +944,10 @@ class SumNextN(ParsingHelperFunction):
                     str(over.name), min_count=1
                 )
             )
-        final_array = xr.concat(results, dim=over).broadcast_like(array)
+        final_array = (
+            xr.concat(results, dim=over)
+            .broadcast_like(array)
+            .assign_attrs(array.attrs)
+            .rename(array.name)
+        )
         return final_array
