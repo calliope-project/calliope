@@ -103,12 +103,10 @@ class EvalArrayOrMath(EvalString):
         Returns:
             xr.DataArray: Array with default values applied, if the array name is defined in the math schema.
         """
-        try:
+        if isinstance(array.name, str):
             default = self.eval_attrs.math.find(array.name)["default"]
             if array.isnull().any() and pd.notna(default):
                 array = array.fillna(default)
-        except KeyError:
-            pass
         return array
 
     def _apply_where_array(self, array: xr.DataArray) -> xr.DataArray:

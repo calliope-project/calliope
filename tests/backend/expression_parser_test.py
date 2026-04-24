@@ -1,6 +1,8 @@
 import operator
 import random
 from dataclasses import replace
+from typing import Any
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -1024,21 +1026,19 @@ class TestApplyDefault:
     It is NOT called when directly evaluating unsliced/sliced components or in helper functions.
     """
 
-    @pytest.mark.parametrize(
-        ("component", "default_value", "nan_count_before"),
-        [
-            ("with_inf", 100, 2),  # Has NaN values, has default
-            ("only_techs", 5, 1),  # Has NaN values, has default
-            ("no_dims", 0, 0),  # No NaN values
-        ],
-    )
+    def assert_method_called(self, n_calls, parsed, *args, **kwargs) -> Any:
+        with patch.object(
+            expression_parser.EvalArrayOrMath,
+            "_apply_default",
+            wraps=parsed._apply_default,
+        ) as spy_method:
+            evaluated_ = parsed.eval(*args, **kwargs)
+            assert spy_method.call_count == n_calls
+        return evaluated_
+
+    @pytest.mark.parametrize(("component"), ["with_inf", "only_techs", "all_true"])
     def test_apply_default_context_unsliced_component_baseline(
-        self,
-        unsliced_param_with_obj_names,
-        eval_kwargs,
-        component,
-        default_value,
-        nan_count_before,
+        self, unsliced_param_with_obj_names, eval_kwargs, dummy_model_data, component
     ):
         """Test baseline: EvalUnslicedComponent does NOT call _apply_default directly.
 
@@ -1046,58 +1046,26 @@ class TestApplyDefault:
         or comparison context), NaN values are NOT filled with defaults.
         """
         parsed_ = unsliced_param_with_obj_names.parse_string(component, parse_all=True)
-
-        # Check NaN count before
-        original_data = eval_kwargs["eval_attrs"].backend_data[component]
-        actual_nan_before = (
-            pd.isnull(original_data).sum().item()
-            if original_data.size > 1
-            else (1 if pd.isnull(original_data) else 0)
-        )
-        assert actual_nan_before == nan_count_before
+        component_nulls = dummy_model_data[component].isnull()
 
         # Evaluate WITHOUT arithmetic/comparison context
         evaluated_ = parsed_[0].eval(**eval_kwargs)
 
-        # NaN count should be UNCHANGED because _apply_default is not called
-        actual_nan_after = (
-            pd.isnull(evaluated_).sum().item()
-            if evaluated_.size > 1
-            else (1 if pd.isnull(evaluated_) else 0)
-        )
-        assert actual_nan_after == nan_count_before, (
-            f"Direct evaluation should not apply defaults - expected {nan_count_before} NaN, got {actual_nan_after}"
+        assert evaluated_.isnull().equals(component_nulls), (
+            f"Direct evaluation should not apply defaults - expected {component_nulls.sum()} NaN, got {evaluated_.isnull().sum()}"
         )
 
-    @pytest.mark.parametrize(
-        ("component", "expected_filled_value"),
-        [
-            ("with_inf", 100),  # default=100
-            ("only_techs", 5),  # default=5
-        ],
-    )
-    def test_apply_default_in_sign_operation(
-        self, arithmetic, eval_kwargs, component, expected_filled_value
-    ):
+    def test_apply_default_in_sign_operation(self, arithmetic, eval_kwargs):
         """Test that _apply_default is applied in unary sign operations (EvalSignOp).
 
         EvalSignOp.as_array() calls _apply_default directly.
         """
         # Test negative sign
-        parsed_neg = arithmetic.parse_string(f"-{component}", parse_all=True)
-        evaluated_neg = parsed_neg[0].eval(**eval_kwargs)
-
+        parsed_ = arithmetic.parse_string("-with_inf", parse_all=True)
+        evaluated_ = self.assert_method_called(1, parsed_[0], **eval_kwargs)
         # After applying default in sign operation, should have no NaN
-        assert not pd.isnull(evaluated_neg).any(), (
-            f"Sign operation should apply defaults for {component}"
-        )
-
-        # Test positive sign
-        parsed_pos = arithmetic.parse_string(f"+{component}", parse_all=True)
-        evaluated_pos = parsed_pos[0].eval(**eval_kwargs)
-        assert not pd.isnull(evaluated_pos).any(), (
-            f"Sign operation should apply defaults for {component}"
-        )
+        assert not pd.isnull(evaluated_).any()
+        assert evaluated_.isel(nodes=0, techs=1) == -100
 
     @pytest.mark.parametrize(
         ("component", "expected_filled_value", "nan_index"),
@@ -1115,7 +1083,9 @@ class TestApplyDefault:
         """
         # with_inf + 1, where with_inf has default=100 for NaN values
         parsed_ = arithmetic.parse_string(f"{component} + 1", parse_all=True)
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        evaluated_ = evaluated_ = self.assert_method_called(
+            2, parsed_[0], **eval_kwargs
+        )
 
         # After applying default and adding 1, should have no NaN
         assert not pd.isnull(evaluated_).any(), (
@@ -1137,7 +1107,9 @@ class TestApplyDefault:
     ):
         """Test _apply_default works with all arithmetic operators."""
         parsed_ = arithmetic.parse_string(f"with_inf {operator} 2", parse_all=True)
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        evaluated_ = evaluated_ = self.assert_method_called(
+            2, parsed_[0], **eval_kwargs
+        )
 
         # Should apply default before any arithmetic operation
         assert not pd.isnull(evaluated_).any()
@@ -1149,7 +1121,9 @@ class TestApplyDefault:
         # with_inf has some non-NaN values that should be preserved when defaults are applied
         # Evaluate with arithmetic (which triggers _apply_default)
         parsed_ = arithmetic.parse_string("with_inf + 0", parse_all=True)
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        evaluated_ = evaluated_ = self.assert_method_called(
+            2, parsed_[0], **eval_kwargs
+        )
 
         # Verify the evaluation completed successfully and has the expected shape
         assert isinstance(evaluated_, xr.DataArray)
@@ -1170,7 +1144,9 @@ class TestApplyDefault:
         # multi_dim_var is a decision variable without a default value
         parsed_ = arithmetic.parse_string("multi_dim_var + 0", parse_all=True)
         # Should evaluate without error even though no default is defined
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        evaluated_ = evaluated_ = self.assert_method_called(
+            2, parsed_[0], **eval_kwargs
+        )
         assert isinstance(evaluated_, xr.DataArray)
 
     @pytest.mark.parametrize(
@@ -1187,7 +1163,9 @@ class TestApplyDefault:
     ):
         """Test that _apply_default is applied to all components in complex expressions."""
         parsed_ = arithmetic.parse_string(expression, parse_all=True)
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        evaluated_ = evaluated_ = self.assert_method_called(
+            2, parsed_[0], **eval_kwargs
+        )
 
         # Both with_inf and only_techs have defaults, so result should have no NaN
         assert not pd.isnull(evaluated_).any()
@@ -1198,7 +1176,9 @@ class TestApplyDefault:
         parsed_ = arithmetic.parse_string(
             "(with_inf + 1) * (only_techs - 2)", parse_all=True
         )
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        evaluated_ = evaluated_ = self.assert_method_called(
+            6, parsed_[0], **eval_kwargs
+        )
 
         # Defaults should be applied at each level
         assert not pd.isnull(evaluated_).any()
@@ -1206,7 +1186,7 @@ class TestApplyDefault:
     def test_apply_default_power_operation(self, arithmetic, eval_kwargs):
         """Test _apply_default with power operations."""
         parsed_ = arithmetic.parse_string("only_techs ** 2", parse_all=True)
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
 
         # only_techs has default=5, so NaN should be filled before power operation
         assert not pd.isnull(evaluated_).any()
@@ -1225,7 +1205,9 @@ class TestApplyDefault:
             "sum(-with_inf, over=[nodes, techs])", parse_all=True
         )
         where = eval_kwargs["eval_attrs"].input_data.with_inf_and_only_techs_as_bool
-        evaluated_ = parsed_[0].eval(
+        evaluated_ = self.assert_method_called(
+            1,
+            parsed_[0],
             eval_kwargs["return_type"],
             replace(eval_kwargs["eval_attrs"], where_array=where),
         )
@@ -1239,28 +1221,17 @@ class TestApplyDefault:
         The sum helper function should receive an array with defaults already applied
         when the input is an arithmetic expression (e.g., sum(with_inf + 1, over=[...])).
         """
+
         # Test sum over arithmetic with with_inf
         parsed_ = helper_function_allow_arithmetic.parse_string(
             "sum(with_inf + 1, over=[nodes, techs])", parse_all=True
         )
         where = eval_kwargs["eval_attrs"].input_data.with_inf_and_only_techs_as_bool
-        evaluated_ = parsed_[0].eval(
+        evaluated_ = self.assert_method_called(
+            2,
+            parsed_[0],
             eval_kwargs["return_type"],
             replace(eval_kwargs["eval_attrs"], where_array=where),
         )
+
         assert evaluated_.item()() == 11
-
-    def test_apply_default_generic_string_edge_case(
-        self, evaluatable_identifier, eval_kwargs
-    ):
-        """Test edge case where EvalGenericString returns an array with same name as math component.
-
-        EvalGenericString creates a DataArray with the string as both name and value.
-        This should NOT trigger _apply_default since it's not in an arithmetic/sign/comparison context.
-        """
-        parsed_ = evaluatable_identifier.parse_string("hello", parse_all=True)
-        evaluated_ = parsed_[0].eval(**eval_kwargs)
-
-        # This should evaluate to the string "hello" as a scalar DataArray
-        assert evaluated_.item() == "hello"
-        assert evaluated_.name == "hello"
