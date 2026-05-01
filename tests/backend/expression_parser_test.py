@@ -1083,9 +1083,7 @@ class TestApplyDefault:
         """
         # with_inf + 1, where with_inf has default=100 for NaN values
         parsed_ = arithmetic.parse_string(f"{component} + 1", parse_all=True)
-        evaluated_ = evaluated_ = self.assert_method_called(
-            2, parsed_[0], **eval_kwargs
-        )
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
 
         # After applying default and adding 1, should have no NaN
         assert not pd.isnull(evaluated_).any(), (
@@ -1107,9 +1105,7 @@ class TestApplyDefault:
     ):
         """Test _apply_default works with all arithmetic operators."""
         parsed_ = arithmetic.parse_string(f"with_inf {operator} 2", parse_all=True)
-        evaluated_ = evaluated_ = self.assert_method_called(
-            2, parsed_[0], **eval_kwargs
-        )
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
 
         # Should apply default before any arithmetic operation
         assert not pd.isnull(evaluated_).any()
@@ -1121,9 +1117,7 @@ class TestApplyDefault:
         # with_inf has some non-NaN values that should be preserved when defaults are applied
         # Evaluate with arithmetic (which triggers _apply_default)
         parsed_ = arithmetic.parse_string("with_inf + 0", parse_all=True)
-        evaluated_ = evaluated_ = self.assert_method_called(
-            2, parsed_[0], **eval_kwargs
-        )
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
 
         # Verify the evaluation completed successfully and has the expected shape
         assert isinstance(evaluated_, xr.DataArray)
@@ -1144,9 +1138,7 @@ class TestApplyDefault:
         # multi_dim_var is a decision variable without a default value
         parsed_ = arithmetic.parse_string("multi_dim_var + 0", parse_all=True)
         # Should evaluate without error even though no default is defined
-        evaluated_ = evaluated_ = self.assert_method_called(
-            2, parsed_[0], **eval_kwargs
-        )
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
         assert isinstance(evaluated_, xr.DataArray)
 
     @pytest.mark.parametrize(
@@ -1163,9 +1155,7 @@ class TestApplyDefault:
     ):
         """Test that _apply_default is applied to all components in complex expressions."""
         parsed_ = arithmetic.parse_string(expression, parse_all=True)
-        evaluated_ = evaluated_ = self.assert_method_called(
-            2, parsed_[0], **eval_kwargs
-        )
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
 
         # Both with_inf and only_techs have defaults, so result should have no NaN
         assert not pd.isnull(evaluated_).any()
@@ -1176,9 +1166,7 @@ class TestApplyDefault:
         parsed_ = arithmetic.parse_string(
             "(with_inf + 1) * (only_techs - 2)", parse_all=True
         )
-        evaluated_ = evaluated_ = self.assert_method_called(
-            6, parsed_[0], **eval_kwargs
-        )
+        evaluated_ = self.assert_method_called(6, parsed_[0], **eval_kwargs)
 
         # Defaults should be applied at each level
         assert not pd.isnull(evaluated_).any()
