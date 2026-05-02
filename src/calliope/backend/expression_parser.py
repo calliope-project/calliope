@@ -121,8 +121,8 @@ class EvalArrayOrMath(EvalString):
                 and dimensions broadcast against the where array (to ensure consistent array shapes).
         """
         where_array = self.eval_attrs.where_array
-        arr = self._apply_default(array).broadcast_like(where_array).where(where_array)
-        return arr
+        masked_array = array.broadcast_like(where_array).where(where_array)
+        return masked_array
 
     # Math strings evaluate to strings.
     @overload
@@ -328,7 +328,7 @@ class EvalSignOp(EvalArrayOrMath):
         return self.sign + self._eval("math_string")
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        evaluated = self._apply_where_array(self._eval("array"))
+        evaluated = self._eval("array")
         if self.sign == "-":
             evaluated = -1 * evaluated
         return evaluated
@@ -830,9 +830,9 @@ class EvalUnslicedComponent(EvalArrayOrMath):
                     f"Trying to access a math component that is not yet defined: {self.name}. "
                     "If the referenced component is a global expression, set its `order` to have it defined first."
                 )
-
+        evaluated_filled = self._apply_default(evaluated)
         self.eval_attrs.references.add(self.name)
-        return evaluated
+        return evaluated_filled
 
 
 class EvalGenericString(EvalArrayOrMath):

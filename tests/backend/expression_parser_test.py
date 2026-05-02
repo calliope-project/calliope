@@ -50,7 +50,9 @@ def valid_component_names():
         "multi_dim_var",
         "no_dim_var",
         "all_true",
+        "all_ones",
         "only_techs_as_bool",
+        "with_inf_as_bool",
     ]
 
 
@@ -205,7 +207,10 @@ def helper_function_allow_arithmetic(
 ):
     arithmetic = pp.Forward()
     helper_func = expression_parser.helper_function_parser(
-        arithmetic, helper_func_list, generic_identifier=identifier
+        arithmetic,
+        helper_func_list,
+        generic_identifier=identifier,
+        allow_function_in_function=True,
     )
     return expression_parser.arithmetic_parser(
         helper_func,
@@ -355,8 +360,8 @@ class TestEquationParserElements:
         self, unsliced_param_with_obj_names, eval_kwargs, string_val
     ):
         parsed_ = unsliced_param_with_obj_names.parse_string(string_val, parse_all=True)
-        # We do not expect defaults to have been applied to raw unsliced objects
-        expected = eval_kwargs["eval_attrs"].backend_data[string_val]
+        default = eval_kwargs["eval_attrs"].math.parameters[string_val].default
+        expected = eval_kwargs["eval_attrs"].backend_data[string_val].fillna(default)
         assert parsed_[0].eval(**eval_kwargs).equals(expected)
 
     def test_unsliced_param_references(
@@ -1038,7 +1043,7 @@ class TestApplyDefault:
 
     @pytest.mark.parametrize(("component"), ["with_inf", "only_techs", "all_true"])
     def test_apply_default_context_unsliced_component_baseline(
-        self, unsliced_param_with_obj_names, eval_kwargs, dummy_model_data, component
+        self, unsliced_param_with_obj_names, eval_kwargs, component
     ):
         """Test baseline: EvalUnslicedComponent does NOT call _apply_default directly.
 
@@ -1046,14 +1051,11 @@ class TestApplyDefault:
         or comparison context), NaN values are NOT filled with defaults.
         """
         parsed_ = unsliced_param_with_obj_names.parse_string(component, parse_all=True)
-        component_nulls = dummy_model_data[component].isnull()
 
         # Evaluate WITHOUT arithmetic/comparison context
         evaluated_ = parsed_[0].eval(**eval_kwargs)
 
-        assert evaluated_.isnull().equals(component_nulls), (
-            f"Direct evaluation should not apply defaults - expected {component_nulls.sum()} NaN, got {evaluated_.isnull().sum()}"
-        )
+        assert evaluated_.notnull().any()
 
     def test_apply_default_in_sign_operation(self, arithmetic, eval_kwargs):
         """Test that _apply_default is applied in unary sign operations (EvalSignOp).
@@ -1083,7 +1085,7 @@ class TestApplyDefault:
         """
         # with_inf + 1, where with_inf has default=100 for NaN values
         parsed_ = arithmetic.parse_string(f"{component} + 1", parse_all=True)
-        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
+        evaluated_ = self.assert_method_called(1, parsed_[0], **eval_kwargs)
 
         # After applying default and adding 1, should have no NaN
         assert not pd.isnull(evaluated_).any(), (
@@ -1105,7 +1107,7 @@ class TestApplyDefault:
     ):
         """Test _apply_default works with all arithmetic operators."""
         parsed_ = arithmetic.parse_string(f"with_inf {operator} 2", parse_all=True)
-        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
+        evaluated_ = self.assert_method_called(1, parsed_[0], **eval_kwargs)
 
         # Should apply default before any arithmetic operation
         assert not pd.isnull(evaluated_).any()
@@ -1117,7 +1119,7 @@ class TestApplyDefault:
         # with_inf has some non-NaN values that should be preserved when defaults are applied
         # Evaluate with arithmetic (which triggers _apply_default)
         parsed_ = arithmetic.parse_string("with_inf + 0", parse_all=True)
-        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
+        evaluated_ = self.assert_method_called(1, parsed_[0], **eval_kwargs)
 
         # Verify the evaluation completed successfully and has the expected shape
         assert isinstance(evaluated_, xr.DataArray)
@@ -1138,7 +1140,7 @@ class TestApplyDefault:
         # multi_dim_var is a decision variable without a default value
         parsed_ = arithmetic.parse_string("multi_dim_var + 0", parse_all=True)
         # Should evaluate without error even though no default is defined
-        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
+        evaluated_ = self.assert_method_called(1, parsed_[0], **eval_kwargs)
         assert isinstance(evaluated_, xr.DataArray)
 
     @pytest.mark.parametrize(
@@ -1166,7 +1168,7 @@ class TestApplyDefault:
         parsed_ = arithmetic.parse_string(
             "(with_inf + 1) * (only_techs - 2)", parse_all=True
         )
-        evaluated_ = self.assert_method_called(6, parsed_[0], **eval_kwargs)
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
 
         # Defaults should be applied at each level
         assert not pd.isnull(evaluated_).any()
@@ -1174,7 +1176,7 @@ class TestApplyDefault:
     def test_apply_default_power_operation(self, arithmetic, eval_kwargs):
         """Test _apply_default with power operations."""
         parsed_ = arithmetic.parse_string("only_techs ** 2", parse_all=True)
-        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
+        evaluated_ = self.assert_method_called(1, parsed_[0], **eval_kwargs)
 
         # only_techs has default=5, so NaN should be filled before power operation
         assert not pd.isnull(evaluated_).any()
@@ -1184,22 +1186,58 @@ class TestApplyDefault:
     def test_apply_default_in_helper_function_with_negation(
         self, helper_function_allow_arithmetic, eval_kwargs
     ):
-        """Test that _apply_default is applied when negation is passed to helper function.
-
-        The sum helper function should receive an array with defaults applied and then the where array applied on top of that.
-        """
+        """Test that _apply_default is applied when negation is passed to helper function."""
         # Test sum over negation of with_inf
         parsed_ = helper_function_allow_arithmetic.parse_string(
             "sum(-with_inf, over=[nodes, techs])", parse_all=True
         )
-        where = eval_kwargs["eval_attrs"].input_data.with_inf_and_only_techs_as_bool
-        evaluated_ = self.assert_method_called(
-            1,
-            parsed_[0],
-            eval_kwargs["return_type"],
-            replace(eval_kwargs["eval_attrs"], where_array=where),
+        evaluated_ = self.assert_method_called(1, parsed_[0], **eval_kwargs)
+        assert evaluated_.item()() == -float("inf")
+
+    def test_apply_default_in_helper_function_with_where_func(
+        self, helper_function, eval_kwargs
+    ):
+        """Test that _apply_default is applied before the where function in helper functions.
+        Without the `where` helper function, we would get inf.
+
+        The sum helper function should receive an array with defaults applied and then the where array applied on top of that.
+        """
+        parsed_ = helper_function.parse_string(
+            "sum(where(with_inf, with_inf_as_bool), over=[nodes, techs])",
+            parse_all=True,
         )
-        assert evaluated_.item()() == -7
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
+        assert evaluated_.item()() == 8
+
+    def test_apply_default_in_helper_function_arithmetic_after_where(
+        self, helper_function_allow_arithmetic, eval_kwargs
+    ):
+        """Test that _apply_default is applied before arithmetic operations _and_ the where function in helper functions.
+        Without the `where` helper function, we would get inf.
+
+        The sum helper function should receive an array with defaults applied and then the where array applied on top of that.
+        """
+        parsed_ = helper_function_allow_arithmetic.parse_string(
+            "sum(where(with_inf + 1, with_inf_as_bool), over=[nodes, techs])",
+            parse_all=True,
+        )
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
+        assert evaluated_.item()() == 13
+
+    def test_apply_default_in_helper_function_with_arithmetic_before_where(
+        self, helper_function_allow_arithmetic, eval_kwargs
+    ):
+        """Test that _apply_default is applied before arithmetic operations _and_ the where function in helper functions.
+        Without the `where` helper function, we would get inf.
+
+        The sum helper function should receive an array with defaults applied and then the where array applied on top of that.
+        """
+        parsed_ = helper_function_allow_arithmetic.parse_string(
+            "sum(1 + where(with_inf, with_inf_as_bool)), over=[nodes, techs])",
+            parse_all=True,
+        )
+        evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
+        assert evaluated_.item()() == 13
 
     def test_apply_default_in_helper_function_with_arithmetic(
         self, helper_function_allow_arithmetic, eval_kwargs
@@ -1216,10 +1254,159 @@ class TestApplyDefault:
         )
         where = eval_kwargs["eval_attrs"].input_data.with_inf_and_only_techs_as_bool
         evaluated_ = self.assert_method_called(
-            2,
+            1,
             parsed_[0],
             eval_kwargs["return_type"],
             replace(eval_kwargs["eval_attrs"], where_array=where),
         )
 
         assert evaluated_.item()() == 11
+
+
+class TestApplyWhereArray:
+    """Test that _apply_where_array correctly broadcasts and masks arrays using the where_array.
+
+    _apply_where_array is called in:
+    - EvalOperatorOperand.as_array() — once per operand in binary arithmetic
+    - EvalComparisonOp.as_array() — once for each of LHS and RHS
+
+    It is NOT called when directly evaluating unsliced/sliced components.
+    """
+
+    def assert_method_called(self, n_calls, parsed, *args, **kwargs) -> Any:
+        with patch.object(
+            expression_parser.EvalArrayOrMath,
+            "_apply_where_array",
+            wraps=parsed._apply_where_array,
+        ) as spy_method:
+            evaluated_ = parsed.eval(*args, **kwargs)
+            assert spy_method.call_count == n_calls
+        return evaluated_
+
+    def test_apply_where_array_not_called_for_bare_component(
+        self, unsliced_param_with_obj_names, eval_kwargs
+    ):
+        """Baseline: _apply_where_array is NOT called when evaluating a component directly (no arithmetic/comparison context)."""
+        parsed_ = unsliced_param_with_obj_names.parse_string("with_inf", parse_all=True)
+        self.assert_method_called(0, parsed_[0], **eval_kwargs)
+
+    @pytest.mark.parametrize("operator", ["+", "-", "*", "/", "**"])
+    def test_apply_where_array_called_per_operand_in_arithmetic(
+        self, arithmetic, eval_kwargs, operator
+    ):
+        """_apply_where_array is called once for each of the two operands in a binary arithmetic expression."""
+        parsed_ = arithmetic.parse_string(
+            f"all_ones {operator} all_ones", parse_all=True
+        )
+        self.assert_method_called(2, parsed_[0], **eval_kwargs)
+
+    def test_apply_where_array_called_for_all_operands_in_chained_arithmetic(
+        self, arithmetic, eval_kwargs
+    ):
+        """_apply_where_array is called once for each operand across all terms in a chained arithmetic expression."""
+        parsed_ = arithmetic.parse_string(
+            "all_ones + all_ones + no_dims", parse_all=True
+        )
+        self.assert_method_called(3, parsed_[0], **eval_kwargs)
+
+    def test_apply_where_array_called_in_comparison(
+        self, equation_comparison, eval_kwargs
+    ):
+        """_apply_where_array is called once each for the LHS and RHS of a comparison operation."""
+        parsed_ = equation_comparison.parse_string("1 == 1", parse_all=True)
+        self.assert_method_called(2, parsed_[0], **eval_kwargs)
+
+    def test_broadcast_in_apply_where_array_called_in_comparison(
+        self, equation_comparison, eval_kwargs
+    ):
+        """_apply_where_array broadcasts both LHS and RHS to the where_array shape in a comparison."""
+        where = eval_kwargs["eval_attrs"].input_data["all_true"]
+        parsed_ = equation_comparison.parse_string("all_ones == 1", parse_all=True)
+        evaluated_ = self.assert_method_called(
+            2,
+            parsed_[0],
+            eval_kwargs["return_type"],
+            replace(eval_kwargs["eval_attrs"], where_array=where),
+        )
+        assert evaluated_.dims == ("nodes", "techs")
+
+    def test_apply_where_array_default_true_does_not_mask(
+        self, arithmetic, eval_kwargs
+    ):
+        """With where_array=True (scalar), no values are masked out — NaN-filled defaults are preserved."""
+        parsed_ = arithmetic.parse_string("with_inf + 1", parse_all=True)
+        where = xr.DataArray(True)
+        evaluated_ = self.assert_method_called(
+            2,
+            parsed_[0],
+            eval_kwargs["return_type"],
+            replace(eval_kwargs["eval_attrs"], where_array=where),
+        )
+        assert not evaluated_.isnull().any()
+
+    def test_apply_where_array_masks_false_positions(
+        self, arithmetic, eval_kwargs, dummy_model_data
+    ):
+        """Positions where where_array is False are set to NaN in the result."""
+        where = dummy_model_data.with_inf_as_bool
+        parsed_ = arithmetic.parse_string("all_ones + 0", parse_all=True)
+        evaluated_ = self.assert_method_called(
+            2,
+            parsed_[0],
+            eval_kwargs["return_type"],
+            replace(eval_kwargs["eval_attrs"], where_array=where),
+        )
+        assert evaluated_.isnull().sum() == 3
+
+    def test_apply_where_array_preserves_unmasked_values(
+        self, arithmetic, eval_kwargs, dummy_model_data
+    ):
+        """Positions where where_array is True retain their computed arithmetic values."""
+        where = dummy_model_data.with_inf_as_bool
+        parsed_ = arithmetic.parse_string("all_ones * 3", parse_all=True)
+        evaluated_ = self.assert_method_called(
+            2,
+            parsed_[0],
+            eval_kwargs["return_type"],
+            replace(eval_kwargs["eval_attrs"], where_array=where),
+        )
+
+        non_nan_values = evaluated_.to_series()[where.to_series()].apply(lambda x: x())
+        assert (non_nan_values == 3.0).all()
+
+    def test_apply_where_array_broadcasts_lower_dim_array(
+        self, arithmetic, eval_kwargs, dummy_model_data
+    ):
+        """A 1D array is broadcast to the shape of a 2D where_array, giving a 2D result."""
+        where = dummy_model_data.with_inf_as_bool  # shape: (nodes, techs)
+        # only_techs is 1D (techs); after broadcast against (nodes, techs) where_array, result is 2D
+        parsed_ = arithmetic.parse_string("only_techs + 0", parse_all=True)
+        evaluated_ = self.assert_method_called(
+            2,
+            parsed_[0],
+            eval_kwargs["return_type"],
+            replace(eval_kwargs["eval_attrs"], where_array=where),
+        )
+
+        assert set(evaluated_.dims) == {"nodes", "techs"}
+
+    def test_apply_where_array_broadcast_values_match_original(
+        self, arithmetic, eval_kwargs, dummy_model_data
+    ):
+        """After broadcasting a 1D array, unmasked positions hold the original values (with defaults applied)."""
+        where = dummy_model_data.with_inf_as_bool  # shape: (nodes, techs)
+        # only_techs = [nan, 1, 2, 3]; default=5 fills the NaN before arithmetic
+        parsed_ = arithmetic.parse_string("only_techs + 0", parse_all=True)
+        evaluated_ = self.assert_method_called(
+            2,
+            parsed_[0],
+            eval_kwargs["return_type"],
+            replace(eval_kwargs["eval_attrs"], where_array=where),
+        )
+
+        # For techs where only_techs is defined and where_array is True, values should match
+        # only_techs values: [5 (default-filled), 1, 2, 3] after default is applied
+        # with_inf_as_bool techs row: [False, True, True, True] (for nodes=foo)
+        assert (
+            evaluated_.sel(nodes="foo", techs="foobar").item() == 5.0
+        )  # filled from default

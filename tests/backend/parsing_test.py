@@ -1143,11 +1143,11 @@ class TestParsedObjective:
     ):
         """Expression is `sum(only_techs, over=[techs]) + 1`.
 
-        Since we do not fill with default values in the sum, the NaN `only_techs` value gets ignored, leading to a sum of 6.
+        Since we fill with default values in the sum, the NaN `only_techs` value gets included, leading to a sum of 11.
         """
         valid_where = objective_obj.equations[1].evaluate_where(*eval_where_args)
         objective_expression = objective_obj.equations[1].evaluate_expression(
             *eval_expr_args, where=valid_where
         )
 
-        assert objective_expression.sum() == 7
+        assert objective_expression.sum() == 12

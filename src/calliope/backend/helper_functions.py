@@ -436,6 +436,8 @@ class SelectFromLookupArrays(ParsingHelperFunction):
     NAME = "select_from_lookup_arrays"
     #:
     ALLOWED_IN = ["expression"]
+    #:
+    ignore_where = True
 
     def as_math_string(self, array: str, **lookup_arrays: str) -> str:  # noqa: D102, override
         new_strings = {
@@ -597,11 +599,8 @@ class Roll(ParsingHelperFunction):
     NAME = "roll"
     #:
     ALLOWED_IN = ["expression"]
-
-    @property
-    def ignore_where(self) -> bool:
-        """Whether or not to ignore `where` functionality."""
-        return True
+    #:
+    ignore_where = True
 
     def as_math_string(self, array: str, **roll_kwargs: str) -> str:  # noqa: D102, override
         new_strings = {
@@ -700,8 +699,6 @@ class GroupSum(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    ignore_where = True
-
     def as_math_string(self, array: str, groupby: str, group_dim: str) -> str:  # noqa: D102, override
         group_dim_singular = self._dim_iterator(group_dim)
         sum_lim_string = rf"\text{{ if }} {groupby} = \text{{{group_dim_singular}}}"
@@ -786,8 +783,6 @@ class GroupDatetime(ParsingHelperFunction):
     NAME = "group_datetime"
     #:
     ALLOWED_IN = ["expression"]
-
-    ignore_where = True
 
     def as_math_string(self, array: str, over: str, group: str) -> str:  # noqa: D102, override
         overstring = self._instr(over)
