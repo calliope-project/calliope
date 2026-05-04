@@ -1233,7 +1233,7 @@ class TestApplyDefault:
         The sum helper function should receive an array with defaults applied and then the where array applied on top of that.
         """
         parsed_ = helper_function_allow_arithmetic.parse_string(
-            "sum(1 + where(with_inf, with_inf_as_bool)), over=[nodes, techs])",
+            "sum(1 + where(with_inf, with_inf_as_bool), over=[nodes, techs])",
             parse_all=True,
         )
         evaluated_ = self.assert_method_called(2, parsed_[0], **eval_kwargs)
