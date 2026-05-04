@@ -1283,7 +1283,12 @@ class TestApplyWhereArray:
             assert spy_method.call_count == n_calls
         return evaluated_
 
-    def test_apply_where_array_not_called_for_bare_component(
+    def test_apply_where_array_not_called_for_number(self, number, eval_kwargs):
+        """Baseline: _apply_where_array is NOT called when evaluating a component directly (no arithmetic/comparison context)."""
+        parsed_ = number.parse_string("1", parse_all=True)
+        self.assert_method_called(0, parsed_[0], **eval_kwargs)
+
+    def test_apply_where_array_called_for_unsliced_component(
         self, unsliced_param_with_obj_names, eval_kwargs
     ):
         """Baseline: _apply_where_array is NOT called when evaluating a component directly (no arithmetic/comparison context)."""
@@ -1341,6 +1346,18 @@ class TestApplyWhereArray:
             parsed_[0],
             eval_kwargs["return_type"],
             replace(eval_kwargs["eval_attrs"], where_array=where),
+        )
+        assert not evaluated_.isnull().any()
+
+    def test_apply_where_array_do_not_apply(self, arithmetic, eval_kwargs):
+        """With apply_where=False, no values are masked out — NaN-filled defaults are preserved."""
+        parsed_ = arithmetic.parse_string("with_inf + 1", parse_all=True)
+        where = xr.DataArray(False)
+        evaluated_ = self.assert_method_called(
+            2,
+            parsed_[0],
+            eval_kwargs["return_type"],
+            replace(eval_kwargs["eval_attrs"], where_array=where, apply_where=False),
         )
         assert not evaluated_.isnull().any()
 
@@ -1407,6 +1424,4 @@ class TestApplyWhereArray:
         # For techs where only_techs is defined and where_array is True, values should match
         # only_techs values: [5 (default-filled), 1, 2, 3] after default is applied
         # with_inf_as_bool techs row: [False, True, True, True] (for nodes=foo)
-        assert (
-            evaluated_.sel(nodes="foo", techs="foobar").item() == 5.0
-        )  # filled from default
+        assert evaluated_.sel(nodes="foo", techs="foobar").item() == 5.0

@@ -645,6 +645,8 @@ class Where(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
+    ignore_where = True
+
     def as_math_string(self, array: str, condition: str) -> str:  # noqa: D102, override
         return rf"({array} \text{{if }} {condition} == True)"
 

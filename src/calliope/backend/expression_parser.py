@@ -120,9 +120,12 @@ class EvalArrayOrMath(EvalString):
                 `array` with NaNs filled with defaults, where array applied,
                 and dimensions broadcast against the where array (to ensure consistent array shapes).
         """
-        where_array = self.eval_attrs.where_array
-        masked_array = array.broadcast_like(where_array).where(where_array)
-        return masked_array
+        if not self.eval_attrs.apply_where:
+            return array
+        elif (where_array := self.eval_attrs.where_array).equals(xr.DataArray(True)):
+            return array
+        else:
+            return array.broadcast_like(where_array).where(where_array)
 
     # Math strings evaluate to strings.
     @overload

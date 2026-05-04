@@ -357,7 +357,8 @@ class TestUrbanScaleExampleModelSenseChecks:
     @pytest.mark.time_intensive
     def test_operate_example_results(self):
         model = calliope.examples.operate(
-            subset={"timesteps": ["2005-07-01", "2005-07-04"]}
+            subset={"timesteps": ["2005-07-01", "2005-07-04"]},
+            scenario="operate,pv_per_cap",
         )
 
         model.build()
@@ -369,7 +370,6 @@ class TestUrbanScaleExampleModelSenseChecks:
             "Source capacity constraint defined and set to infinity for all supply_plus techs",
             "Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run",
         ]
-
         assert all(
             model.results.timesteps
             == pd.date_range("2005-07", "2005-07-04 23:00:00", freq="h")
