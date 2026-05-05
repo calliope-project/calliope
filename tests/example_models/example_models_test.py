@@ -356,9 +356,13 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     @pytest.mark.time_intensive
     def test_operate_example_results(self):
+        override = {
+            "techs.pv.source_unit": "per_cap",
+            "data_tables.pv_resource.select.scaler": "per_cap",
+        }
+
         model = calliope.examples.operate(
-            subset={"timesteps": ["2005-07-01", "2005-07-04"]},
-            scenario="operate,pv_per_cap",
+            subset={"timesteps": ["2005-07-01", "2005-07-04"]}, override_dict=override
         )
 
         model.build()

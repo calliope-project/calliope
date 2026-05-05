@@ -85,7 +85,3 @@ overrides:
       X1_to_N1.flow_cap: 300
       N1_to_X2.flow_cap: 250
       N1_to_X3.flow_cap: 320
-
-  pv_per_cap:
-    techs.pv.source_unit: per_cap
-    data_tables.pv_resource.select.scaler: per_cap
