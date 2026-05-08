@@ -20,8 +20,8 @@ TEMPDIR = tempfile.TemporaryDirectory()
 
 MODEL_PATH = Path(__file__).parent / "dummy_model" / "model.yaml"
 
-BASE_MATH_NAV_PATH = ["Math", "Built-in base math"]
-OTHER_MATH_NAV_PATH = ["Math", "Other built-in math"]
+BASE_MATH_NAV_PATH = ["Building blocks", "Built-in base math"]
+OTHER_MATH_NAV_PATH = ["Building blocks", "Other built-in math"]
 
 PREPEND_SNIPPET = """
 # {title}

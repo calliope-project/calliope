@@ -13,7 +13,7 @@ TEMPDIR = tempfile.TemporaryDirectory()
 
 CUSTOM_MATH_PATH = Path("docs") / "user_defined_math" / "examples"
 
-EXAMPLES_PAGE_NAME = "User-defined math examples"
+EXAMPLES_PAGE_NAME = "Math gallery"
 
 MD_EXAMPLE_STRING = """
 # {title}

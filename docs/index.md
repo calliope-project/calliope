@@ -13,6 +13,28 @@
 
     If you want to install the most recent _stable_ version of Calliope, see our [v0.6.10 documentation](https://calliope.readthedocs.io/en/v0.6.10/).
 
+ This is the documentation for Calliope version {{ calliope_version }} ([version history](version_history.md)).
+
+<div class="grid cards" markdown>
+
+-   :fontawesome-solid-rocket:{ .lg .middle } __Starting quickly__
+
+    * [Getting started](getting_started/concepts.md): read through this first to understand Calliope’s basic concepts.
+    * [Examples & tutorials](examples/overview.md): these examples are best understood after you’ve gone through the basic concepts.
+    * [Home](/): the page you're on; holds guidance on contributing, version history, and migrating to new versions.
+
+-   :fontawesome-solid-book:{ .lg .middle } __Going deeper__
+
+    * [Building blocks](): Mode detailed explanation of all the building blocks that make up a Calliope model.
+    * [How to](): How to troubleshoot and access more advanced features like solver customisation or shadow prices.
+    * [Math gallery](): Gallery of re-usable, user-defined math for implementing advanced constraints.
+    * [Reference](): API, command-line, and schema reference.
+    * Also see [www.callio.pe](https://www.callio.pe/) for more general information on the Calliope project.
+
+</div>
+
+## About Calliope
+
 Calliope is an energy system modelling framework based on mathematical optimisation.
 It is designed to formulate and solve typical problems from the energy field such as capacity expansion planning, economic dispatch, power market modelling and energy system modelling in general.
 It is used in such roles by both commercial and research organisations.
@@ -20,13 +42,6 @@ It is used in such roles by both commercial and research organisations.
 Calliope focuses on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
 Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents.
 In an optional operational mode it can also test a pre-defined system under different operational conditions.
-
-This is the documentation for Calliope version {{ calliope_version }} ([version history](version_history.md)).
-See the [main project website at www.callio.pe](https://www.callio.pe/) for more general information, including a gallery of models built with Calliope, and other useful information.
-
-!!! tip "Where to start"
-
-    If you are new to Calliope, we recommend that you first read through the [getting started guide](getting_started/concepts.md), then review the [examples and tutorials](examples/overview.md). The remaining sections primarily contain reference material that is most useful if you already know the basics and need to look up specifics.
 
 A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials.
 Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of [xarray Datasets](https://docs.xarray.dev/en/v2022.03.0/user-guide/data-structures.html#dataset) which in turn can easily be converted into [Pandas data structures](https://pandas.pydata.org/pandas-docs/version/1.5/user_guide/dsintro.html#dsintro) for further analysis.

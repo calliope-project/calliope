@@ -24,6 +24,8 @@ theme:
   features:
     - navigation.indexes
     - navigation.top
+    - navigation.tabs
+    - navigation.tabs.sticky
     - content.code.copy
     - content.code.annotate
     - search.suggest
@@ -39,6 +41,7 @@ plugins:
   - macros:
       module_name: docs/hooks/macros
   - mkdocs-jupyter:
+      enabled: !ENV [FULL_BUILD, true]
       include: ["examples/**/*.py", "examples/*.py"]
       ignore: ["examples/.*/*.py"]
       allow_errors: false
@@ -98,76 +101,76 @@ markdown_extensions:
       clickable_checkbox: true
 
 nav:
-  - Home: index.md
-  - Download and installation: installation.md
+  - Home:
+      - index.md
+      - migrating.md
+      - Contributing: contributing.md
+      - Version history: version_history.md
   - Getting started:
-    - Basic concepts: getting_started/concepts.md
-    - Creating a model: getting_started/creating.md
-    - Running a model: getting_started/running.md
-    - Analysing a model: getting_started/analysing.md
-  - Troubleshooting: troubleshooting.md
+      - Download and installation: installation.md
+      - Basic concepts: getting_started/concepts.md
+      - Creating a model: getting_started/creating.md
+      - Running a model: getting_started/running.md
+      - Analysing a model: getting_started/analysing.md
+  - Examples & tutorials:
+      - Overview: examples/overview.md
+      - National scale example model:
+          - examples/national_scale/index.md
+          - examples/national_scale/notebook.py
+      - Urban scale example model:
+          - examples/urban_scale/index.md
+          - examples/urban_scale/notebook.py
+      - MILP example model:
+          - examples/milp/index.md
+          - examples/milp/notebook.py
+      - examples/loading_tabular_data.py
+      - examples/modes.py
+      - examples/piecewise_constraints.py
+      - examples/calliope_model_object.py
+      - examples/calliope_logging.py
   - Building blocks:
-    - Model configuration: basic/config.md
-    - Modes: basic/modes.md
-    - Technologies: basic/techs.md
-    - Nodes: basic/nodes.md
-    - Data tables: basic/data_tables.md
-    - Data definitions: basic/data_definitions.md
-    - Scenarios and overrides: basic/scenarios.md
-    - Running in the command line: basic/running-cli.md
-    - Running in Python: basic/running-python.md
-    - Postprocessing: basic/postprocessing.md
-  - Math:
-    - Built-in base math: math/base/index.md
-    - Other built-in math:
-      - math/built_in/index.md
-    - User-defined math:
-      - user_defined_math/index.md
-      - user_defined_math/components.md
-      - user_defined_math/syntax.md
-      - user_defined_math/helper_functions.md
-      - user_defined_math/customise.md
-  - User-defined math examples:
-    - user_defined_math/examples/index.md
-  - Advanced features:
-    - advanced/constraints.md
-    - advanced/time.md
-    - advanced/scripts.md
-    - advanced/solver.md
-    - advanced/backend_choice.md
-    - advanced/backend_interface.md
-    - advanced/shadow_prices.md
-  - Example models and tutorials:
-    - Overview: examples/overview.md
-    - National scale example model:
-      - examples/national_scale/index.md
-      - examples/national_scale/notebook.py
-    - Urban scale example model:
-      - examples/urban_scale/index.md
-      - examples/urban_scale/notebook.py
-    - MILP example model:
-      - examples/milp/index.md
-      - examples/milp/notebook.py
-    - examples/loading_tabular_data.py
-    - examples/modes.py
-    - examples/piecewise_constraints.py
-    - examples/calliope_model_object.py
-    - examples/calliope_logging.py
+      - Model configuration: basic/config.md
+      - Modes: basic/modes.md
+      - Technologies: basic/techs.md
+      - Nodes: basic/nodes.md
+      - Data tables: basic/data_tables.md
+      - Data definitions: basic/data_definitions.md
+      - Scenarios and overrides: basic/scenarios.md
+      - Running in the command line: basic/running-cli.md
+      - Running in Python: basic/running-python.md
+      - Postprocessing: basic/postprocessing.md
+      - Built-in base math: math/base/index.md
+      - Other built-in math:
+          - math/built_in/index.md
+      - User-defined math:
+          - user_defined_math/index.md
+          - user_defined_math/components.md
+          - user_defined_math/syntax.md
+          - user_defined_math/helper_functions.md
+          - user_defined_math/customise.md
+  - How to:
+      - Troubleshoot: troubleshooting.md
+      - advanced/constraints.md
+      - advanced/time.md
+      - advanced/scripts.md
+      - advanced/solver.md
+      - advanced/backend_choice.md
+      - advanced/backend_interface.md
+      - advanced/shadow_prices.md
+  - Math gallery:
+      - user_defined_math/examples/index.md
   - Reference:
-    - YAML as used in Calliope: reference/yaml.md
-    - Command line interface: reference/cli.md
-    - Python API:
-      - reference/api/model.md
-      - reference/api/backend_model.md
-      - reference/api/helper_functions.md
-      - reference/api/example_models.md
-      - reference/api/attrdict.md
-      - reference/api/exceptions.md
-      - reference/api/logging.md
-    - reference/config_schema.md
-    - reference/data_table_schema.md
-    - reference/model_schema.md
-    - reference/math_schema.md
-  - migrating.md
-  - Contributing: contributing.md
-  - Version history: version_history.md
+      - YAML as used in Calliope: reference/yaml.md
+      - Command line interface: reference/cli.md
+      - Python API:
+          - reference/api/model.md
+          - reference/api/backend_model.md
+          - reference/api/helper_functions.md
+          - reference/api/example_models.md
+          - reference/api/attrdict.md
+          - reference/api/exceptions.md
+          - reference/api/logging.md
+      - reference/config_schema.md
+      - reference/data_table_schema.md
+      - reference/model_schema.md
+      - reference/math_schema.md
