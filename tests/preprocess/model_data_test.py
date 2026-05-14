@@ -73,7 +73,7 @@ def timeseries_da():
         ("2005-01-01 01:00", "bar"): [False, 20],
     }
     da = pd.Series(data).rename_axis(index=["timesteps", "foobaz"]).to_xarray()
-    da.coords["timesteps"] = da.coords["timesteps"].astype("M")
+    da.coords["timesteps"] = da.coords["timesteps"].astype("datetime64[ns]")
     return da
 
 
@@ -1421,6 +1421,9 @@ class TestUpdateAndResample:
         assert model_data_cleaner_with_def_matrix.runtime.resample.root == resample
         assert model_data_cleaner_with_def_matrix.dataset.timesteps.size == 2
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Only one timestep defined. Inferring timestep resolution to be 1 hour:calliope.exceptions.ModelWarning"
+    )
     def test_resample_update_runtime_from_something(
         self, model_data_cleaner_with_def_matrix: ModelDataCleaner
     ):

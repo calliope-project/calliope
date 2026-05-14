@@ -426,6 +426,7 @@ class TestCalliopeBaseModel:
         assert new_model.extra_nested.nested.foobar == 2
         assert model.model_dump() == model_dict
 
+    @pytest.mark.filterwarnings("ignore:Pydantic serializer warnings:UserWarning")
     @pytest.mark.parametrize(
         "to_update",
         [
