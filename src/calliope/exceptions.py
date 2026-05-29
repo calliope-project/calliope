@@ -34,8 +34,8 @@ def warn(message: str, _class: type[Warning] = ModelWarning):
     """Raises the specified type of warning."""
     formatwarning = warnings.formatwarning
 
-    warnings.formatwarning = (
-        lambda message, category, *args, **kwargs: f"{category.__name__}: {message}\n"
+    warnings.formatwarning = lambda message, category, *args, **kwargs: (
+        f"{category.__name__}: {message}\n"
     )
     try:
         warnings.warn(message, _class)
