@@ -2,6 +2,9 @@
 
 ### User-facing changes
 
+|fixed| Default values on masked array entries entering into math expression summation.
+In particular, fixes `sum(flow_cap, over=carriers)` on the constraint `source_availability_supply` erroneously returning `inf` (#862).
+
 |fixed| Time clustering method, to handle cases where floating point errors can lead to index mismatches and dropped clusters (#826).
 
 |new| user-defined math example introducing monthly peak charges (#727).

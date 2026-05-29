@@ -346,6 +346,7 @@ class ParsedBackendEquation:
             eval_attrs_["references"] = references
         evaluated = self.expression[0].eval(return_type, EvalAttrs(**eval_attrs_))
         if return_type == "array":
+            evaluated = self.expression[0]._apply_where_array(evaluated)
             self.raise_error_on_where_expr_mismatch(evaluated, where)
         return evaluated
 
