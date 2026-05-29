@@ -157,7 +157,7 @@ class CalliopeBaseModel(BaseModel):
         new_dict: dict = {}
         # Iterate through dict to be updated and convert any sub-dicts into their respective pydantic model objects.
         # Wrapped in `AttrDict` to allow users to define dot notation nested configuration.
-        for key, val in AttrDict(update_dict).items():
+        for key, val in AttrDict(update_dict).as_dict().items():
             key_class = getattr(self, key, None)
             if isinstance(key_class, CalliopeBaseModel | CalliopeDictModel):
                 new_dict[key] = key_class.update(val, deep=deep)
@@ -171,7 +171,9 @@ class CalliopeBaseModel(BaseModel):
                 )
                 new_dict[key] = val
         updated = super().model_copy(update=new_dict, deep=deep)
-        return updated.model_validate(updated.model_dump())
+        return updated.model_validate(
+            updated.model_dump(exclude_unset=True, serialize_as_any=True)
+        )
 
     @classmethod
     def model_no_ref_schema(cls) -> AttrDict:

@@ -116,7 +116,7 @@ class TestModelInit:
     def test_model_creation_timing(self, request, model_name):
         """Check that the expected model creation timings are set."""
         model: Model = request.getfixturevalue(model_name)
-        assert not set(model.runtime.timings.keys()).symmetric_difference(
+        assert not set(model.runtime.timings.root.keys()).symmetric_difference(
             ["preprocess_start", "init_complete"]
         )
 

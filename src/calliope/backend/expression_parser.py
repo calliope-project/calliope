@@ -46,7 +46,7 @@ from calliope.backend.eval_attrs import EvalAttrs
 from calliope.backend.helper_functions import ParsingHelperFunction
 from calliope.exceptions import BackendError
 
-pp.ParserElement.enablePackrat()
+pp.ParserElement.enable_packrat()
 
 SUB_EXPRESSION_CLASSIFIER = "$"
 

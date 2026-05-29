@@ -14,7 +14,6 @@ import pandas as pd
 import xarray as xr
 
 from calliope import _version, backend, exceptions, io, preprocess
-from calliope.attrdict import AttrDict
 from calliope.preprocess import (
     ModelDataBuilder,
     ModelDataCleaner,
@@ -121,29 +120,25 @@ def read_dict(
     model_def = preprocess.prepare_model_definition(
         model_definition, scenario, override_dict, math_dict, definition_path, **kwargs
     )
-    log_time(
+    runtime = log_time(
         LOGGER,
-        model_def.runtime.timings,
+        model_def.runtime,
         "preprocess_start",
         comment="Model: preprocessing data",
     )
+    model_def = model_def.update({"runtime": runtime.model_dump(exclude_unset=True)})
     math_priority = model_math.get_math_priority(model_def.config.init)
     math = model_math.build_math(
         math_priority,
         model_def.math.init.model_dump(),
         validate=model_def.config.init.pre_validate_math_strings,
     )
-
     tables = [
         data_tables.DataTable(table, table_dict, data_table_dfs, definition_path)
         for table, table_dict in model_def.definition.data_tables.root.items()
     ]
-
     model_data_factory = ModelDataBuilder(
-        model_def.config.init,
-        AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
-        math,
-        tables,
+        model_def.config.init, model_def.definition, math, tables
     )
     model_data_factory.build()
     model_def = model_def.update(
@@ -215,9 +210,9 @@ class Model(ModelStructure):
         self.math = attrs.math
 
         self._check_versions()
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "init_complete",
             comment="Model: initialisation complete",
         )
@@ -282,11 +277,8 @@ class Model(ModelStructure):
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
-        log_time(
-            LOGGER,
-            self.runtime.timings,
-            "build_start",
-            comment="Model: backend build starting",
+        self.runtime = log_time(
+            LOGGER, self.runtime, "build_start", comment="Model: backend build starting"
         )
 
         self.config = self.config.update({"build": kwargs})
@@ -302,9 +294,9 @@ class Model(ModelStructure):
         )
         self.backend.add_optimisation_components()
 
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "build_complete",
             comment="Model: backend build complete",
         )
@@ -352,9 +344,9 @@ class Model(ModelStructure):
         self.backend.shadow_prices.track_constraints(self.config.solve.shadow_prices)
 
         mode = self.config.init.mode
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "solve_start",
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
@@ -365,9 +357,9 @@ class Model(ModelStructure):
         else:
             results = self.backend._solve(self.config.solve, warmstart=warmstart)
 
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "solver_exit",
             time_since_solve_start=True,
             comment="Backend: solver finished running",
@@ -384,17 +376,17 @@ class Model(ModelStructure):
             {"termination_condition": results.attrs.pop("termination_condition")}
         )
 
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "postprocess_complete",
             time_since_solve_start=True,
             comment="Postprocessing: ended",
         )
 
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "solve_complete",
             time_since_solve_start=True,
             comment="Backend: model solve completed",
@@ -716,9 +708,9 @@ class Model(ModelStructure):
             return None
 
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
-            log_time(
+            self.runtime = log_time(
                 LOGGER,
-                self.runtime.timings,
+                self.runtime,
                 "solve_complete",
                 time_since_solve_start=True,
                 comment=f"Optimisation model | SPORE {spore} complete",
