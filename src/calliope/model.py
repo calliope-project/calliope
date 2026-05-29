@@ -284,9 +284,11 @@ class Model(ModelStructure):
             backend_input = self._prepare_operate_mode_inputs(self.config.build.operate)
         else:
             backend_input = self.inputs
-
+        backend_input_cleaned = ModelDataCleaner._drop_undefined(
+            backend_input, backend_input.active
+        )
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, self.math.build
+            self.config.build, backend_input_cleaned, self.math.build
         )
         self.backend.add_optimisation_components()
 
@@ -439,7 +441,7 @@ class Model(ModelStructure):
         model_name = self.name
         info_strings.append(f"Model name:   {model_name}")
         msize = dict(self.inputs.dims)
-        msize_exists = self.inputs.definition_matrix.sum()
+        msize_exists = self.inputs.active.sum()
         info_strings.append(
             f"Model size:   {msize} ({msize_exists.item()} valid node:tech:carrier combinations)"
         )
@@ -844,7 +846,7 @@ class Model(ModelStructure):
             self.inputs.get(
                 spores_config.tracking_parameter, xr.DataArray(True)
             ).notnull()
-            & self.inputs.definition_matrix
+            & self.inputs.active
         )
         old_score = self.backend.get_parameter(
             "spores_score", as_backend_objs=False

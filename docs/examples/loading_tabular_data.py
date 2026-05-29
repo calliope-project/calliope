@@ -715,10 +715,6 @@ nodes:
 model_from_data_tables_w_deactivations = calliope.read_dict(model_def)
 
 # Let's compare the two after overriding `flow_cap_max`
-definition_matrix_old = (
-    model_from_data_tables.inputs.definition_matrix.to_series().dropna()
-)
-definition_matrix_new = (
-    model_from_data_tables_w_deactivations.inputs.definition_matrix.to_series().dropna()
-)
-pd.concat([definition_matrix_old, definition_matrix_new], axis=1, keys=["old", "new"])
+active_old = model_from_data_tables.inputs.active.to_series().dropna()
+active_new = model_from_data_tables_w_deactivations.inputs.active.to_series().dropna()
+pd.concat([active_old, active_new], axis=1, keys=["old", "new"])

@@ -198,7 +198,7 @@ system_balance:
   register:
     constraints: [system_balance]
     variables: [flow_out, flow_in, flow_export, unmet_demand, unused_supply]
-    lookups: [definition_matrix]
+    lookups: [active]
   overrides:
     config.build.ensure_feasibility: true
   scenario: simple_supply,two_hours

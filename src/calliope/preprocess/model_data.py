@@ -231,14 +231,14 @@ class ModelDataBuilder(ModelDTypeUpdater):
         node_tech_ds = xr.combine_nested(
             node_tech_data,
             concat_dim="nodes",
-            data_vars="minimal",
+            data_vars=["active"],
             combine_attrs="no_conflicts",
             coords="minimal",
         )
 
         node_ds = self._definition_to_ds(active_node_def, {"techs"})
-        ds = xr.merge([node_tech_ds, node_ds])
-
+        node_tech_ds["active"] = node_tech_ds["active"] * node_ds["active"]
+        ds = xr.merge([node_tech_ds, node_ds.drop_vars("active")])
         self._add_to_dataset(ds, "YAML definition")
 
     def add_top_level_data_definitions(self):
@@ -290,7 +290,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
 
         for tech_name, tech_data in techs_def.root.items():
             if not tech_data.active:
-                self._deactivate_item(techs=tech_name, nodes=node)
+                continue
             else:
                 if tech_data.base_tech is not None:
                     raise exceptions.ModelError(
@@ -344,9 +344,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
         input_data_ds = xr.Dataset()
         for idx_name, idx_inputs in definition.root.items():
             input_data_das: list[xr.DataArray] = []
-            for name, input_data in idx_inputs.model_dump(
-                exclude=exclude, exclude_defaults=True
-            ).items():
+            for name, input_data in idx_inputs.model_dump(exclude=exclude).items():
                 validated_data = self._prepare_input_data(name, input_data)
                 validated_data = validated_data.update(
                     {
@@ -454,31 +452,10 @@ class ModelDataBuilder(ModelDTypeUpdater):
                     item_base_def
                 )
 
-            if not item_base_def.active:
-                self._deactivate_item(
-                    **{"nodes": at_node} if at_node else {}, techs=item_name
-                )
-                continue
-
             updated_defs = updated_defs.update({item_name: item_base_def})
         # Re-evaluate to ensure transmission techs are appropriately set
         updated_defs = CalliopeTechs(updated_defs.model_dump(exclude_unset=True))
         return updated_defs
-
-    def _deactivate_item(self, **item_ref):
-        LOGGER.debug(
-            ", ".join(f"({k}, {v})" for k, v in item_ref.items()) + " | Deactivated."
-        )
-        for dim_name, item_name in item_ref.items():
-            if item_name not in self.dataset.coords.get(dim_name, xr.DataArray()):
-                return None
-        if len(item_ref) == 1:
-            self.dataset = self.dataset.drop_sel(**item_ref)
-        else:
-            if "carrier_in" in self.dataset:
-                self.dataset["carrier_in"].loc[item_ref] = False
-            if "carrier_out" in self.dataset:
-                self.dataset["carrier_out"].loc[item_ref] = False
 
     def _links_to_node_format(self, active_node_def: CalliopeNodes) -> CalliopeNodes:
         """Process `transmission` techs into links by assigning them to the nodes defined by their `link_from` and `link_to` keys.
@@ -498,16 +475,6 @@ class ModelDataBuilder(ModelDTypeUpdater):
             if not isinstance(link_data, CalliopeTransmissionTech):
                 continue
             node_from, node_to = link_data.link_from, link_data.link_to
-            nodes_exists = all(
-                node in active_node_def.root for node in [node_from, node_to]
-            )
-
-            if not nodes_exists:
-                LOGGER.debug(
-                    f"(links, {link_name}) | Deactivated due to missing/deactivated `link_from` or `link_to` node."
-                )
-                self._deactivate_item(techs=link_name)
-                continue
 
             link_tech_def = link_tech_def.update(
                 {
@@ -630,8 +597,9 @@ class ModelDataCleaner(ModelDTypeUpdater):
 
     def clean(self):
         """Clean built dataset."""
-        # If input dataset is empty, stop here.
-        self.clean_data_from_undefined_members()
+        self.dataset = self._update_dtypes(self.dataset)
+        if not self.config.keep_deactivated:
+            self.clean_data_from_undefined_members()
         self.add_colors()
         self.add_link_distances()
         self.update_and_resample_dimensions()
@@ -642,15 +610,15 @@ class ModelDataCleaner(ModelDTypeUpdater):
         self.runtime = self.runtime.update({"instantiated": True})
 
     def clean_data_from_undefined_members(self):
-        """Generate the `definition_matrix` array and remove undefined members.
+        """Update the `active` array and remove undefined members.
 
         Members stripped:
         - Any dimension items that are NaN in all arrays.
         - Any arrays that are NaN in all index positions.
         """
-        ds = self._update_dtypes(self.dataset)
-        def_matrix = ds.carrier_in | ds.carrier_out
-        # NaNing values where they are irrelevant requires definition_matrix to be boolean
+        ds = self.dataset.copy()
+        def_matrix = (ds.carrier_in | ds.carrier_out) & ds.active
+        # NaNing values where they are irrelevant requires active to be boolean
         for var_name, var_data in ds.data_vars.items():
             non_dims = set(def_matrix.dims).difference(var_data.dims)
             var_updated = var_data.where(def_matrix.any(non_dims))
@@ -659,7 +627,7 @@ class ModelDataCleaner(ModelDTypeUpdater):
                 if var_data.dtype.kind != "b"
                 else var_updated.fillna(False).astype(bool)
             )
-        # dropping index values where they are irrelevant requires definition_matrix to be NaN where False
+        # dropping index values where they are irrelevant requires active to be NaN where False
         self.dataset = self._drop_undefined(ds, def_matrix)
 
     def add_colors(self):
@@ -699,9 +667,7 @@ class ModelDataCleaner(ModelDTypeUpdater):
             for tech in self.dataset.techs:
                 if self.dataset.base_tech.sel(techs=tech).item() != "transmission":
                     continue
-                tech_def = self.dataset.definition_matrix.sel(techs=tech).any(
-                    "carriers"
-                )
+                tech_def = self.dataset.active.sel(techs=tech)
                 node1, node2 = tech_def.where(tech_def).dropna("nodes").nodes.values
                 distances[tech.item()] = self._get_distance(node1, node2)
             distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
@@ -769,25 +735,22 @@ class ModelDataCleaner(ModelDTypeUpdater):
         Returns:
             xr.Dataset: Input `ds` with undefined members dropped.
         """
-        ds["definition_matrix"] = def_matrix.where(def_matrix)
+        ds["__active"] = def_matrix.where(def_matrix)
         for dim in def_matrix.dims:
             orig_dim_vals = set(ds.coords[dim].data)
-            ds = ds.dropna(dim, how="all", subset=["definition_matrix"])
+            ds = ds.dropna(dim, how="all", subset=["__active"])
             deleted_dim_vals = orig_dim_vals.difference(set(ds.coords[dim].data))
             if deleted_dim_vals:
                 LOGGER.debug(
                     f"Deleting {dim} values as they are not defined anywhere in the model: {deleted_dim_vals}"
                 )
 
-        # The boolean version of definition_matrix is what we keep
-        ds["definition_matrix"] = def_matrix
-
         vars_to_delete = [
             var_name for var_name, var in ds.data_vars.items() if var.isnull().all()
         ]
         if vars_to_delete:
             LOGGER.debug(f"Deleting empty input data: {vars_to_delete}")
-        return ds.drop_vars(vars_to_delete)
+        return ds.drop_vars(vars_to_delete + ["__active"])
 
     @functools.lru_cache(maxsize=1000)
     def _get_distance(self, node1: str, node2: str) -> float:
@@ -809,13 +772,13 @@ class ModelDataCleaner(ModelDTypeUpdater):
         )["s12"]
 
     def _subset_dims(self):
-        """Subset all timeseries dimensions according to an input slice of start and end times.
+        """Subset dimensions according to an input slice of start and end times.
 
         Args:
-            ds (xr.Dataset): Dataset containing timeseries data to subset.
+            ds (xr.Dataset): Dataset containing data to subset.
 
         Returns:
-            xr.Dataset: Input `ds` with subset timeseries coordinates.
+            xr.Dataset: Input `ds` with subset coordinates.
         """
         selectors = {}
 
@@ -840,18 +803,16 @@ class ModelDataCleaner(ModelDTypeUpdater):
 
         # Drop any transmission links that are now hanging (i.e., only connected to one node)
         hanging_links = (
-            subset_dataset.definition_matrix.sel(
-                techs=subset_dataset.base_tech == "transmission"
-            )
+            subset_dataset.active.sel(techs=subset_dataset.base_tech == "transmission")
             .sum("nodes")
             .where(lambda x: x == 1, drop=True)
             .techs
         )
         subset_dataset = subset_dataset.drop_sel(techs=hanging_links)
-
-        self.dataset = self._drop_undefined(
-            subset_dataset, subset_dataset.definition_matrix
-        )
+        if not self.config.keep_deactivated:
+            self.dataset = self._drop_undefined(subset_dataset, subset_dataset.active)
+        else:
+            self.dataset = subset_dataset
 
     def _resample_dims(self):
         ds = self.dataset

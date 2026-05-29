@@ -312,10 +312,8 @@ class Defined(ParsingHelperFunction):
             dim: self._to_str_list(vals) if dim == "techs" else self._to_str_list(vals)
             for dim, vals in dims.items()
         }
-        definition_matrix = self._attrs.input_data.definition_matrix
-        dim_within_da = definition_matrix.any(
-            self._dims_to_remove(dim_names, str(within.name))
-        )
+        active = self._attrs.input_data.active
+        dim_within_da = active.any(self._dims_to_remove(dim_names, str(within.name)))
         within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
 
         return within_da
@@ -330,20 +328,20 @@ class Defined(ParsingHelperFunction):
             within (str): dimension whose members are being checked.
 
         Raises:
-            ValueError: Can only define dimensions that exist in model.definition_matrix.
+            ValueError: Can only define dimensions that exist in model.active.
 
         Returns:
             set: Undefined dimensions to remove from the definition matrix.
         """
-        definition_matrix = self._attrs.input_data.definition_matrix
-        missing_dims = set([*dim_names, within]).difference(definition_matrix.dims)
+        active = self._attrs.input_data.active
+        missing_dims = set([*dim_names, within]).difference(active.dims)
         if missing_dims:
             raise ValueError(
                 f"Unexpected model dimension referenced in `{self.NAME}` helper function. "
-                "Only dimensions given by `model.inputs.definition_matrix` can be used. "
+                "Only dimensions given by `model.inputs.active` can be used. "
                 f"Received: {missing_dims}"
             )
-        return set(definition_matrix.dims).difference([*dim_names, within])
+        return set(active.dims).difference([*dim_names, within])
 
     def _latex_substring(
         self, how: Literal["all", "any"], dim: str, vals: str | list[str], within: str

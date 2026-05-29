@@ -612,10 +612,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 parsed_ = parser_.parse_string(check.where, parse_all=True)
                 eval_attrs_ = eval_attrs.EvalAttrs(equation_name=name, **eval_kwargs)
                 evaluated = parsed_[0].eval("array", eval_attrs_)
-                if (
-                    evaluated.any()
-                    and (evaluated & self.inputs.definition_matrix).any()
-                ):
+                if evaluated.any() and (evaluated & self.inputs.active).any():
                     check_results[check.errors].append(check.message)
 
         exceptions.print_warnings_and_raise_errors(

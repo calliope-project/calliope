@@ -807,7 +807,7 @@ class TestTopLevelParams:
     def test_top_level_param_extend_dim_vals(
         self, my_caplog, run_and_test, model_data_builder_w_params
     ):
-        # We do this test with timesteps as all other dimension elements are filtered out if there is no matching True element in `definition_matrix`
+        # We do this test with timesteps as all other dimension elements are filtered out if there is no matching True element in `active`
         run_and_test(
             {"data": 10, "index": ["d"], "dims": ["nodes"]}, {"d": 10}, "nodes"
         )
@@ -855,9 +855,7 @@ class TestActiveFalse:
 
         # Ensure what should be gone is gone
         assert not (
-            model.inputs.definition_matrix.sel(techs="test_storage", nodes="b").any(
-                ["carriers"]
-            )
+            model.inputs.active.sel(techs="test_storage", nodes="b").any(["carriers"])
         )
         assert "(nodes, b), (techs, test_storage) | Deactivated" in my_caplog.text
 
@@ -936,7 +934,7 @@ class TestModelDataCleaner:
         assert model_data_cleaner.dataset["will_remain"].item() == 1
         assert set(model_data_cleaner.dataset.techs.values) == {"foo"}
         assert set(model_data_cleaner.dataset.nodes.values) == {"A", "C"}
-        assert model_data_cleaner.dataset["definition_matrix"].dtype.kind == "b"
+        assert model_data_cleaner.dataset["active"].dtype.kind == "b"
 
     @pytest.mark.parametrize(
         ("existing_distance", "expected_distance"), [(np.nan, 343.834), (1, 1)]

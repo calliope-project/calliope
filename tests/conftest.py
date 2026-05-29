@@ -156,7 +156,7 @@ def dummy_model_data():
     model_data = xr.Dataset(
         coords=coords,
         data_vars={
-            "definition_matrix": node_tech & (carrier_in | carrier_out),
+            "active": node_tech,
             "carrier_in": carrier_in,
             "carrier_out": carrier_out,
             "with_inf": (

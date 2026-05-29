@@ -484,7 +484,7 @@ lookups:
     description: >-
       If true, the timestep is the first in the given clustered day.
 
-  definition_matrix:
+  active:
     dtype: bool
     default: false
     description: >-
