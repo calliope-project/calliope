@@ -1141,8 +1141,7 @@ class TestParsedObjective:
     def test_parse_objective_dict_evaluate_eq2(
         self, objective_obj, eval_where_args, eval_expr_args
     ):
-        """Since we fill with default values in the sum, the NaN `only_techs` value gets included, leading to a sum of 11.
-        """
+        """Since we fill with default values in the sum, the NaN `only_techs` value gets included, leading to a sum of 11."""
         valid_where = objective_obj.equations[1].evaluate_where(*eval_where_args)
         objective_expression = objective_obj.equations[1].evaluate_expression(
             *eval_expr_args, where=valid_where
