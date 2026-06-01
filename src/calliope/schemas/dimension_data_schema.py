@@ -46,7 +46,7 @@ class IndexedData(CalliopeBaseModel):
 
     @field_validator("index", mode="before")
     @classmethod
-    def listify_index(cls, value) -> Self:
+    def listify_index(cls, value) -> list[list]:
         """Ensure index and dims are consistent."""
         if not isinstance(value, list):
             value = [[value]]
@@ -57,7 +57,7 @@ class IndexedData(CalliopeBaseModel):
 
     @field_validator("dims", mode="before")
     @classmethod
-    def listify_dims(cls, value) -> Self:
+    def listify_dims(cls, value) -> list:
         """Ensure index and dims are consistent."""
         if not isinstance(value, list):
             value = [value]
@@ -103,7 +103,7 @@ class CalliopeTech(DimensionData):
     """
 
 
-class CalliopeTransmissionTech(DimensionData):
+class CalliopeTransmissionTech(CalliopeTech):
     """Calliope's transmission technology dimension schema."""
 
     model_config = {"title": "Transmission technology dimension data"}
