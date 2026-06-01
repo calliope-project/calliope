@@ -104,7 +104,7 @@ class DataTable:
 
         Args:
             techs_incl_inheritance (CalliopeTechs):
-                Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data tables.
+                Technology definition dictionary which is a union of any YAML definition and the result of solving tech definition across all data tables.
                 Technologies should have their definition inheritance resolved.
         """
         node_tech_vars = self.dataset[
