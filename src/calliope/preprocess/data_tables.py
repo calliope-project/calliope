@@ -124,12 +124,18 @@ class DataTable:
         node_tech_dict = CalliopeNodes.model_validate(
             {i: {"techs": {}} for i in self.dataset.nodes.values}
         )
-        for node, tech_def in node_tech_dict.root.items():
-            try:
-                techs_this_node = is_defined[is_defined].xs(node, level="nodes").index
-            except KeyError:
-                continue
-            for tech in techs_this_node:
+        defined_node_techs = is_defined[is_defined]
+        techs_by_node = {}
+        if not defined_node_techs.empty:
+            techs_by_node =
+                defined_node_techs.index
+                .to_frame(index=False)
+                .groupby("nodes")["techs"]
+                .apply(list)
+                .to_dict()
+            )
+        for node in node_tech_dict.root:
+            for tech in techs_by_node.get(node, []):
                 if tech not in techs_incl_inheritance.root:
                     continue
                 if techs_incl_inheritance[tech].base_tech == "transmission":
