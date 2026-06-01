@@ -100,7 +100,7 @@ class DataTable:
 
         This definition dictionary will ensure that the minimal YAML content is still possible.
 
-        This function should be run _after_ `self._update_tech_def_from_data_table`.
+        This function should be run _after_ tech definition.
 
         Args:
             techs_incl_inheritance (CalliopeTechs):
