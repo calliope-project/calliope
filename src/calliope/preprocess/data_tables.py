@@ -78,8 +78,7 @@ class DataTable:
 
         This definition dictionary will ensure that the minimal YAML content is still possible.
 
-        This function should be accessed _before_ `self.node_dict`.
-
+        This function should be accessed _before_ node definition.
         """
         tech_dict = CalliopeTechs.model_validate(
             {k: {} for k in self.dataset.get("techs", xr.DataArray([])).values}
