@@ -16,11 +16,9 @@ from calliope.preprocess import (
 from calliope.schemas.data_table_schema import CalliopeDataTables
 from calliope.schemas.dimension_data_schema import (
     CalliopeNodes,
-    CalliopeTech,
     CalliopeTechs,
     IndexedData,
 )
-from calliope.schemas.model_def_schema import CalliopeModelDef
 from calliope.util import DATETIME_DTYPE
 
 from ..common.util import build_test_model as build_model
@@ -127,159 +125,6 @@ def my_caplog(caplog):
 
 
 @pytest.mark.filterwarnings("ignore:(?s).*Converting non-nanosecond precision datetime")
-class TestModelDataBuilderUpdateDef:
-    def test_update_def_base_model_no_key_no_overwrite(self):
-        to_update = CalliopeTech(param=1, param2=1)
-        update_def = CalliopeTech(
-            param2=2,
-            active=False,
-            dim_param={"data": 1, "index": [["foo"]], "dims": ["foobar"]},
-        )
-        # Param 2 is not overwritten by default
-        expected = CalliopeTech(
-            param=1,
-            param2=1,
-            active=False,
-            dim_param={"data": 1, "index": [["foo"]], "dims": ["foobar"]},
-        )
-
-        updated = ModelDataBuilder._update_def(to_update, update_def)
-
-        assert updated == expected
-
-    def test_update_def_base_model_no_key_no_overwrite_explicit_active(self):
-        to_update = CalliopeTech(param=1, param2=1, active=True)
-        update_def = CalliopeTech(
-            param2=2,
-            active=False,
-            dim_param={"data": 1, "index": [["foo"]], "dims": ["foobar"]},
-        )
-        # Param 2 is not overwritten by default
-        expected = CalliopeTech(
-            param=1,
-            param2=1,
-            active=True,
-            dim_param={"data": 1, "index": [["foo"]], "dims": ["foobar"]},
-        )
-
-        updated = ModelDataBuilder._update_def(to_update, update_def)
-
-        assert updated == expected
-
-    def test_update_def_base_model_no_key_overwrite(self):
-        to_update = CalliopeTech(param=1, param2=1)
-        update_def = CalliopeTech(
-            param2=2,
-            active=False,
-            dim_param={"data": 1, "index": [["foo"]], "dims": ["foobar"]},
-        )
-        # param2 is overwritten
-        expected = CalliopeTech(
-            param=1,
-            param2=2,
-            active=False,
-            dim_param={"data": 1, "index": [["foo"]], "dims": ["foobar"]},
-        )
-
-        updated = ModelDataBuilder._update_def(to_update, update_def, overwrite=True)
-
-        assert updated == expected
-
-    def test_update_def_base_model_no_key_overwrite_explicit_active(self):
-        to_update = CalliopeTech(param=1, param2=1, active=True)
-        update_def = CalliopeTech(
-            param2=2,
-            active=False,
-            dim_param={"data": 1, "index": [["foo"]], "dims": ["foobar"]},
-        )
-        # param2 is overwritten
-        expected = CalliopeTech(
-            param=1,
-            param2=2,
-            active=False,
-            dim_param={"data": 1, "index": [["foo"]], "dims": ["foobar"]},
-        )
-
-        updated = ModelDataBuilder._update_def(to_update, update_def, overwrite=True)
-
-        assert updated == expected
-
-    def test_update_def_dict_model_no_overwrite(self):
-        to_update = CalliopeTechs.model_validate(
-            {"foo": {"base_tech": "supply", "active": False}}
-        )
-        update_def = CalliopeTechs.model_validate(
-            {"foo": {"base_tech": "demand"}, "bar": {"base_tech": "demand"}}
-        )
-        expected = CalliopeTechs.model_validate(
-            {
-                "foo": {"base_tech": "supply", "active": False},
-                "bar": {"base_tech": "demand"},
-            }
-        )
-
-        updated = ModelDataBuilder._update_def(to_update, update_def)
-
-        assert updated == expected
-
-    def test_update_def_dict_model_key_fails(self):
-        to_update = CalliopeTechs.model_validate(
-            {"foo": {"base_tech": "supply", "active": False}}
-        )
-        update_def = CalliopeTech(param=1, base_tech="demand")
-        with pytest.raises(
-            ValueError, match="Cannot specify a key for updating a CalliopeDictModel"
-        ):
-            ModelDataBuilder._update_def(to_update, update_def, key="foo")
-
-    def test_update_def_base_model_key_existing_no_overwrite(self):
-        to_update = CalliopeModelDef(
-            techs={"foo": {"base_tech": "supply"}}, nodes={"A": {"active": False}}
-        )
-        update_def = CalliopeTechs.model_validate(
-            {
-                "foo": {"base_tech": "demand", "active": False},
-                "bar": {"base_tech": "demand"},
-            }
-        )
-        expected = CalliopeModelDef(
-            techs={
-                "foo": {"base_tech": "supply", "active": False},
-                "bar": {"base_tech": "demand"},
-            },
-            nodes={"A": {"active": False}},
-        )
-
-        updated = ModelDataBuilder._update_def(to_update, update_def, key="techs")
-
-        assert updated == expected
-
-    def test_update_def_base_model_key_existing_overwrite(self):
-        to_update = CalliopeModelDef(techs={"foo": {"base_tech": "supply"}})
-        update_def = CalliopeTechs.model_validate(
-            {"foo": {"base_tech": "demand"}, "bar": {"base_tech": "demand"}}
-        )
-        expected = CalliopeModelDef(
-            techs={"foo": {"base_tech": "demand"}, "bar": {"base_tech": "demand"}}
-        )
-
-        updated = ModelDataBuilder._update_def(
-            to_update, update_def, key="techs", overwrite=True
-        )
-
-        assert updated == expected
-
-    def test_update_def_key_not_in_model_fields(self):
-        to_update = CalliopeModelDef(techs={"foo": {"base_tech": "supply"}})
-        update_def = CalliopeTechs({"foo": {"base_tech": "demand"}})
-
-        with pytest.raises(
-            KeyError,
-            match="Key 'not_a_field' not found in model fields of CalliopeModelDef",
-        ):
-            ModelDataBuilder._update_def(to_update, update_def, key="not_a_field")
-
-
 class TestModelDataBuilder:
     def test_add_node_tech_data(self, model_data_builder_w_params: ModelDataBuilder):
         assert set(model_data_builder_w_params.dataset.nodes.values) == {"a", "b", "c"}
@@ -470,39 +315,53 @@ class TestModelDataBuilder:
             f"foo | Length mismatch between data ({param_data}) and index ([['foo'], ['bar']]) in input definition",
         )
 
-    def test_inherit_defs_inactive(
+    def test_inherit_techs_inactive(
         self, my_caplog, model_data_builder: ModelDataBuilder
     ):
-        def_dict = {"A": {"active": False}}
-        new_def = model_data_builder._inherit_defs(
-            dim_name="nodes", dim_def=CalliopeNodes.model_validate(def_dict)
+        def_dict = {"test_supply_gas": {"active": False}}
+        new_def = model_data_builder._inherit_techs(
+            base_def=CalliopeTechs.model_validate(def_dict)
         )
-        assert "(nodes, A) | Deactivated." in my_caplog.text
+        assert "(techs, test_supply_gas) | Deactivated." in my_caplog.text
         assert not new_def.root.keys()
 
-    def test_inherit_defs_nodes_from_base(self, model_data_builder: ModelDataBuilder):
-        """Without a `dim_def` to start off inheritance chaining, the `dim_name` will be used to find keys."""
-        new_def_dict = model_data_builder._inherit_defs(dim_name="nodes")
-        assert new_def_dict.root.keys() == {"a", "b", "c"}
+    def test_inherit_techs_from_full_model(self, model_data_builder: ModelDataBuilder):
+        """Without a `base_def` to start off inheritance chaining, the full model tech definition will be used to find keys."""
+        new_def_dict = model_data_builder._inherit_techs()
+        assert new_def_dict.root.keys() == {
+            "test_supply_gas",
+            "test_supply_elec",
+            "test_supply_coal",
+            "test_supply_plus",
+            "test_storage",
+            "test_conversion",
+            "test_conversion_plus",
+            "test_chp",
+            "test_demand_elec",
+            "test_demand_heat",
+            "test_demand_coal",
+            "test_link_a_b_elec",
+            "test_link_a_b_heat",
+        }
 
-    def test_inherit_defs_techs(self, model_data_builder: ModelDataBuilder):
+    def test_inherit_techs(self, model_data_builder: ModelDataBuilder, dummy_int):
         """`dim_def` overrides content of base model definition."""
         model_data_builder.model_definition = (
             model_data_builder.model_definition.update(
-                {"techs.foo.base_tech": "supply", "techs.foo.my_param": 2}
+                {"techs.foo.base_tech": "supply", "techs.foo.param1": 2}
             )
         )
 
-        def_dict = {"foo": {"my_param": 1}}
-        new_def_dict = model_data_builder._inherit_defs(
-            dim_name="techs", dim_def=CalliopeTechs.model_validate(def_dict)
+        def_dict = {"foo": {"param1": dummy_int}}
+        new_def_dict = model_data_builder._inherit_techs(
+            base_def=CalliopeTechs.model_validate(def_dict)
         )
         assert new_def_dict == CalliopeTechs.model_validate(
-            {"foo": {"my_param": 1, "base_tech": "supply"}}
+            {"foo": {"param1": dummy_int, "base_tech": "supply"}}
         )
 
-    def test_inherit_defs_techs_empty_def(self, model_data_builder: ModelDataBuilder):
-        """An empty `dim_def` entry can be handled, by returning the model definition for that entry."""
+    def test_inherit_techs_empty_def(self, model_data_builder: ModelDataBuilder):
+        """An empty `base_def` entry can be handled, by returning the model definition for that entry."""
         model_data_builder.model_definition = (
             model_data_builder.model_definition.update(
                 {"techs.foo.base_tech": "supply", "techs.foo.my_param": 2}
@@ -510,45 +369,36 @@ class TestModelDataBuilder:
         )
 
         def_dict = {"foo": None}
-        new_def_dict = model_data_builder._inherit_defs(
-            dim_name="techs", dim_def=CalliopeTechs.model_validate(def_dict)
+        new_def_dict = model_data_builder._inherit_techs(
+            base_def=CalliopeTechs.model_validate(def_dict)
         )
         assert new_def_dict == CalliopeTechs.model_validate(
             {"foo": {"my_param": 2, "base_tech": "supply"}}
         )
 
-    def test_inherit_defs_techs_missing_base_def(
-        self, model_data_builder: ModelDataBuilder
+    def test_deactivate_single_dim(
+        self, my_caplog, model_data_builder_w_params: ModelDataBuilder
     ):
-        """If inheriting from a template, checks against the schema will still be undertaken."""
-        def_dict = {"foo": {"base_tech": "supply"}}
-        with pytest.raises(KeyError) as excinfo:
-            model_data_builder._inherit_defs(
-                dim_name="techs",
-                dim_def=CalliopeTechs.model_validate(def_dict),
-                foobar="bar",
-            )
-        assert check_error_or_warning(
-            excinfo,
-            "(foobar, bar), (techs, foo) | Reference to item not defined in base techs",
-        )
-
-    def test_deactivate_single_dim(self, model_data_builder_w_params: ModelDataBuilder):
         assert "a" in model_data_builder_w_params.dataset.nodes
         model_data_builder_w_params._deactivate_item(nodes="a")
         assert "a" not in model_data_builder_w_params.dataset.nodes
+        assert "(nodes, a) | Deactivated." in my_caplog.text
 
-    def test_deactivate_two_dims(self, model_data_builder_w_params: ModelDataBuilder):
+    def test_deactivate_two_dims(
+        self, my_caplog, model_data_builder_w_params: ModelDataBuilder
+    ):
+        """We drop a tech at a single node, so it isn't removed entirely from the dataset since it is present at the other node."""
         to_drop = {"nodes": "a", "techs": "test_supply_elec"}
         model_data_builder_w_params._deactivate_item(**to_drop)
         assert "a" in model_data_builder_w_params.dataset.nodes
         assert "test_supply_elec" in model_data_builder_w_params.dataset.techs
         assert (
-            model_data_builder_w_params.dataset.carrier_in.sel(**to_drop) == 0
+            model_data_builder_w_params.dataset[["carrier_in", "carrier_out"]].sel(
+                **to_drop
+            )
+            == 0
         ).all()
-        assert (
-            model_data_builder_w_params.dataset.carrier_out.sel(**to_drop) == 0
-        ).all()
+        assert "(nodes, a), (techs, test_supply_elec) | Deactivated." in my_caplog.text
 
     @pytest.mark.parametrize(
         "to_drop",

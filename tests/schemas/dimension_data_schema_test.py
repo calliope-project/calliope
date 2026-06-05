@@ -5,6 +5,7 @@ from calliope.io import read_rich_yaml
 from calliope.schemas.dimension_data_schema import (
     CalliopeNode,
     CalliopeTech,
+    CalliopeTechs,
     IndexedData,
 )
 
@@ -114,6 +115,22 @@ class TestCalliopeTech:
             CalliopeTech(**tech)
         check_error_or_warning(
             error, ["error for Technology dimension data", "base_tech"]
+        )
+
+
+class TestCalliopeTechs:
+    def test_none_top_level(self):
+        """Test that a None entry is converted to an empty dictionary in the top level."""
+        techs = CalliopeTechs.model_validate(None)
+        assert techs == CalliopeTechs.model_validate({})
+
+    def test_none_sub_level(self):
+        """Test that a None entry is converted to an empty dictionary within individual tech definitions."""
+        techs = CalliopeTechs.model_validate(
+            {"foo": None, "bar": {"param1": 1}, "baz": {}}
+        )
+        assert techs == CalliopeTechs.model_validate(
+            {"foo": {}, "bar": {"param1": 1}, "baz": {}}
         )
 
 

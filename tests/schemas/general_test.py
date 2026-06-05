@@ -181,6 +181,14 @@ class TestCalliopeDictModel:
         with pytest.raises(pydantic.ValidationError, match="1 validation error"):
             dict_str_model.update({"key1": 123})
 
+    def test_update_str_no_overwrite(self, dict_str_model):
+        """Ensure that the update method does not overwrite existing keys when overwrite=False."""
+        new_model = dict_str_model.update(
+            {"key1": "new_value1", "key3": "value3"}, overwrite=False
+        )
+
+        assert new_model.root == {"key1": "value1", "key2": "value2", "key3": "value3"}
+
     def test_check_base_model(self, dict_base_model):
         """Ensure that the CalliopeDictModel can pass updates onto a CalliopeBaseModel."""
         for key in ["key1", "key2"]:
@@ -208,6 +216,23 @@ class TestCalliopeDictModel:
             "key2": {"foo": "value2", "bar": 3},
         }
 
+    def test_update_base_model_no_overwrite(self, dict_base_model, dummy_int):
+        """Ensure that the update method does not overwrite existing fields when overwrite=False."""
+        new_model = dict_base_model.update(
+            {
+                "key1": {"foo": "new_value1", "bar": dummy_int},
+                "key3": {"foo": "new_value3", "bar": 4},
+            },
+            overwrite=False,
+        )
+
+        assert new_model.model_dump() == {
+            # for key1: foo was unset initially, so can be overwritten; no change to set bar val
+            "key1": {"foo": "new_value1", "bar": 2},
+            "key2": {"foo": "value2", "bar": 3},
+            "key3": {"foo": "new_value3", "bar": 4},  # new dict item
+        }
+
     def test_update_list_model(self, dict_list_model):
         """Ensure that the update method replaces entire list model."""
         new_model = dict_list_model.update(
@@ -224,6 +249,18 @@ class TestCalliopeDictModel:
         assert dict_list_model.model_dump() == {
             "key1": [{"foo": "value1", "bar": 2}],
             "key2": [{"foo": "value2", "bar": 3}],
+        }
+
+    def test_update_list_model_no_overwrite(self, dict_list_model):
+        """Ensure that the update method does not overwrite existing list models when overwrite=False."""
+        new_model = dict_list_model.update(
+            {"key1": [{"bar": 4}], "key3": [{"bar": 4}]}, overwrite=False
+        )
+
+        assert new_model.model_dump() == {
+            "key1": [{"foo": "value1", "bar": 2}],
+            "key2": [{"foo": "value2", "bar": 3}],
+            "key3": [{"foo": "value1", "bar": 4}],
         }
 
     def test_log_message_on_adding_dict_entry(self, caplog, dict_str_model):
@@ -383,6 +420,20 @@ class TestCalliopeBaseModel:
     @pytest.mark.parametrize(
         ("to_update", "expected"),
         [
+            ({"foo": "baz"}, {"foo": "bar", "foobar": 1}),
+            ({"foobar": 2}, {"foo": "bar", "foobar": 2}),
+            ({"foo": "baz", "foobar": 2}, {"foo": "bar", "foobar": 2}),
+        ],
+    )
+    def test_update_flat_no_overwrite(self, config_model_flat, to_update, expected):
+        """Ensure that the update method does not overwrite existing fields when overwrite=False, so long as the fields have been explicitly set."""
+        model = config_model_flat(foo="bar")
+        new_model = model.update(to_update, overwrite=False)
+        assert new_model.model_dump() == expected
+
+    @pytest.mark.parametrize(
+        ("to_update", "expected"),
+        [
             (
                 {"top_level_foobar": 20},
                 {"top_level_foobar": 20, "nested": {"foo": "bar", "foobar": 1}},
@@ -409,6 +460,26 @@ class TestCalliopeBaseModel:
 
         assert new_model.model_dump() == expected
         assert model.model_dump() == model_dict
+
+    @pytest.mark.parametrize(
+        ("to_update", "expected"),
+        [
+            (
+                {"top_level_foobar": 20},
+                {"top_level_foobar": 20, "nested": {"foo": "bar", "foobar": 1}},
+            ),
+            (
+                {"nested": {"foo": "baz", "foobar": 2}},
+                {"top_level_foobar": 10, "nested": {"foo": "bar", "foobar": 2}},
+            ),
+        ],
+    )
+    def test_update_nested_no_overwrite(self, config_model_nested, to_update, expected):
+        """Ensure that the update method does not overwrite existing fields when overwrite=False,
+        including nested fields, so long as the fields have been explicitly set."""
+        model = config_model_nested(nested={"foo": "bar"})
+        new_model = model.update(to_update, overwrite=False)
+        assert new_model.model_dump() == expected
 
     @pytest.mark.parametrize(
         "to_update",
@@ -499,6 +570,66 @@ class TestCalliopeBaseModel:
         # No change in the original model
         assert model.model_dump() == orig_model
 
+    def test_update_nested_with_dict_and_list_models_no_overwrite(
+        self, config_model_nested_with_dict_and_list_models
+    ):
+        """Test updating a nested model with CalliopeDictModel and CalliopeListModel without overwriting set fields."""
+        model = config_model_nested_with_dict_and_list_models(
+            dict_field={
+                "key1": {
+                    "nested_list_field": [
+                        {"foo": "value1", "foobar": 2},
+                        {"foo": "value2", "foobar": 4},
+                    ],
+                    "nested_config": {"foobar": 1},
+                },
+                "key2": {"other_field": "value3"},
+            },
+            list_field=[{"foo": "value3", "foobar": 6}],
+        )
+
+        # Update the dict field
+        new_model = model.update(
+            {
+                "dict_field": {
+                    "key1": {
+                        "nested_list_field": [{"foo": "new_value1"}],
+                        "nested_config": {"foo": "new_value1", "foobar": 2},
+                    },
+                    "key2": {"other_field": "new_value3"},
+                    "key3": {},
+                },
+                "list_field": [
+                    {"foo": "bar", "foobar": 1},
+                    {"foo": "new_value3", "foobar": 8},
+                ],
+            },
+            overwrite=False,
+        )
+        assert new_model.model_dump() == {
+            "dict_field": {
+                "key1": {
+                    "nested_list_field": [
+                        {"foo": "value1", "foobar": 2},
+                        {"foo": "value2", "foobar": 4},
+                    ],
+                    "nested_config": {"foo": "new_value1", "foobar": 1},
+                    "other_field": "default_value",
+                },
+                "key2": {
+                    "nested_list_field": [],
+                    "nested_config": {"foo": "bar", "foobar": 1},
+                    "other_field": "value3",
+                },
+                "key3": {
+                    "nested_list_field": [],
+                    "nested_config": {"foo": "bar", "foobar": 1},
+                    "other_field": "default_value",
+                },
+            },
+            "list_field": [{"foo": "value3", "foobar": 6}],
+        }
+
     @pytest.mark.parametrize(
         ("to_update", "expected"),
         [
@@ -546,6 +677,30 @@ class TestCalliopeBaseModel:
                 }
             )
         assert not caplog.text
+
+    def test_logging_no_overwrite(
+        self, caplog, config_model_nested_with_dict_and_list_models
+    ):
+        """Ensure that no log message is generated when attempting to update a set value when overwrite=False."""
+
+        model = config_model_nested_with_dict_and_list_models(
+            dict_field={
+                "key1": {"nested_config": {"foo": "value1"}},
+                "key2": {"other_field": "value3"},
+            },
+            list_field=[{"foo": "value3", "foobar": 6}],
+        )
+        with caplog.at_level(logging.DEBUG, logger=LOGGER):
+            model.update(
+                {
+                    "dict_field.key1.nested_config.foo": "value2",
+                    "dict_field.key1.nested_config.foobar": 2,
+                    "dict_field.key2.other_field": "value3",
+                },
+                overwrite=False,
+            )
+        assert "`foo`: value1 -> value2" not in caplog.text
+        assert "`foobar`: 1 -> 2" in caplog.text
 
     def test_config_model_no_defs(self, config_model_nested):
         model = config_model_nested()

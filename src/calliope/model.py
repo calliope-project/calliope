@@ -126,11 +126,11 @@ def read_dict(
         "preprocess_start",
         comment="Model: preprocessing data",
     )
-    model_def = model_def.update({"runtime": runtime.model_dump(exclude_unset=True)})
+    model_def = model_def.update({"runtime": runtime})
     math_priority = model_math.get_math_priority(model_def.config.init)
     math = model_math.build_math(
         math_priority,
-        model_def.math.init.model_dump(),
+        model_def.math.init,
         validate=model_def.config.init.pre_validate_math_strings,
     )
     tables = [
@@ -142,7 +142,7 @@ def read_dict(
     )
     model_data_factory.build()
     model_def = model_def.update(
-        {"math.build": math.model_dump(), "runtime.math_priority": math_priority}
+        {"math.build": math, "runtime.math_priority": math_priority}
     )
     return Model(inputs=model_data_factory.dataset, attrs=model_def)
 
@@ -186,14 +186,11 @@ class Model(ModelStructure):
         if math_priority != attrs.runtime.math_priority:
             math = model_math.build_math(
                 math_priority,
-                attrs.math.init.model_dump(),
+                attrs.math.init,
                 validate=self.config.init.pre_validate_math_strings,
             )
             attrs = attrs.update(
-                {
-                    "runtime.math_priority": math_priority,
-                    "math.build": math.model_dump(),
-                }
+                {"runtime.math_priority": math_priority, "math.build": math}
             )
         if inputs:
             model_data_factory = ModelDataCleaner(
@@ -249,19 +246,18 @@ class Model(ModelStructure):
         """Get solved status."""
         return self._is_solved
 
-    @property
-    def all_attrs(self) -> CalliopeAttrs:
+    def all_attrs(self, exclude_unset: bool = True) -> CalliopeAttrs:
         """Get all model attributes as a CalliopeAttrs object."""
         return CalliopeAttrs(
             **{
-                k: getattr(self, k).model_dump()
+                k: getattr(self, k).model_dump(exclude_unset=exclude_unset)
                 for k in CalliopeAttrs.model_fields.keys()
             }
         )
 
-    def dump_all_attrs(self) -> dict:
+    def dump_all_attrs(self, exclude_unset: bool = True) -> dict:
         """Dump of all class pydantic model attributes as a single dictionary."""
-        return self.all_attrs.model_dump()
+        return self.all_attrs(exclude_unset).model_dump(exclude_unset=exclude_unset)
 
     def build(self, force: bool = False, **kwargs) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
@@ -371,7 +367,7 @@ class Model(ModelStructure):
                 results, self.config.solve.zero_threshold
             )
 
-        self.math = self.math.update({"build": self.backend.math.model_dump()})
+        self.math = self.math.update({"build": self.backend.math})
         self.runtime = self.runtime.update(
             {"termination_condition": results.attrs.pop("termination_condition")}
         )

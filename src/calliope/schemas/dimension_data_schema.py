@@ -2,7 +2,7 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for dimensional data definition."""
 
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import Field, field_validator, model_validator
 from typing_extensions import Self
@@ -19,6 +19,7 @@ from calliope.schemas.general import (
 DataValue = str | bool | NumericVal | None
 IndexValue = str | NumericVal
 BaseTech = Literal["conversion", "demand", "storage", "supply", "transmission"]
+DimNames = Literal["techs", "nodes"]
 
 
 class IndexedData(CalliopeBaseModel):
@@ -125,9 +126,24 @@ class CalliopeTransmissionTech(CalliopeTech):
 class CalliopeTechs(CalliopeDictModel):
     """Calliope Techs dictionary."""
 
-    root: dict[AttrStr, CalliopeTransmissionTech | CalliopeTech | None] = Field(
+    root: dict[AttrStr, CalliopeTransmissionTech | CalliopeTech] = Field(
         default_factory=dict
     )
+
+    _dim: ClassVar[DimNames] = "techs"
+    """The name of the dimension in YAML used for validation and error messages."""
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def no_none_entries(cls, value) -> dict:
+        """All entries are of dict type."""
+        if value is None:
+            return {}
+
+        for key, entry in value.items():
+            if entry is None:
+                value[key] = {}
+        return value
 
 
 class CalliopeNode(DimensionData):
@@ -153,20 +169,14 @@ class CalliopeNode(DimensionData):
             )
         return self
 
-    @field_validator("techs", mode="before")
-    @classmethod
-    def check_techs(cls, value: dict | None) -> dict:
-        """Ensure techs are in correct format."""
-        if value is None:
-            return {}
-        else:
-            return value
-
 
 class CalliopeNodes(CalliopeDictModel):
     """Calliope Nodes dictionary."""
 
     root: dict[AttrStr, CalliopeNode] = Field(default_factory=dict)
+
+    _dim: ClassVar[DimNames] = "nodes"
+    """The name of the dimension in YAML used for validation and error messages."""
 
 
 class CalliopeDataDef(CalliopeDictModel):

@@ -7,7 +7,7 @@ import itertools
 import logging
 from abc import ABC
 from collections.abc import Hashable, Iterable, Mapping
-from typing import Literal, TypeVar, overload
+from typing import TypeVar
 
 import pandas as pd
 import xarray as xr
@@ -17,9 +17,7 @@ from calliope import exceptions
 from calliope.preprocess import data_tables, time
 from calliope.schemas import config_schema, math_schema, runtime_attrs_schema
 from calliope.schemas.dimension_data_schema import (
-    CalliopeNode,
     CalliopeNodes,
-    CalliopeTech,
     CalliopeTechs,
     CalliopeTransmissionTech,
     IndexedData,
@@ -33,6 +31,7 @@ LOGGER = logging.getLogger(__name__)
 
 DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
 DEF_T = TypeVar("DEF_T", bound=CalliopeBaseModel | CalliopeDictModel)
+TECHS_NODES_T = TypeVar("TECH_NODES_T", CalliopeTechs, CalliopeNodes)
 
 
 class ModelDTypeUpdater(ABC):
@@ -132,73 +131,6 @@ class ModelDataBuilder(ModelDTypeUpdater):
         self.add_node_tech_data()
         self.add_top_level_data_definitions()
 
-    @overload
-    @staticmethod
-    def _update_def(
-        to_update: CalliopeBaseModel,
-        update_def: CalliopeBaseModel | CalliopeDictModel,
-        key: str | None = None,
-        overwrite: bool = False,
-    ) -> CalliopeBaseModel: ...
-
-    @overload
-    @staticmethod
-    def _update_def(
-        to_update: CalliopeDictModel,
-        update_def: CalliopeDictModel,
-        key: None = None,
-        overwrite: bool = False,
-    ) -> CalliopeDictModel: ...
-
-    @staticmethod
-    def _update_def(
-        to_update: CalliopeBaseModel | CalliopeDictModel,
-        update_def: CalliopeBaseModel | CalliopeDictModel,
-        key: str | None = None,
-        overwrite: bool = False,
-    ) -> CalliopeBaseModel | CalliopeDictModel:
-        """Update a pydantic model using another pydantic model.
-
-        If a key is given, the update will ignore keys already present in the `key` sub-model of `to_update`, allowing for a form of precedence in the inheritance tree.
-
-        Args:
-            to_update (CalliopeBaseModel | CalliopeDictModel):
-                Pydantic model to update.
-            update_def (CalliopeBaseModel | CalliopeDictModel):
-                pydantic model to update from.
-            key (str | None, optional):
-                If given, update the sub-model corresponding to the key. Defaults to None.
-            overwrite (bool, optional):
-                If True, values in `update_def` will overwrite those already in `to_update`.
-                Defaults to False.
-
-        Returns:
-            CalliopeBaseModel | CalliopeDictModel:
-                The updated pydantic model, of the same class as the input `to_update`.
-        """
-        kwargs = {"exclude_unset": True}
-        if key is not None and isinstance(to_update, CalliopeDictModel):
-            msg = "Cannot specify a key for updating a CalliopeDictModel, as it has no predefined field names."
-            raise ValueError(msg)
-        if key is not None and key not in to_update.__class__.model_fields:
-            raise KeyError(
-                f"Key '{key}' not found in model fields of {to_update.__class__.__name__}"
-            )
-        # Update `update_def` with the contents of `to_update` if we do not allow overwriting.
-        if overwrite:
-            pre_update = {}
-        elif key is not None:
-            pre_update = getattr(to_update, key).model_dump(**kwargs)
-        else:
-            pre_update = to_update.model_dump(**kwargs)
-        update_dict = update_def.update(pre_update).model_dump(**kwargs)
-
-        if key is not None:
-            updated = to_update.update({key: update_dict})
-        else:
-            updated = to_update.update(update_dict)
-        return updated
-
     def init_from_data_tables(self, data_tables: Iterable[data_tables.DataTable]):
         """Initialise the model definition and dataset using data loaded from file / in-memory objects.
 
@@ -210,25 +142,22 @@ class ModelDataBuilder(ModelDTypeUpdater):
         """
         for data_table in data_tables:
             tech_def, base_tech_data = data_table.tech_def()
-            self.model_definition = self._update_def(
-                self.model_definition, tech_def, key="techs"
-            )
-            self.tech_data_from_tables = self._update_def(
-                self.tech_data_from_tables, base_tech_data, overwrite=True
+            self.model_definition = self.model_definition.update(
+                {"techs": tech_def}, overwrite=False
             )
 
-        techs_incl_inheritance = self._inherit_defs("techs")
+        techs_incl_inheritance = self._inherit_techs()
         for data_table in data_tables:
             node_def = data_table.node_def(techs_incl_inheritance)
-            self.model_definition = self._update_def(
-                self.model_definition, node_def, key="nodes"
+            self.model_definition = self.model_definition.update(
+                {"nodes": node_def}, overwrite=False
             )
             for param, param_config in self.math.lookups.root.items():
                 lookup_dim = param_config.pivot_values_to_dim
                 if lookup_dim is not None:
                     lookup_def = data_table.lookup_def_from_param(param, lookup_dim)
-                    self.tech_data_from_tables = self._update_def(
-                        self.tech_data_from_tables, lookup_def, overwrite=True
+                    self.tech_data_from_tables = self.tech_data_from_tables.update(
+                        lookup_def
                     )
                     data_table.drop(param)
 
@@ -249,7 +178,12 @@ class ModelDataBuilder(ModelDTypeUpdater):
 
         Node and tech definitions will be validated against the model definition schema here.
         """
-        active_node_def = self._inherit_defs("nodes")
+        active_node_def = CalliopeNodes()
+        for node, node_def in self.model_definition.nodes.root.items():
+            if node_def.active:
+                active_node_def = active_node_def.update({node: node_def})
+            else:
+                self._deactivate_item(nodes=node)
         links_at_nodes = self._links_to_node_format(active_node_def)
 
         node_tech_data = []
@@ -257,20 +191,20 @@ class ModelDataBuilder(ModelDTypeUpdater):
             techs_this_node = node_data.techs
             node_ref_vars = self._get_relevant_node_refs(techs_this_node, node_name)
 
-            techs_this_node_incl_inheritance = self._inherit_defs(
-                "techs", techs_this_node, nodes=node_name
+            techs_this_node_incl_inheritance = self._inherit_techs(
+                techs_this_node, node_name
             )
             self._raise_error_on_transmission_tech_def(
                 techs_this_node_incl_inheritance, node_name
             )
             if node_name in links_at_nodes.root:
-                techs_this_node_incl_inheritance = self._update_def(
-                    techs_this_node_incl_inheritance,
-                    links_at_nodes[node_name].techs,
-                    overwrite=True,
+                techs_this_node_incl_inheritance = (
+                    techs_this_node_incl_inheritance.update(
+                        links_at_nodes[node_name].techs
+                    )
                 )
 
-            tech_ds = self._definition_to_ds(techs_this_node_incl_inheritance, "techs")
+            tech_ds = self._definition_to_ds(techs_this_node_incl_inheritance)
 
             tech_ds.coords["nodes"] = node_name
             for ref_var in node_ref_vars:
@@ -291,7 +225,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
             coords="minimal",
         )
 
-        node_ds = self._definition_to_ds(active_node_def, "nodes")
+        node_ds = self._definition_to_ds(active_node_def, {"techs"})
         ds = xr.merge([node_tech_ds, node_ds])
         self._add_to_dataset(ds, "YAML definition")
 
@@ -343,9 +277,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
         refs = set()
 
         for tech_name, tech_data in techs_def.root.items():
-            if tech_data is None:
-                continue
-            elif not tech_data.active:
+            if not tech_data.active:
                 self._deactivate_item(techs=tech_name, nodes=node)
             else:
                 if tech_data.base_tech is not None:
@@ -353,7 +285,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
                         f"(nodes, {node}), (techs, {tech_name}) | Defining a technology `base_tech` at a node is not supported; "
                         "limit yourself to defining this lookup within `techs` or `templates`"
                     )
-                refs.update(tech_data.model_fields_set)
+                refs.update(tech_data.model_fields_set - {"active", "base_tech"})
 
         return list(refs)
 
@@ -380,37 +312,25 @@ class ModelDataBuilder(ModelDTypeUpdater):
         input_data_da = input_data_da.rename(name)
         return input_data_da
 
-    @overload
     def _definition_to_ds(
-        self, definition: CalliopeNodes, dim_name: Literal["nodes"]
-    ) -> xr.Dataset: ...
-
-    @overload
-    def _definition_to_ds(
-        self, definition: CalliopeTechs, dim_name: Literal["techs"]
-    ) -> xr.Dataset: ...
-    def _definition_to_ds(
-        self,
-        definition: CalliopeTechs | CalliopeNodes,
-        dim_name: Literal["techs", "nodes"],
+        self, definition: CalliopeNodes | CalliopeTechs, exclude: set | None = None
     ) -> xr.Dataset:
         """Convert nodes/techs definition with their input data definitions into an xarray dataset.
 
         Node/tech name will be injected into each input's `index` and `dims` lists so that the resulting arrays include those dimensions.
 
         Args:
-            definition (CalliopeTechs | CalliopeNodes): Dictionary of `techs` or `nodes` definitions, including any input data definitions nested within them.
+            definition (CalliopeTechs | CalliopeNodes):
+                Dictionary of `techs` or `nodes` definitions, including any input data definitions nested within them.
                 This should already include inherited parameters from the base definitions.
-            dim_name (Literal[nodes, techs]): Dimension name of the dictionary items.
+            exclude (set, optional):
+                Set of parameter names to exclude from being added to the output dataset.
 
         Returns:
             xr.Dataset: Dataset with arrays indexed over (at least) the input `dim_name`.
         """
-        exclude = {"techs"} if dim_name == "nodes" else None
         input_data_ds = xr.Dataset()
         for idx_name, idx_inputs in definition.root.items():
-            if idx_inputs is None:
-                continue
             input_data_das: list[xr.DataArray] = []
             for name, input_data in idx_inputs.model_dump(
                 exclude=exclude, exclude_defaults=True
@@ -419,7 +339,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
                 validated_data = validated_data.update(
                     {
                         "index": [[idx_name] + idx for idx in validated_data.index],
-                        "dims": [dim_name, *validated_data.dims],
+                        "dims": [definition._dim, *validated_data.dims],
                     }
                 )
                 input_data_das.append(self._input_data_to_array(name, validated_data))
@@ -475,28 +395,9 @@ class ModelDataBuilder(ModelDTypeUpdater):
             data_def = IndexedData.model_validate({"data": raw_input_data})
         return data_def
 
-    @overload
-    def _inherit_defs(
-        self,
-        dim_name: Literal["techs"],
-        dim_def: CalliopeTechs | None = None,
-        **connected_dims: str,
-    ) -> CalliopeTechs: ...
-
-    @overload
-    def _inherit_defs(
-        self,
-        dim_name: Literal["nodes"],
-        dim_def: CalliopeNodes | None = None,
-        **connected_dims: str,
-    ) -> CalliopeNodes: ...
-
-    def _inherit_defs(
-        self,
-        dim_name: Literal["nodes", "techs"],
-        dim_def: CalliopeTechs | CalliopeNodes | None = None,
-        **connected_dims: str,
-    ) -> CalliopeTechs | CalliopeNodes:
+    def _inherit_techs(
+        self, base_def: CalliopeTechs | None = None, at_node: str | None = None
+    ) -> CalliopeTechs:
         """For a set of node/tech definitions, climb the inheritance tree to build a final definition dictionary.
 
         For `techs` at `nodes`, they inherit the technology definition from `techs`.
@@ -506,70 +407,55 @@ class ModelDataBuilder(ModelDTypeUpdater):
         If a `tech`/`node` has the `active` parameter set to `False` (including if it inherits this parameter), it will not make it into the output dictionary.
 
         Args:
-            dim_name (Literal[nodes, techs]): Name of dimension we're working with.
-            dim_def (CalliopeTechs | CalliopeNodes | None, optional):
+            base_def (CalliopeTechs | None, optional):
                 Base definition to work from.
-                If not defined, `dim_name` will be used to access the base definition from the model definition.
+                If None, the model definition `techs` item will be used.
                 Defaults to None.
+            at_node (str | None, optional):
+                Limit inheritance to a specific node, if desired.
 
-        Keyword Args:
-            connected_dims (str):
-                Any dimension index items connected to the one for which we're tracing inheritance.
-                E.g., if looking at technologies at a node `A`, we would be using `dim_name=techs` and `connected_dims={nodes=A}`
         Raises:
             KeyError: Cannot define a `tech` at a `node` if it isn't already defined under the `techs` top-level key.
 
         Returns:
             CalliopeTechs | CalliopeNodes: Dictionary containing all active tech/node definitions with inherited parameters.
         """
-        if connected_dims:
-            debug_message_prefix = (
-                ", ".join([f"({k}, {v})" for k, v in connected_dims.items()]) + ", "
-            )
+        if at_node:
+            debug_message_prefix = f"(nodes, {at_node})"
         else:
             debug_message_prefix = ""
 
-        updated_defs = CalliopeTechs() if dim_name == "techs" else CalliopeNodes()
-        if dim_def is None:
-            dim_def = self.model_definition[dim_name]
+        updated_defs = CalliopeTechs()
+        if base_def is None:
+            base_def = self.model_definition.techs
 
-        for item_name, item_def in dim_def.root.items():
-            if item_def is None:
-                item_def = CalliopeTech() if dim_name == "techs" else CalliopeNode()
-            if dim_name == "techs":
-                base_def = self.model_definition["techs"]
-                if item_name not in base_def.root:
-                    raise KeyError(
-                        f"{debug_message_prefix}({dim_name}, {item_name}) | Reference to item not defined in base {dim_name}"
-                    )
-
-                item_base_def = self._update_def(
-                    base_def[item_name], item_def, overwrite=True
+        for item_name, item_def in base_def.root.items():
+            if item_name not in self.model_definition.techs.root:
+                raise KeyError(
+                    f"{debug_message_prefix}(techs, {item_name}) | Reference to item not defined in base techs definition."
                 )
 
-                if item_name in self.tech_data_from_tables.root:
-                    item_base_def = self._update_def(
-                        self.tech_data_from_tables[item_name],
-                        item_base_def,
-                        overwrite=True,
-                    )
-            else:
-                item_base_def = item_def
+            item_base_def = self.model_definition.techs[item_name].update(item_def)
+
+            if item_name in self.tech_data_from_tables.root:
+                item_base_def = self.tech_data_from_tables[item_name].update(
+                    item_base_def
+                )
 
             if not item_base_def.active:
-                LOGGER.debug(
-                    f"{debug_message_prefix}({dim_name}, {item_name}) | Deactivated."
+                self._deactivate_item(
+                    **{"nodes": at_node} if at_node else {}, techs=item_name
                 )
-                self._deactivate_item(**{dim_name: item_name, **connected_dims})
                 continue
 
-            updated_defs = updated_defs.update(
-                {item_name: item_base_def.model_dump(exclude_unset=True)}
-            )
+            updated_defs = updated_defs.update({item_name: item_base_def})
 
         return updated_defs
 
     def _deactivate_item(self, **item_ref):
+        LOGGER.debug(
+            ", ".join(f"({k}, {v})" for k, v in item_ref.items()) + " | Deactivated."
+        )
         for dim_name, item_name in item_ref.items():
             if item_name not in self.dataset.coords.get(dim_name, xr.DataArray()):
                 return None
@@ -592,7 +478,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
         Returns:
             CalliopeNodes: Node definition with transmission techs distributed to nodes (of the form {node_name: {tech_name: {...}, ...}}).
         """
-        active_techs = self._inherit_defs("techs")
+        active_techs = self._inherit_techs()
         link_tech_def = CalliopeNodes()
 
         for link_name, link_data in active_techs.root.items():
@@ -847,10 +733,10 @@ class ModelDataCleaner(ModelDTypeUpdater):
         runtime_updater = {}
         if self.config.subset != self.runtime.subset:
             self._subset_dims()
-            runtime_updater["subset"] = self.config.subset.model_dump()
+            runtime_updater["subset"] = self.config.subset
         if self.config.resample != self.runtime.resample:
             self._resample_dims()
-            runtime_updater["resample"] = self.config.resample.model_dump()
+            runtime_updater["resample"] = self.config.resample
 
         if not self.runtime.instantiated:
             self.dataset = time.add_inferred_time_params(self.dataset)

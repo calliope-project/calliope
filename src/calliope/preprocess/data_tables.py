@@ -84,13 +84,12 @@ class DataTable:
             {k: {} for k in self.dataset.get("techs", xr.DataArray([])).values}
         )
         params = self.PARAMS_TO_INITIALISE_YAML.intersection(self.dataset.data_vars)
+        base_tech_dict: dict[str, dict] = {}
         if params:
             df = self.dataset[params].to_dataframe().dropna(how="all").T
             base_tech_dict = {
                 col: series.dropna().to_dict() for col, series in df.items()
             }
-        else:
-            base_tech_dict = {}
         base_tech_data = CalliopeTechs.model_validate(base_tech_dict)
 
         return tech_dict, base_tech_data
@@ -121,20 +120,18 @@ class DataTable:
 
         is_defined = node_tech_vars.notnull().any(other_dims).to_dataframe().any(axis=1)
 
-        node_tech_dict = CalliopeNodes.model_validate(
-            {i: {"techs": {}} for i in self.dataset.nodes.values}
-        )
-        defined_node_techs = is_defined[is_defined]
-        techs_by_node = {}
-        if not defined_node_techs.empty:
-            techs_by_node =
-                defined_node_techs.index
-                .to_frame(index=False)
+        techs_by_node: dict[str, list] = {}
+        if not (defined_node_techs := is_defined[is_defined]).empty:
+            techs_by_node = (
+                defined_node_techs.index.to_frame(index=False)
                 .groupby("nodes")["techs"]
                 .apply(list)
                 .to_dict()
             )
-        for node in node_tech_dict.root:
+        node_tech_def = CalliopeNodes.model_validate(
+            {i: {"techs": {}} for i in self.dataset.nodes.values}
+        )
+        for node in node_tech_def.root:
             for tech in techs_by_node.get(node, []):
                 if tech not in techs_incl_inheritance.root:
                     continue
@@ -143,11 +140,9 @@ class DataTable:
                         "Cannot define transmission technology data over the `nodes` dimension"
                     )
                 else:
-                    node_tech_dict = node_tech_dict.update(
-                        {node: {"techs": {tech: {}}}}
-                    )
+                    node_tech_def = node_tech_def.update({node: {"techs": {tech: {}}}})
 
-        return node_tech_dict
+        return node_tech_def
 
     def lookup_def_from_param(self, param: str, lookup_dim: str) -> CalliopeTechs:
         """Convert "lookup" data loaded from file into YAML-esque format.
