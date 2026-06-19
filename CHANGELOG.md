@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| "Running in Python" docs to load models with `calliope.read_yaml` instead of the removed `calliope.Model(path)` instantiation form (#870).
+
 |fixed| Default values on masked array entries entering into math expression summation.
 In particular, fixes `sum(flow_cap, over=carriers)` on the constraint `source_availability_supply` erroneously returning `inf` (#862).
 
