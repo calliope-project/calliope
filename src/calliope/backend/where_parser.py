@@ -61,10 +61,6 @@ class EvalAndOr(
                 val = operator.or_(val, evaluated_operand)
         return val
 
-    def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
-        """Override func from parent class to effectively do nothing."""
-        return evaluated
-
     def as_math_string(self) -> str:  # noqa: D102, override
         return super().as_math_string()
 

@@ -474,7 +474,7 @@ class TestAddInferredTimeParams:
         be inferred to be 1 hour
         """
         dataset = xr.Dataset().assign_coords(
-            timesteps=pd.date_range("2005-01-01", periods=1, freq="H")
+            timesteps=pd.date_range("2005-01-01", periods=1, freq="h")
         )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.warns(

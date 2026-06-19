@@ -913,7 +913,7 @@ class TestUptimeDowntime(CustomMathExamples):
         )
 
     @pytest.mark.filterwarnings(
-        "ignore:(?s).*This parameter will only take effect if you have already defined:calliope.exceptions.ModelWarning"
+        "ignore:(?s).*This input data will only take effect if you have already defined:calliope.exceptions.ModelWarning"
     )
     def test_downtime(self, build_and_compare):
         overrides = {
@@ -1050,6 +1050,9 @@ class TestPeakMonthCost(CustomMathExamples):
         },
     }
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*This input data will only take effect if you have already defined:calliope.exceptions.ModelWarning"
+    )
     def test_net_import_share_max(self, build_and_compare):
         build_and_compare(
             "monthly_peak_flow_charge",
