@@ -207,7 +207,7 @@ class EvalOperatorOperand(EvalArrayOrMath):
         where_array = self.eval_attrs.where_array
         try:
             evaluated = evaluated.where(where_array)
-        except AttributeError:
+        except (AttributeError, TypeError):
             evaluated = evaluated.broadcast_like(where_array).where(where_array)
 
         return evaluated

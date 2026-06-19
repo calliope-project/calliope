@@ -32,7 +32,9 @@ def add_inferred_time_params(model_data: xr.Dataset):
         exceptions.warn(
             "Only one timestep defined. Inferring timestep resolution to be 1 hour"
         )
-        timestep_resolution = timestep_resolution.fillna(pd.Timedelta("1 hour"))
+        timestep_resolution = timestep_resolution.fillna(
+            pd.Timedelta("1 hour").to_timedelta64()
+        )
     else:
         timestep_resolution = timestep_resolution.ffill("timesteps")
 
