@@ -17,7 +17,7 @@ These pages are intended for looking up specifics. For a guided introduction, se
 
     ---
 
-    * [Built-in base math](../math/base/index.md): the base mathematical formulation, always applied to a model.
+    * [Built-in base math](../math/base.md): the base mathematical formulation, always applied to a model.
     * [Other built-in math](../math/built_in/index.md): pre-defined mode and extra math.
 
 -   :fontawesome-brands-python:{ .lg .middle } __Python API__
