@@ -236,6 +236,16 @@ class EvalOperatorOperand(EvalArrayOrMath):
             except StopIteration:
                 break
 
+    def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
+        """Util function to apply where arrays to non-latex strings."""
+        where_array = self.eval_attrs.where_array
+        try:
+            evaluated = evaluated.where(where_array)
+        except (AttributeError, TypeError):
+            evaluated = evaluated.broadcast_like(where_array).where(where_array)
+
+        return evaluated
+
     def _skip_component_on_conditional(self, component: str, operator_: str) -> bool:
         """Conditional to skip adding to math string if element evaluates to zero.
 
