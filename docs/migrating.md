@@ -717,7 +717,7 @@ Visualisation has moved to a separate tool, [Calligraph](https://calligraph.read
 We made this decision due to the wide variety of visualisations that we saw being created outside our plotting module.
 It has proven impossible to keep our plotting methods agile given the almost infinite tweaks that libraries like [matplotlib](https://matplotlib.org/) and [plotly](https://plotly.com/) allow.
 
-If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/overview.md).
+If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/index.md).
 
 ### Clustering
 

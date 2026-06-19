@@ -1,0 +1,10 @@
+{
+    "ignorePatterns": [
+        {
+            "pattern": "math/base\\.md$"
+        },
+        {
+            "pattern": "_schema\\.md$"
+        }
+    ]
+}
