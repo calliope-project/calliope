@@ -3,7 +3,7 @@
 Once you understand the [math components](components.md) and the [formulation syntax](syntax.md), you'll be ready to introduce your own math to a model.
 
 !!! info
-    You can find examples of additional math that we have put together in our [math example gallery](../examples/overview.md).
+    You can find examples of additional math that we have put together in our [math example gallery](../examples/index.md).
 
 Whenever you introduce your own math, it can either be _added_ on top of our pre-defined math or _replace_ it entirely.
 

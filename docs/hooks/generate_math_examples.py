@@ -7,13 +7,14 @@ from io import StringIO
 from pathlib import Path
 
 import ruamel.yaml
+from generate_math_docs import find_nav_reference
 from mkdocs.structure.files import File
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
 CUSTOM_MATH_PATH = Path("docs") / "user_defined_math" / "examples"
 
-EXAMPLES_PAGE_NAME = "Math gallery"
+EXAMPLES_NAV_PATH = ["Examples & tutorials", "Math gallery"]
 
 MD_EXAMPLE_STRING = """
 # {title}
@@ -34,15 +35,11 @@ MD_EXAMPLE_STRING = """
 
 def on_files(files: list, config: dict, **kwargs):
     """Generate custom math example markdown files and attach them to the documentation and the navigation tree."""
-    nav_reference = [
-        idx
-        for idx in config["nav"]
-        if isinstance(idx, dict) and set(idx.keys()) == {EXAMPLES_PAGE_NAME}
-    ][0]
+    nav_reference = find_nav_reference(config["nav"], EXAMPLES_NAV_PATH)
 
     # Generate and attach the markdown files
     for file in sorted(CUSTOM_MATH_PATH.glob("*.yaml")):
-        files.append(_process_file(file, config, nav_reference[EXAMPLES_PAGE_NAME]))
+        files.append(_process_file(file, config, nav_reference[EXAMPLES_NAV_PATH[-1]]))
     return files
 
 

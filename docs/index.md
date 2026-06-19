@@ -1,34 +1,32 @@
 # Calliope: energy system modelling made simple
 
-!!! note
-
-    This version of Calliope is available as a pre-release with the purpose of gathering feedback from users.
-    To install the pre-release:
-
-    ```shell
-    mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
-    ```
-
-    To see a full list of changes, read our [page on migrating between v0.6 and v0.7](migrating.md).
-
-    If you want to install the most recent _stable_ version of Calliope, see our [v0.6.10 documentation](https://calliope.readthedocs.io/en/v0.6.10/).
-
  This is the documentation for Calliope version {{ calliope_version }} ([version history](version_history.md)).
 
 <div class="grid cards" markdown>
 
 -   :fontawesome-solid-rocket:{ .lg .middle } __Starting quickly__
 
-    * [Getting started](getting_started/concepts.md): read through this first to understand Calliope’s basic concepts.
-    * [Examples & tutorials](examples/overview.md): these examples are best understood after you’ve gone through the basic concepts.
-    * [Home](/): the page you're on; holds guidance on contributing, version history, and migrating to new versions.
+    * [Download and installation](installation.md): get Calliope installed and ready to use.
+    * [Getting started](getting_started/concepts.md): read through this first to understand Calliope's basic concepts.
+    * [Examples & tutorials](examples/index.md): these examples are best understood after you've gone through the basic concepts.
 
 -   :fontawesome-solid-book:{ .lg .middle } __Going deeper__
 
-    * [Building blocks](): Mode detailed explanation of all the building blocks that make up a Calliope model.
-    * [How to](): How to troubleshoot and access more advanced features like solver customisation or shadow prices.
-    * [Math gallery](): Gallery of re-usable, user-defined math for implementing advanced constraints.
-    * [Reference](): API, command-line, and schema reference.
+    * [Building blocks](basic/index.md): more detailed explanation of all the building blocks that make up a Calliope model.
+    * [How to](advanced/index.md): how to troubleshoot and access more advanced features like solver customisation or shadow prices.
+    * [Math gallery](user_defined_math/examples/index.md): gallery of re-usable, user-defined math for implementing advanced constraints.
+
+-   :material-bookshelf:{ .lg .middle } __Reference__
+
+    * [YAML, command line & schemas](reference/yaml.md): the YAML syntax, command-line interface, and configuration schemas.
+    * [Python API](reference/api/model.md): reference documentation for the API.
+    * [Built-in math](math/base.md): the base and other built-in math formulations.
+
+-   :fontawesome-solid-signs-post:{ .lg .middle } __Other places to look__
+
+    * [Migrating between versions](migrating.md): what changed between v0.6 and v0.7 and how to update your models.
+    * [Contributing](contributing.md): how to contribute to Calliope's development.
+    * [Version history](version_history.md): the full changelog.
     * Also see [www.callio.pe](https://www.callio.pe/) for more general information on the Calliope project.
 
 </div>

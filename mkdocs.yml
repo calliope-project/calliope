@@ -113,7 +113,9 @@ nav:
       - Running a model: getting_started/running.md
       - Analysing a model: getting_started/analysing.md
   - Examples & tutorials:
-      - Overview: examples/overview.md
+      - examples/index.md
+      - Math gallery:
+          - user_defined_math/examples/index.md
       - National scale example model:
           - examples/national_scale/index.md
           - examples/national_scale/notebook.py
@@ -129,6 +131,7 @@ nav:
       - examples/calliope_model_object.py
       - examples/calliope_logging.py
   - Building blocks:
+      - basic/index.md
       - Model configuration: basic/config.md
       - Modes: basic/modes.md
       - Technologies: basic/techs.md
@@ -139,9 +142,6 @@ nav:
       - Running in the command line: basic/running-cli.md
       - Running in Python: basic/running-python.md
       - Postprocessing: basic/postprocessing.md
-      - Built-in base math: math/base/index.md
-      - Other built-in math:
-          - math/built_in/index.md
       - User-defined math:
           - user_defined_math/index.md
           - user_defined_math/components.md
@@ -149,6 +149,7 @@ nav:
           - user_defined_math/helper_functions.md
           - user_defined_math/customise.md
   - How to:
+      - advanced/index.md
       - Troubleshoot: troubleshooting.md
       - advanced/constraints.md
       - advanced/time.md
@@ -157,12 +158,14 @@ nav:
       - advanced/backend_choice.md
       - advanced/backend_interface.md
       - advanced/shadow_prices.md
-  - Math gallery:
-      - user_defined_math/examples/index.md
   - Reference:
+      - reference/index.md
       - YAML as used in Calliope: reference/yaml.md
       - Command line interface: reference/cli.md
-      - Python API:
+      - Built-in base math: math/base/index.md
+      - Other built-in math: # TODO add landing page
+          - math/built_in/index.md
+      - Python API: # TODO add landing page
           - reference/api/model.md
           - reference/api/backend_model.md
           - reference/api/helper_functions.md
@@ -170,7 +173,8 @@ nav:
           - reference/api/attrdict.md
           - reference/api/exceptions.md
           - reference/api/logging.md
-      - reference/config_schema.md
-      - reference/data_table_schema.md
-      - reference/model_schema.md
-      - reference/math_schema.md
+      - Schemas:
+          - reference/config_schema.md
+          - reference/model_schema.md
+          - reference/data_table_schema.md
+          - reference/math_schema.md
