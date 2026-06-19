@@ -81,8 +81,11 @@ After installing, log on to the [Gurobi website](https://www.gurobi.com/) and ob
 ### CPLEX
 
 Another commercial alternative is [CPLEX](https://www.ibm.com/products/ilog-cplex-optimization-studio).
-IBM offer academic licenses for CPLEX. Refer to the IBM website for details. After installing CPLEX, it is important to ensure that the path to the solver is part of the environment variables, which is typically not automatic. You can check out how to 'set up' CPLEX depending on your operating system on the [dedicated documentation](https://www.ibm.com/docs/en/icos/22.1.0?topic=cplex-setting-up).
+IBM offers academic licenses for CPLEX. Refer to the IBM website for details. 
+
+!!! tip
+    After installing CPLEX, it is important to ensure that the path to the solver is part of the environment variables, which is typically not automatic. Please follow the steps given for your operating system on CPLEX's [dedicated documentation](https://www.ibm.com/docs/en/icos/22.1.0?topic=cplex-setting-up).
 
 ## Customising the solver's performance
 
-Solvers typically allow users to specify custom `solver_options`, by which you may tailor their performance to what best suits the features of the model you are working with. For further information on such `solver_options`, refer to the section [Specifying custom solver options](advanced/solver.md).
+Solvers typically allow users to specify custom `solver_options`, by which you may tailor their performance to what best suits the features of the model you are working with. For further information, see our guide on [solver options customisation ](advanced/solver.md).

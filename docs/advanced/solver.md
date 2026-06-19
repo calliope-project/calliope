@@ -3,7 +3,7 @@
 ## Gurobi
 
 Refer to the [Gurobi manual](https://docs.gurobi.com/projects/optimizer/en/current/reference/parameters.html), which contains a list of parameters.
-Simply use the names given in the documentation (e.g. "NumericFocus" to set the numerical focus value). We report below, as an illustrative example, the typical parameters that we used to speed-up the performance of the solver, especially for large models, based on the insights from [empirical tests we carried out](https://doi.org/10.1186/s13705-024-00458-z).
+Simply use the parameter names given in the documentation (e.g. "NumericFocus" to set the numerical focus value). Below we list our recommended parameters to speed-up solver performance in large models, based on insights from [empirical tests we carried out](https://doi.org/10.1186/s13705-024-00458-z).
 
 ```yaml
 config.solve:
