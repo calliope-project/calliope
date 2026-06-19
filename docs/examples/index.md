@@ -13,7 +13,7 @@ The built-in examples are simple on purpose, to show the key components of a Cal
 
     ---
 
-    * [Math gallery](../user_defined_math/examples/index.md): re-usable, user-defined math for implementing advanced constraints.
+    * [Math gallery](../user_defined_math/examples/index.md): reusable, user-defined math for implementing advanced constraints.
 
 -   :fontawesome-solid-diagram-project:{ .lg .middle } __Example models__
 
