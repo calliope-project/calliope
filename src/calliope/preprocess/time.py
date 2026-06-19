@@ -18,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 def add_inferred_time_params(model_data: xr.Dataset):
     """Add timestep_resolution.
 
-    Done by ooking at the time difference between timestep n and timestep n + 1 for all timesteps.
+    Done by looking at the time difference between timestep n and timestep n + 1 for all timesteps.
     Last timestep has no n + 1, so will be NaT (not a time), we ffill this.
     Time resolution is saved in hours (i.e. nanoseconds / 3600e6)
     """
@@ -72,7 +72,7 @@ def resample(
 ) -> xr.Dataset:
     """Function to resample timeseries data.
 
-    Transforms the input resolution (e.g. 1h), to the given resolution (e.g. 2h).
+    Transforms the input resolution (e.g. 1h) to the given resolution (e.g. 2h).
 
     Args:
         data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
