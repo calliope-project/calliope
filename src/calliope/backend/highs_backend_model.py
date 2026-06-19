@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import bisect
 import importlib
 import logging
 from collections.abc import Iterable
@@ -121,7 +122,6 @@ class HighsBackendModel(backend_model.BackendModel):
     def _add_objective(  # noqa: D102, override
         self, name: str, where: xr.DataArray, expression: xr.DataArray, sense: int
     ) -> xr.DataArray:
-        self._instance.setOptionValue
         if name == self.objective:
             self._instance.setObjective(obj=expression.item(), sense=sense)
             self.objective = name
@@ -161,7 +161,9 @@ class HighsBackendModel(backend_model.BackendModel):
         if constraint is None:
             raise KeyError(f"Unknown constraint: {name}")
         if isinstance(constraint, xr.DataArray) and not as_backend_objs:
-            return constraint.astype(str)
+            return self._apply_func(
+                self._cons_to_str, constraint.notnull(), 1, constraint
+            )
         return constraint
 
     def get_variable(  # noqa: D102, override
@@ -178,7 +180,9 @@ class HighsBackendModel(backend_model.BackendModel):
                     self._instance.variableValue, variable.notnull(), 1, variable
                 )
             except AttributeError:
-                return variable.astype(str).where(variable.notnull())
+                return self._apply_func(
+                    self._expr_to_str, variable.notnull(), 1, variable
+                )
 
     def get_variable_bounds(self, name: str) -> xr.Dataset:  # noqa: D102, override
         variable = self.get_variable(name, as_backend_objs=True)
@@ -200,7 +204,9 @@ class HighsBackendModel(backend_model.BackendModel):
             raise KeyError(f"Unknown {component_type.removesuffix('s')}: {name}")
         if isinstance(expression, xr.DataArray) and not as_backend_objs:
             if not eval_body or not self._instance.getSolution().value_valid:
-                return expression.astype(str).where(expression.notnull())
+                return self._apply_func(
+                    self._expr_to_str, expression.notnull(), 1, expression
+                )
             else:
                 return self._apply_func(
                     self._from_highs_expr,
@@ -240,10 +246,6 @@ class HighsBackendModel(backend_model.BackendModel):
 
         termination = self._instance.modelStatusToString(termination).lower()
         results.attrs["termination_condition"] = str(termination)
-        import linopy
-
-        lm = linopy.Model()
-        lm.to_file
         return results
 
     def verbose_strings(self) -> None:  # noqa: D102, override
@@ -278,28 +280,69 @@ class HighsBackendModel(backend_model.BackendModel):
             key (str): Name of object
             component_type (str): Object type
         """
-        if key in self._dataset and self._dataset[key].obj_type == component_type:
-            if component_type == "variables":
-                self._apply_func(
-                    self._instance.deleteVariable,
-                    self._dataset[key].notnull(),
-                    1,
-                    self._dataset[key],
-                )
-            elif component_type == "constraints":
-                idx_da = self._apply_func(
-                    lambda x: x.index,
-                    self._dataset[key].notnull(),
-                    1,
-                    self._dataset[key],
-                )
-                if idx_da.notnull().any():
-                    if idx_da.shape:
-                        all_constr_indices = idx_da.to_series().dropna().tolist()
-                    else:
-                        all_constr_indices = [int(idx_da.item())]
-                    self._instance.deleteCols(1, all_constr_indices)
+        if key not in self._dataset or self._dataset[key].obj_type != component_type:
+            return
+        if component_type in ("variables", "constraints"):
+            deleted = self._collect_indices(self._dataset[key])
             del self._dataset[key]
+            if deleted:
+                sorted_deleted = sorted(deleted)
+                arr = np.asarray(sorted_deleted, dtype=np.int32)
+                if component_type == "variables":
+                    self._instance.deleteCols(len(arr), arr)
+                else:
+                    self._instance.deleteRows(len(arr), arr)
+                self._shift_stale_indices(sorted_deleted, component_type)
+        else:
+            del self._dataset[key]
+
+    @staticmethod
+    def _collect_indices(da: xr.DataArray) -> list[int]:
+        """Gather the `.index` attribute of every non-null backend object in a DataArray."""
+        indices: list[int] = []
+        for val in da.values.ravel():
+            if val is None or (isinstance(val, float) and np.isnan(val)):
+                continue
+            indices.append(int(val.index))
+        return indices
+
+    def _shift_stale_indices(
+        self,
+        sorted_deleted: list[int],
+        component_type: Literal["variables", "constraints"],
+    ) -> None:
+        """Refresh `.index` on remaining backend objects after a batch delete.
+
+        HiGHS shifts internal row/column indices on deleteRows/deleteCols, but
+        the Python wrappers (`highs_var`, `highs_cons`, `highs_linear_expression`)
+        hold copies of the old indices and must be corrected manually.
+        """
+        if not sorted_deleted:
+            return
+
+        if component_type == "variables":
+            obj_targets = ("variables",)
+            expr_targets = ("global_expressions", "objectives")
+        else:
+            obj_targets = ("constraints",)
+            expr_targets = ()
+
+        for da in self._dataset.data_vars.values():
+            obj_type = da.attrs.get("obj_type")
+            if obj_type in obj_targets:
+                for val in da.values.ravel():
+                    if val is None or (isinstance(val, float) and np.isnan(val)):
+                        continue
+                    val.index = val.index - bisect.bisect_left(
+                        sorted_deleted, val.index
+                    )
+            elif obj_type in expr_targets:
+                for val in da.values.ravel():
+                    if not isinstance(val, highspy.highs.highs_linear_expression):
+                        continue
+                    val.idxs = [
+                        i - bisect.bisect_left(sorted_deleted, i) for i in val.idxs
+                    ]
 
     def update_input(  # noqa: D102, override
         self, name: str, new_values: xr.DataArray | SupportsFloat
@@ -381,7 +424,7 @@ class HighsBackendModel(backend_model.BackendModel):
     def has_integer_or_binary_variables(self) -> bool:  # noqa: D102, override
         return any(
             self._instance.getColIntegrality(var.index)[1]
-            != self.VARIABLE_DOMAIN_DICT["integer"]
+            == self.VARIABLE_DOMAIN_DICT["integer"]
             for var in self._instance.getVariables()
         )
 
@@ -475,6 +518,66 @@ class HighsBackendModel(backend_model.BackendModel):
             raise TypeError(
                 f"Cannot convert highs object of type {type(val)} to a numeric value."
             )
+
+    def _col_name(self, idx: int) -> str:
+        """Return the variable name for a column index, or a generic fallback."""
+        status, name = self._instance.getColName(int(idx))
+        if status != highspy.HighsStatus.kOk or not name:
+            return f"_v{int(idx)}"
+        return name
+
+    def _linexpr_to_str(self, expr: highspy.highs.highs_linear_expression) -> str:
+        """Render a `highs_linear_expression` using variable names instead of column indices.
+
+        The native `__str__` emits placeholders like `2.0_v0` regardless of whether
+        column names have been set, which makes debug output and the
+        `as_backend_objs=False` API surface useless for inspecting models.
+        """
+        parts: list[str] = []
+        for idx, coef in zip(expr.idxs, expr.vals):
+            name = self._col_name(idx)
+            if coef == 1:
+                parts.append(f"+ {name}")
+            elif coef == -1:
+                parts.append(f"- {name}")
+            elif coef >= 0:
+                parts.append(f"+ {coef:g}*{name}")
+            else:
+                parts.append(f"- {abs(coef):g}*{name}")
+        if expr.constant:
+            const = expr.constant
+            if const >= 0:
+                parts.append(f"+ {const:g}")
+            else:
+                parts.append(f"- {abs(const):g}")
+        body = " ".join(parts).lstrip("+ ").strip()
+        if not body:
+            body = "0"
+        return body
+
+    def _expr_to_str(
+        self,
+        val: highspy.highs.highs_linear_expression | highspy.highs.highs_var | float,
+    ) -> str:
+        """Programmatic string repr for the values stored in expression/objective DataArrays."""
+        if isinstance(val, highspy.highs.highs_linear_expression):
+            return self._linexpr_to_str(val)
+        if isinstance(val, highspy.highs.highs_var):
+            return self._col_name(val.index)
+        return str(val)
+
+    def _cons_to_str(self, cons: highspy.highs.highs_cons) -> str:
+        """Programmatic string repr for a `highs_cons`, using variable names and bounds."""
+        expr = cons.expr()
+        body = self._linexpr_to_str(expr)
+        lb, ub = expr.bounds if expr.bounds is not None else (-np.inf, np.inf)
+        if lb == ub:
+            return f"{body} == {lb:g}"
+        if np.isneginf(lb):
+            return f"{body} <= {ub:g}"
+        if np.isposinf(ub):
+            return f"{body} >= {lb:g}"
+        return f"{lb:g} <= {body} <= {ub:g}"
 
 
 class HighsShadowPrices(backend_model.ShadowPrices):

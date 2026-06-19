@@ -901,10 +901,19 @@ class TestUpdateParameter:
             "built_model_func" + model_suffix
         )
         # TODO: update once we have a `get_objective` method that is backend-agnostic
-        obj = model.backend.objectives.min_cost_optimisation.item()
-        if isinstance(model.backend, calliope.backend.PyomoBackendModel):
-            obj = obj.expr
-        objective_string = str(obj)
+        if isinstance(model.backend, calliope.backend.HighsBackendModel):
+            # `str()` on a raw highs_linear_expression does not include variable
+            # names (it emits placeholders like `2.0_v0`), so we have to go
+            # through `get_objective(..., as_backend_objs=False)` which routes
+            # through the backend's programmatic string conversion.
+            objective_string = model.backend.get_objective(
+                "min_cost_optimisation", as_backend_objs=False
+            ).item()
+        else:
+            obj = model.backend.objectives.min_cost_optimisation.item()
+            if isinstance(model.backend, calliope.backend.PyomoBackendModel):
+                obj = obj.expr
+            objective_string = str(obj)
         if model_suffix.endswith("updated_cost_flow_cap"):
             assert "test_demand_elec" in objective_string
         else:

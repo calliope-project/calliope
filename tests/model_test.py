@@ -213,20 +213,28 @@ class TestOperateMode:
         for _ in logging_plugin.pytest_runtest_setup(request.node):
             yield pytest.LogCaptureFixture(request.node, _ispytest=True)
 
+    @pytest.fixture(scope="class", params=["pyomo", "gurobi", "highs"])
+    def operate_backend(self, request) -> str:
+        if request.param == "gurobi":
+            pytest.importorskip("gurobipy")
+        if request.param == "highs":
+            pytest.importorskip("highspy")
+        return request.param
+
     @pytest.fixture(scope="class")
-    def base_model(self):
+    def base_model(self, operate_backend):
         """Solve in base mode for the same overrides, to check against operate mode model."""
         model = build_model(
             {}, "simple_supply,operate,var_costs,investment_costs", mode="base"
         )
-        model.build()
+        model.build(backend=operate_backend)
         model.solve()
         return model
 
     @pytest.fixture(
         scope="class", params=[("6h", "12h"), ("12h", "12h"), ("16h", "20h")]
     )
-    def operate_model_and_log(self, base_model, request):
+    def operate_model_and_log(self, base_model, operate_backend, request):
         """Solve in base mode, then use results to set operate mode inputs, then solve in operate mode.
 
         Three different operate/horizon windows chosen:
@@ -240,7 +248,10 @@ class TestOperateMode:
             attrs=base_model.all_attrs,
             mode="operate",
         )
-        model.build(operate={"window": request.param[0], "horizon": request.param[1]})
+        model.build(
+            operate={"window": request.param[0], "horizon": request.param[1]},
+            backend=operate_backend,
+        )
 
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
