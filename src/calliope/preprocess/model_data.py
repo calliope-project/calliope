@@ -145,13 +145,11 @@ class ModelDataBuilder(ModelDTypeUpdater):
             self.model_definition = self.model_definition.update(
                 {"techs": tech_def}, overwrite=False
             )
-
-        techs_incl_inheritance = self._inherit_techs()
-        for data_table in data_tables:
-            node_def = data_table.node_def(techs_incl_inheritance)
-            self.model_definition = self.model_definition.update(
-                {"nodes": node_def}, overwrite=False
+            self.tech_data_from_tables = self.tech_data_from_tables.update(
+                base_tech_data
             )
+
+        for data_table in data_tables:
             for param, param_config in self.math.lookups.root.items():
                 lookup_dim = param_config.pivot_values_to_dim
                 if lookup_dim is not None:
@@ -159,12 +157,26 @@ class ModelDataBuilder(ModelDTypeUpdater):
                     self.tech_data_from_tables = self.tech_data_from_tables.update(
                         lookup_def
                     )
+                    # We drop it for now; it'll come back via YAML dict later.
                     data_table.drop(param)
 
+        techs_incl_inheritance = self._inherit_techs()
+        for data_table in data_tables:
+            node_def = data_table.node_def(techs_incl_inheritance)
+            self.model_definition = self.model_definition.update(
+                {"nodes": node_def}, overwrite=False
+            )
+
         # Pre-populate the dataset with model nodes and techs
+        _nodes = self.model_definition.nodes
+        techs_at_nodes = [node.techs.root.keys() for node in _nodes.root.values()]
+        links_at_nodes = [
+            node.techs.root.keys()
+            for node in self._links_to_node_format(_nodes).root.values()
+        ]
+        all_techs = set().union(*techs_at_nodes).union(*links_at_nodes)
         self.dataset = self.dataset.assign_coords(
-            nodes=list(self.model_definition.nodes.root.keys()),
-            techs=list(self.model_definition.techs.root.keys()),
+            nodes=sorted(_nodes.root.keys()), techs=sorted(all_techs)
         )
         for data_table in data_tables:
             self._add_to_dataset(
@@ -214,7 +226,6 @@ class ModelDataBuilder(ModelDTypeUpdater):
                     tech_ds[ref_var] = tech_ds[ref_var].expand_dims("nodes")
             if not tech_ds.nodes.shape:
                 tech_ds["nodes"] = tech_ds["nodes"].expand_dims("nodes")
-
             node_tech_data.append(tech_ds)
 
         node_tech_ds = xr.combine_nested(
@@ -227,6 +238,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
 
         node_ds = self._definition_to_ds(active_node_def, {"techs"})
         ds = xr.merge([node_tech_ds, node_ds])
+
         self._add_to_dataset(ds, "YAML definition")
 
     def add_top_level_data_definitions(self):
@@ -449,7 +461,8 @@ class ModelDataBuilder(ModelDTypeUpdater):
                 continue
 
             updated_defs = updated_defs.update({item_name: item_base_def})
-
+        # Re-evaluate to ensure transmission techs are appropriately set
+        updated_defs = CalliopeTechs(updated_defs.model_dump(exclude_unset=True))
         return updated_defs
 
     def _deactivate_item(self, **item_ref):
@@ -486,9 +499,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
                 continue
             node_from, node_to = link_data.link_from, link_data.link_to
             nodes_exists = all(
-                node in active_node_def.root
-                or node in self.dataset.coords.get("nodes", xr.DataArray())
-                for node in [node_from, node_to]
+                node in active_node_def.root for node in [node_from, node_to]
             )
 
             if not nodes_exists:
@@ -498,19 +509,10 @@ class ModelDataBuilder(ModelDTypeUpdater):
                 self._deactivate_item(techs=link_name)
                 continue
 
-            exclude_from = {"link_from", "link_to", "one_way"}
-            exclude_to = {"link_from", "link_to", "one_way"}
-            if link_data.one_way:
-                exclude_from.update(["carrier_out"])
-                exclude_to.update(["carrier_in"])
-            node_from_data = link_data.model_dump(
-                exclude=exclude_from, exclude_unset=True
-            )
-            node_to_data = link_data.model_dump(exclude=exclude_to, exclude_unset=True)
             link_tech_def = link_tech_def.update(
                 {
-                    node_from: {"techs": {link_name: node_from_data}},
-                    node_to: {"techs": {link_name: node_to_data}},
+                    node_from: {"techs": {link_name: link_data}},
+                    node_to: {"techs": {link_name: link_data}},
                 }
             )
         if not link_tech_def.root:

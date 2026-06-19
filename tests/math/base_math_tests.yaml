@@ -303,7 +303,7 @@ symmetric_transmission:
   description: "Test symmetric_transmission constraint"
   register:
     constraints: [symmetric_transmission]
-    variables: [flow_cap, link_flow_cap]
+    variables: [flow_cap]
     lookups: [base_tech]
   overrides: {}
   scenario: simple_conversion,two_hours

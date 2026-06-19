@@ -252,7 +252,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             name,
             component_da,
             "global_expressions",
-            definition.model_dump(),
+            definition.model_dump(exclude_unset=True),
             references=references,
         )
 

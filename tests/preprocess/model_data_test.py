@@ -25,11 +25,19 @@ from ..common.util import build_test_model as build_model
 from ..common.util import check_error_or_warning
 
 
-@pytest.fixture(scope="class")
-def model_def(minimal_test_model_path):
+@pytest.fixture(
+    scope="class",
+    params=[
+        "",
+        ",link_data_table_base_tech",
+        ",link_data_table_from_to",
+        ",link_data_table_from_only",
+    ],
+)
+def model_def(request, minimal_test_model_path):
     model_def_override = prepare_model_definition(
         io.read_rich_yaml(minimal_test_model_path),
-        scenario="simple_supply,empty_tech_node",
+        scenario=f"simple_supply,empty_tech_node{request.param}",
         definition_path=minimal_test_model_path,
     )
     return model_def_override
@@ -83,8 +91,8 @@ def timeseries_da():
 
 
 @pytest.fixture
-def model_data_builder(model_def, config, math):
-    return ModelDataBuilder(config.init, model_def.definition, math)
+def model_data_builder(model_def, config, math, tables):
+    return ModelDataBuilder(config.init, model_def.definition, math, tables)
 
 
 @pytest.fixture
@@ -147,6 +155,9 @@ class TestModelDataBuilder:
             "flow_cap_max",
             "source_use_max",
             "flow_out_eff",
+            "sink_use_equals",
+            "link_from",
+            "link_to",
         }
 
     def test_get_relevant_node_refs_ts_data(self, model_data_builder: ModelDataBuilder):
@@ -432,14 +443,6 @@ class TestModelDataBuilder:
             set(node.techs.root.keys()) == {"test_link_a_b_heat", "test_link_a_b_elec"}
             for node in link_def.root.values()
         )
-        assert not any(
-            "link_to" in node.techs["test_link_a_b_elec"].model_fields_set
-            for node in link_def.root.values()
-        )
-        assert not any(
-            "link_from" in node.techs["test_link_a_b_elec"].model_fields_set
-            for node in link_def.root.values()
-        )
 
     def test_links_to_node_format_none_active(
         self, my_caplog, model_data_builder: ModelDataBuilder
@@ -467,41 +470,6 @@ class TestModelDataBuilder:
             "(links, test_link_a_b_elec) | Deactivated due to missing" in my_caplog.text
         )
         assert not link_def.root.keys()
-
-    def test_links_to_node_format_one_way(self, model_data_builder: ModelDataBuilder):
-        model_data_builder.model_definition = (
-            model_data_builder.model_definition.update(
-                {"techs.test_link_a_b_elec.one_way": True}
-            )
-        )
-        node_def = CalliopeNodes.model_validate(
-            {
-                "a": {"techs": {"foo": {"base_tech": "supply"}}},
-                "b": {"techs": {"bar": {"base_tech": "demand"}}},
-            }
-        )
-        link_def = model_data_builder._links_to_node_format(node_def)
-        assert (
-            "carrier_out"
-            not in link_def["a"].techs["test_link_a_b_elec"].model_fields_set
-        )
-        assert (
-            "carrier_in"
-            not in link_def["b"].techs["test_link_a_b_elec"].model_fields_set
-        )
-
-        assert (
-            "carrier_in" in link_def["a"].techs["test_link_a_b_elec"].model_fields_set
-        )
-        assert (
-            "carrier_out" in link_def["b"].techs["test_link_a_b_elec"].model_fields_set
-        )
-
-        assert (
-            f"carrier_{j}" in link_def[node].techs["test_link_a_b_heat"]
-            for node in ["a", "b"]
-            for j in ["in", "out"]
-        )
 
     @pytest.mark.parametrize("coord_name", ["foosteps", "barsteps"])
     def test_add_to_dataset_timeseries(

@@ -500,3 +500,53 @@ overrides:
         data: [1, 10]
         index: [monetary, emissions]
         dims: costs
+
+  link_data_table_base_tech:
+    techs:
+      test_link_a_b_elec:
+        template: test_controller
+        link_from: a
+        link_to: b
+        name: Transmission elec tech from file
+        carrier_in: electricity
+        carrier_out: electricity
+        flow_cap_max: 10
+    data_tables.link_base_tech:
+      table: data_tables/link_inputs.csv
+      rows: techs
+      columns: inputs
+      select:
+        inputs: [base_tech]
+
+  link_data_table_from_to:
+    techs:
+      test_link_a_b_elec:
+        template: test_controller
+        base_tech: transmission
+        name: Transmission elec tech from file
+        carrier_in: electricity
+        carrier_out: electricity
+        flow_cap_max: 10
+    data_tables.link_from_to:
+      table: data_tables/link_inputs.csv
+      rows: techs
+      columns: inputs
+      select:
+        inputs: [link_from, link_to]
+
+  link_data_table_from_only:
+    techs:
+      test_link_a_b_elec:
+        template: test_controller
+        base_tech: transmission
+        link_to: b
+        name: Transmission elec tech from file
+        carrier_in: electricity
+        carrier_out: electricity
+        flow_cap_max: 10
+    data_tables.link_from_only:
+      table: data_tables/link_inputs.csv
+      rows: techs
+      columns: inputs
+      select:
+        inputs: [link_from]
