@@ -356,7 +356,9 @@ class ModelDataBuilder(ModelDTypeUpdater):
                 )
                 input_data_das.append(self._input_data_to_array(name, validated_data))
             input_data_ds = xr.merge(
-                [input_data_ds, xr.combine_by_coords(input_data_das)]
+                [input_data_ds, xr.combine_by_coords(input_data_das)],
+                join="outer",
+                compat="no_conflicts",
             )
 
         return input_data_ds
@@ -536,6 +538,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
             [to_add_update_dim_dtype, self.dataset],
             combine_attrs="no_conflicts",
             compat="override",
+            join="outer",
         ).fillna(self.dataset)
 
     def _log_input_data_updates(self, name: str, input_data_da: xr.DataArray):
