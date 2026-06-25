@@ -98,6 +98,9 @@ class CalliopeDictModel(RootModel):
                 if overwrite:
                     new_dict[key] = key_class.update(val)
                 else:
+                    LOGGER.debug(
+                        f"Skipping existing {self.__class__.__name__} entry: `{key}` as overwrite is set to False"
+                    )
                     continue
             elif key_class == val:
                 continue
@@ -194,6 +197,9 @@ class CalliopeBaseModel(BaseModel):
                 if overwrite:
                     new_dict[key] = key_class.update(val)
                 else:
+                    LOGGER.debug(
+                        f"Skipping existing {self.__class__.__name__} entry: `{key}` as overwrite is set to False"
+                    )
                     continue
             elif key_class == val:
                 continue
@@ -205,6 +211,11 @@ class CalliopeBaseModel(BaseModel):
                     LOGGER.debug(
                         f"Updating {self.__class__.__name__} `{key}`: {key_class} -> {val}"
                     )
+                if key in self.model_fields_set and not overwrite:
+                    LOGGER.debug(
+                        f"Skipping existing {self.__class__.__name__} entry: `{key}` as overwrite is set to False"
+                    )
+                    continue
                 new_dict[key] = val
         updated = super().model_copy(update=new_dict, deep=deep)
         if not overwrite:

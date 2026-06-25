@@ -425,11 +425,16 @@ class TestCalliopeBaseModel:
             ({"foo": "baz", "foobar": 2}, {"foo": "bar", "foobar": 2}),
         ],
     )
-    def test_update_flat_no_overwrite(self, config_model_flat, to_update, expected):
+    def test_update_flat_no_overwrite(
+        self, caplog, config_model_flat, to_update, expected
+    ):
         """Ensure that the update method does not overwrite existing fields when overwrite=False, so long as the fields have been explicitly set."""
         model = config_model_flat(foo="bar")
-        new_model = model.update(to_update, overwrite=False)
+        with caplog.at_level(logging.DEBUG, logger=LOGGER):
+            new_model = model.update(to_update, overwrite=False)
         assert new_model.model_dump() == expected
+        if "foo" in to_update:
+            assert "Skipping existing TestModel1 entry: `foo` as" in caplog.text
 
     @pytest.mark.parametrize(
         ("to_update", "expected"),
@@ -571,7 +576,7 @@ class TestCalliopeBaseModel:
         assert model.model_dump() == orig_model
 
     def test_update_nested_with_dict_and_list_models_no_overwrite(
-        self, config_model_nested_with_dict_and_list_models
+        self, caplog, config_model_nested_with_dict_and_list_models
     ):
         """Test updating a nested model with CalliopeDictModel and CalliopeListModel without overwriting set fields."""
         model = config_model_nested_with_dict_and_list_models(
@@ -589,23 +594,24 @@ class TestCalliopeBaseModel:
         )
 
         # Update the dict field
-        new_model = model.update(
-            {
-                "dict_field": {
-                    "key1": {
-                        "nested_list_field": [{"foo": "new_value1"}],
-                        "nested_config": {"foo": "new_value1", "foobar": 2},
+        with caplog.at_level(logging.DEBUG, logger=LOGGER):
+            new_model = model.update(
+                {
+                    "dict_field": {
+                        "key1": {
+                            "nested_list_field": [{"foo": "new_value1"}],
+                            "nested_config": {"foo": "new_value1", "foobar": 2},
+                        },
+                        "key2": {"other_field": "new_value3"},
+                        "key3": {},
                     },
-                    "key2": {"other_field": "new_value3"},
-                    "key3": {},
+                    "list_field": [
+                        {"foo": "bar", "foobar": 1},
+                        {"foo": "new_value3", "foobar": 8},
+                    ],
                 },
-                "list_field": [
-                    {"foo": "bar", "foobar": 1},
-                    {"foo": "new_value3", "foobar": 8},
-                ],
-            },
-            overwrite=False,
-        )
+                overwrite=False,
+            )
         assert new_model.model_dump() == {
             "dict_field": {
                 "key1": {
@@ -629,6 +635,7 @@ class TestCalliopeBaseModel:
             },
             "list_field": [{"foo": "value3", "foobar": 6}],
         }
+        assert "Skipping existing TestNestedModel entry: `list_field`" in caplog.text
 
     @pytest.mark.parametrize(
         ("to_update", "expected"),

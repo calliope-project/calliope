@@ -720,11 +720,11 @@ class MapDim(ParsingHelperFunction):
             To select a specific node from a `flow` variable, you would do the following:
 
 
-            1. Define `node_1` as an array whose data is node names and whose index is _not_ the `nodes` dimension.
+            1. Define `tech_to_node` as an array whose data is node names and whose index is _not_ the `nodes` dimension.
                It could, for instance, be the techs dimension:
                ```yaml
                data_definitions:
-                 node_1:
+                 tech_to_node:
                    data: ["a", "b"]
                    index: ["tech1", "tech2"]
                    dims: [techs]
@@ -738,12 +738,12 @@ class MapDim(ParsingHelperFunction):
             constraints:
               node_flow_max:
                 foreach: [techs, nodes]
-                where: map_dim(nodes, node_1)==True
+                where: map_dim(nodes, tech_to_node)==True
                 equations:
                     - expression: flow_out <= 10
             ```
             The resulting constraint will only apply to the (tech, node) combinations of (tech1, a) and (tech2, b),
-            as defined in the `node_1` array.
+            as defined in the `tech_to_node` array.
         """
         return dim == mapper
 

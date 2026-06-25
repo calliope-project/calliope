@@ -157,7 +157,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
                     self.tech_data_from_tables = self.tech_data_from_tables.update(
                         lookup_def
                     )
-                    # We drop it for now; it'll come back via YAML dict later.
+                    # We drop it for now; it'll come back via YAML dict in other methods of this class.
                     data_table.drop(param)
 
         techs_incl_inheritance = self._inherit_techs()

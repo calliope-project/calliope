@@ -97,7 +97,7 @@ class Parameter(MathComponent):
 class Lookup(MathComponent):
     """Schema for named lookup arrays."""
 
-    default: str | float | int | bool = float("nan")
+    default: AttrStr | float | int | bool = float("nan")
     """The default value for the lookup, if not set in the data."""
     dtype: Literal["float", "string", "bool", "datetime", "date"] = "string"
     """The lookup data type."""
