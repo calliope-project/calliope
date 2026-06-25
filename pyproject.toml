@@ -79,19 +79,6 @@ ignore-words-list = "socio-economic"  # British english spelling that isn't cove
 ignore_missing_imports = true
 files = "src/"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["calliope*"]
-
-[tool.setuptools.package-data]
-calliope = ["config/*", "math/*", "example_models/**/*", "py.typed"]
-
-[tool.setuptools]
-license-files = ["LICENSE", "CITATION"]
-
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
 
 [project]
 name = "calliope"
@@ -106,7 +93,8 @@ description = "A multi-scale energy systems modelling framework."
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = ["energy systems", "optimisation", "mathematical programming"]
-license = { text = "Apache 2.0" }
+license = {"text" = "Apache 2.0"}
+license-files = ["LICENSE", "CITATION"]
 classifiers = [
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: Apache Software License",
@@ -114,20 +102,122 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
 ]
-dynamic = ["version", "dependencies", "optional-dependencies"]
+dynamic = ["version"]
+dependencies = [
+  "bottleneck >= 1",
+  "click >= 8",
+  "geographiclib >= 2",
+  "ipdb >= 0.13",
+  "ipykernel >= 6",
+  "jinja2 >= 3",
+  "jsonref >= 1.1",
+  "jsonschema >= 4",
+  "natsort >= 8",
+  "netcdf4 >= 1.2",
+  "numpy >= 1",
+  "pandas >= 2.1.3",
+  "pyomo >= 6.8.2",
+  "pyparsing >= 3.2",
+  "ruamel.yaml >= 0.18",
+  "typing-extensions >= 4",
+  "xarray >= 2026.4",
+  "pydantic >= 2.11.4",
+]
 
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements/base.txt"] }
-version = { attr = "calliope._version.__version__" }
+[tool.hatch.build]
+skip-excluded-dirs = true
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src", "LICENSE", "CITATION", "AUTHORS", "README.md"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/calliope/_version.py"
 
 [project.scripts]
 calliope = "calliope.cli:cli"
-
-[tool.setuptools.dynamic.optional-dependencies]
-dev = { file = ["requirements/dev.txt"] }
 
 [project.urls]
 website = "https://www.callio.pe/"
 repository = "https://github.com/calliope-project/calliope"
 documentation = "https://calliope.readthedocs.io"
 changelog = "https://github.com/calliope-project/calliope/changelog.rst"
+
+[tool.pixi.workspace]
+name = "calliope"
+channels = ["conda-forge", "gurobi"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
+preview = ["pixi-build"]
+
+[tool.pixi.dependencies]
+libnetcdf = "*"
+gurobi = "*"
+uv = "*"
+glpk = "==5.0"
+coin-or-cbc = "*"
+rich = ">=14.0.0"
+
+[tool.pixi.pypi-dependencies]
+calliope = { path = ".", editable = true}
+
+[tool.pixi.feature.docs.dependencies]
+jsonschema2md = ">=1"
+mkdocs = ">=1.5"
+mkdocs-click = ">=0.6"
+mkdocs-jupyter = ">=0.25"
+mkdocs-macros-plugin = ">=1.0"
+mkdocs-material = ">=9.5"
+mkdocstrings-python = ">=1.7"
+plotly = ">=5"
+
+[tool.pixi.feature.dev.dependencies]
+mypy = ">=1.13.0"
+pandas-stubs = "*"
+pre-commit = ">=3"
+pytest = ">=8"
+pytest-cov = ">=4"
+pytest-order = ">=1"
+pytest-xdist = ">=3"
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
+
+[tool.pixi.feature.py314.dependencies]
+python = "3.14.*"
+
+[tool.pixi.tasks]
+init-dev-env = { cmd = "python -m ipykernel install --user --name calliope && pre-commit install", default-environment = "dev" }
+test = { cmd = "pytest --no-cov", default-environment = "dev", depends-on = ["init-dev-env"] }
+test-ci = { cmd = "pytest --no-cov -m 'not time_intensive' -m 'not needs_gurobi_license'", default-environment = "dev", depends-on = ["init-dev-env"]  }
+test-cov = { cmd = "pytest --cov", default-environment = "dev", depends-on = ["init-dev-env"] }
+docs-build = { cmd = "mkdocs build", default-environment = "docs", depends-on = ["init-dev-env"] }
+docs-serve = { cmd = "mkdocs serve", default-environment = "docs", depends-on = ["init-dev-env"] }
+
+[tool.pixi.environments]
+default = { solve-group = "py314" }
+dev = { features = ["dev"], solve-group = "py314" }
+docs = { features = ["py312", "docs"], solve-group = "py312" }
+py311 = { features = ["py311", "dev"]}
+py312 = { features = ["py312", "dev"], solve-group = "py312" }
+py313 = { features = ["py313", "dev"]}
+py314 = { features = ["py314", "dev"], solve-group = "py314" }
+
+[tool.pixi.package]
+name = { workspace = true }
+
+[tool.pixi.package.build.backend]
+channels = ["https://prefix.dev/conda-forge"]
+name = "pixi-build-python"
+version = "0.*"
+
+[tool.pixi.package.build.config]
+ignore-pypi-mapping = false  # Enable automatic PyPI-to-conda mapping

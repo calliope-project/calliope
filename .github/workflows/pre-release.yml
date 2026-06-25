@@ -33,22 +33,20 @@ jobs:
     if: startsWith(github.event.pull_request.title, 'Release v')
     steps:
       - uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: prefix-dev/setup-pixi@v0.9.6
         with:
-          micromamba-version: '1.5.10-0'
-          environment-name: pipbuild
-          create-args: >-
-            python=3.11
-            pip
-            python-build
-          post-cleanup: all
-          cache-environment: true
+          pixi-version: v0.70.2
+          cache: true
+          environments: py314
+          manifest-path: pyproject.toml
+      - name: Install build package
+        run: pixi run -e py314 python -m pip install build
       - name: Build package
-        run: python -m build
+        run: pixi run -e py314 python -m build
       - name: Test package install
         run: |
-          pip install dist/calliope-*.tar.gz
-          calliope --help
+          pixi run -e py311 uv pip install dist/calliope-*.tar.gz
+          pixi run -e py311 calliope --help
 
   pre-release:
     needs: [pre-release-version, pip-test]

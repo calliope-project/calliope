@@ -30,35 +30,28 @@ Look at our [milestones](https://github.com/calliope-project/calliope/milestones
 
 ### Setting up a development environment
 
-To create a development environment for calliope, with all libraries required for development and quality assurance installed, it is easiest to install calliope using the [mamba](https://mamba.readthedocs.io/en/latest/index.html) package manager, as follows:
+To create a development environment for calliope, use [pixi](https://pixi.sh/latest/):
 
-1. Install mamba with the [Mambaforge](https://github.com/conda-forge/miniforge#mambaforge) executable for your operating system.
-1. Open the command line (or the "miniforge prompt" in Windows).
+1. Install pixi following the [official instructions](https://pixi.sh/latest/installation/).
 1. Download (a.k.a., clone) the calliope repository: `git clone git@github.com:calliope-project/calliope.git`
 1. Change into the `calliope` directory: `cd calliope`
-1. Create the calliope mamba environment: `mamba create -n calliope -c conda-forge --file requirements/base.txt --file requirements/dev.txt coin-or-cbc gurobi::gurobi`
-1. Activate the calliope mamba environment: `mamba activate calliope`
-1. Install the calliope package into the environment, in editable mode and ignoring dependencies (we have dealt with those when creating the mamba environment): `pip install --no-deps -e .`
-1. Install the interactive python shell (necessary when testing our documentation locally): `ipython kernel install --user --name=calliope_docs_build`
+1. Install the interactive python shell kernel (necessary when testing our documentation locally): `pixi run install-kernel`
 
 All together:
 
 ``` shell
 git clone git@github.com:calliope-project/calliope.git
 cd calliope
-mamba create -n calliope -c conda-forge --file requirements/base.txt --file requirements/dev.txt coin-or-cbc gurobi::gurobi
-mamba activate calliope
-pip install --no-deps -e .
-ipython kernel install --user --name=calliope_docs_build
+pixi run install-dev
 ```
-
-If installing directly with pip, you can install these libraries using the `dev` option, i.e., `pip install -e '.[dev]'`
 
 If you plan to make changes to the code then please make regular use of the following tools to verify the codebase while you work:
 
-- `pre-commit`: run `pre-commit install` in your command line to load inbuilt checks that will run every time you commit your changes.
-The checks are: 1. check no large files have been staged, 2. lint python files for major errors, 3. format python files to conform with the [PEP8 standard](https://peps.python.org/pep-0008/).
-You can also run these checks yourself at any time to ensure staged changes are clean by calling `pre-commit`.
+- `pre-commit`: run `pixi run pre-commit` in your command line to load and run inbuilt checks.
+The checks include:
+  1. check no large files have been staged,
+  1. lint python files for major errors,
+  1. format python files to conform with the [PEP8 standard](https://peps.python.org/pep-0008/).
 - `pytest` - run the unit test suite and check test coverage.
 
 !!! note

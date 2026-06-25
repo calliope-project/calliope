@@ -37,7 +37,7 @@ Model results can be explored interactively with [Calligraph](https://calligraph
 
 ## Quick start
 
-Calliope can run on Windows, macOS and Linux. Installing it is quickest with the `mamba` package manager by running a single command: `mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope`.
+Calliope can run on Windows, macOS and Linux. Installing from PyPI is quickest with `uv`: `uv pip install calliope`. For local development and full solver/binary environment management, use pixi as described in the documentation.
 
 See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html).
 

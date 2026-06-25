@@ -29,3 +29,4 @@ dist/
 .ipynb_checkpoints
 outputs/
 site/
+pixi.lock
