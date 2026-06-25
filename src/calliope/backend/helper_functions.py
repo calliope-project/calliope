@@ -233,7 +233,7 @@ class WhereAny(ParsingHelperFunction):
             )
         available_dims = set(input_component.dims).intersection(self._to_str_list(over))
 
-        return input_component.any(dim=available_dims, keep_attrs=True)
+        return input_component.any(dim=available_dims)
 
 
 class Defined(ParsingHelperFunction):
@@ -436,6 +436,8 @@ class SelectFromLookupArrays(ParsingHelperFunction):
     NAME = "select_from_lookup_arrays"
     #:
     ALLOWED_IN = ["expression"]
+    #:
+    ignore_where = True
 
     def as_math_string(self, array: str, **lookup_arrays: str) -> str:  # noqa: D102, override
         new_strings = {
@@ -597,7 +599,7 @@ class Roll(ParsingHelperFunction):
     NAME = "roll"
     #:
     ALLOWED_IN = ["expression"]
-
+    #:
     ignore_where = True
 
     def as_math_string(self, array: str, **roll_kwargs: str) -> str:  # noqa: D102, override
@@ -642,6 +644,8 @@ class Where(ParsingHelperFunction):
     NAME = "where"
     #:
     ALLOWED_IN = ["expression"]
+    #:
+    ignore_where = True
 
     def as_math_string(self, array: str, condition: str) -> str:  # noqa: D102, override
         return rf"({array} \text{{if }} {condition} == True)"
@@ -696,7 +700,7 @@ class MapDim(ParsingHelperFunction):
     NAME = "map_dim"
     #:
     ALLOWED_IN = ["expression", "where"]
-
+    #:
     ignore_where = True
 
     def as_math_string(self, dim: str, mapper: str) -> str:  # noqa: D102, override
@@ -755,8 +759,6 @@ class GroupSum(ParsingHelperFunction):
     NAME = "group_sum"
     #:
     ALLOWED_IN = ["expression"]
-
-    ignore_where = True
 
     def as_math_string(self, array: str, groupby: str, group_dim: str) -> str:  # noqa: D102, override
         group_dim_singular = self._dim_iterator(group_dim)
@@ -832,7 +834,7 @@ class GroupSum(ParsingHelperFunction):
 
         array = xr.concat(
             grouped.values(), dim=pd.Index(grouped.keys(), name=group_dim.name)
-        )
+        ).rename(array.name)
         return array
 
 
@@ -842,8 +844,6 @@ class GroupDatetime(ParsingHelperFunction):
     NAME = "group_datetime"
     #:
     ALLOWED_IN = ["expression"]
-
-    ignore_where = True
 
     def as_math_string(self, array: str, over: str, group: str) -> str:  # noqa: D102, override
         overstring = self._instr(over)
@@ -996,5 +996,7 @@ class SumNextN(ParsingHelperFunction):
                     str(over.name), min_count=1
                 )
             )
-        final_array = xr.concat(results, dim=over).broadcast_like(array)
+        final_array = (
+            xr.concat(results, dim=over).broadcast_like(array).rename(array.name)
+        )
         return final_array

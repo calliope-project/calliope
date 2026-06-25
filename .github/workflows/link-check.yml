@@ -16,3 +16,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: markdown-link-check
         uses: gaurav-nelson/github-action-markdown-link-check@1.0.15
+        with:
+          config-file: mlc_config.json

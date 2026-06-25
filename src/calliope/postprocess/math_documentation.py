@@ -22,7 +22,7 @@ class MathDocumentation:
         Backend is always built by default.
 
         Args:
-            model (Model): initialised Callipe model instance.
+            model (Model): initialised Calliope model instance.
             include (Literal["all", "valid"], optional):
                 Either include all possible math equations ("all") or only those for
                 which at least one "where" case is valid ("valid"). Defaults to "all".

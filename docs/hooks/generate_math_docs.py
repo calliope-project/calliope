@@ -20,8 +20,8 @@ TEMPDIR = tempfile.TemporaryDirectory()
 
 MODEL_PATH = Path(__file__).parent / "dummy_model" / "model.yaml"
 
-BASE_MATH_NAV_PATH = ["Math", "Built-in base math"]
-OTHER_MATH_NAV_PATH = ["Math", "Other built-in math"]
+BASE_MATH_NAV_PATH = ["Reference", "Built-in base math"]
+OTHER_MATH_NAV_PATH = ["Reference", "Other built-in math"]
 
 PREPEND_SNIPPET = """
 # {title}
@@ -94,6 +94,34 @@ def on_files(files: list, config: dict, **kwargs):
     return files
 
 
+def find_nav_reference(nav: list, nav_path: list[str]) -> dict:
+    """Find the nav entry at the end of a nested mkdocs navigation path.
+
+    Args:
+        nav (list): The mkdocs ``config["nav"]`` tree.
+        nav_path (list[str]): Sequence of nested page titles to follow, e.g.
+            ``["Reference", "Built-in base math"]``.
+
+    Returns:
+        dict: The ``{page_name: value}`` dict for the final page in the path.
+            Mutate (set or append to) its single value to attach files to the
+            navigation.
+    """
+    *parent_path, leaf = nav_path
+    reference = nav
+    for page_name in parent_path:
+        reference = next(
+            entry[page_name]
+            for entry in reference
+            if isinstance(entry, dict) and set(entry.keys()) == {page_name}
+        )
+    return next(
+        entry
+        for entry in reference
+        if isinstance(entry, dict) and set(entry.keys()) == {leaf}
+    )
+
+
 def write_file(
     filename: str,
     description: str,
@@ -136,21 +164,9 @@ def write_file(
             use_directory_urls=config["use_directory_urls"],
         )
     )
-    if base_math:
-        top_level_page_name, second_level_page_name = BASE_MATH_NAV_PATH
-    else:
-        top_level_page_name, second_level_page_name = OTHER_MATH_NAV_PATH
-
-    top_level_nav_reference = [
-        idx
-        for idx in config["nav"]
-        if isinstance(idx, dict) and set(idx.keys()) == {top_level_page_name}
-    ][0]
-    nav_reference = [
-        idx
-        for idx in top_level_nav_reference[top_level_page_name]
-        if isinstance(idx, dict) and set(idx.keys()) == {second_level_page_name}
-    ][0]
+    nav_path = BASE_MATH_NAV_PATH if base_math else OTHER_MATH_NAV_PATH
+    second_level_page_name = nav_path[-1]
+    nav_reference = find_nav_reference(config["nav"], nav_path)
 
     if base_math:
         nav_reference[second_level_page_name] = output_file.as_posix()

@@ -32,11 +32,15 @@ class BackendWarning(Warning):
 
 def warn(message: str, _class: type[Warning] = ModelWarning):
     """Raises the specified type of warning."""
+    formatwarning = warnings.formatwarning
+
     warnings.formatwarning = lambda message, category, *args, **kwargs: (
         f"{category.__name__}: {message}\n"
     )
-    warnings.warn(message, _class)
-    warnings.formatwarning = warnings._formatwarning_orig
+    try:
+        warnings.warn(message, _class)
+    finally:
+        warnings.formatwarning = formatwarning
 
 
 def print_warnings_and_raise_errors(

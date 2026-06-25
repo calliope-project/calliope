@@ -711,7 +711,7 @@ constraints:
         - where: "sink_unit==per_area"
           expression: "area_use"
         - where: "sink_unit==per_cap"
-          expression: "sum(flow_cap, over=carriers)"
+          expression: "sum(where(flow_cap, carrier_in), over=carriers)"
         - where: "sink_unit==absolute"
           expression: "1"
 
@@ -776,7 +776,7 @@ constraints:
         - where: "source_unit==per_area"
           expression: "area_use"
         - where: "source_unit==per_cap"
-          expression: "sum(flow_cap, over=carriers)"
+          expression: "sum(where(flow_cap, carrier_out), over=carriers)"
         - where: "source_unit==absolute"
           expression: "1"
 

@@ -4,7 +4,7 @@ This page explains the basic concepts and ideas behind Calliope.
 We then move on to describing how to [create](creating.md), [run](running.md), and [analyse](analysing.md) a Calliope model.
 
 !!! note
-    The [examples and tutorials section](../examples/overview.md) contains more hands-on examples of how to build and work with Calliope models.
+    The [examples and tutorials section](../examples/index.md) contains more hands-on examples of how to build and work with Calliope models.
     We still recommend that you first read the section you are currently looking at - "Getting started" - before going to the examples and tutorials.
 
 ## What Calliope does
