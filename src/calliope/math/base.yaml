@@ -1325,7 +1325,7 @@ postprocessed:
       This is useful for renewable energy technologies, for which unused resource in any hour is effectively lost revenue.
     unit: unitless
     foreach: [nodes, techs, timesteps]
-    where: base_tech==supply AND source_use_max>0 AND NOT source_use_max==inf AND source_cap>0
+    where: base_tech==supply AND source_use_max>0 AND NOT source_use_max==inf AND source_cap>0 AND flow_cap>0
     default: 0
     equations:
       - expression: 1 - (source_use / (source_use_max * $source_scaler))

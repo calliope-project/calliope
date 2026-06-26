@@ -233,7 +233,9 @@ class GurobiBackendModel(backend_model.BackendModel):
         termination = self._instance.status
 
         if termination == gurobipy.GRB.OPTIMAL:
-            results = self.load_results(solve_config.postprocessing_active)
+            results = self.load_results(
+                solve_config.postprocessing_active, solve_config.zero_threshold
+            )
         else:
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
             results = xr.Dataset()
