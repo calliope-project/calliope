@@ -33,12 +33,12 @@ jobs:
     if: startsWith(github.event.pull_request.title, 'Release v')
     steps:
       - uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: mamba-org/setup-micromamba@v3
         with:
-          micromamba-version: '1.5.10-0'
+          micromamba-version: '2.0.5-0'
           environment-name: pipbuild
           create-args: >-
-            python=3.11
+            python=3.14
             pip
             python-build
           post-cleanup: all

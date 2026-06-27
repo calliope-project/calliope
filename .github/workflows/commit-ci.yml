@@ -25,14 +25,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - uses: mamba-org/setup-micromamba@v1
+    - uses: mamba-org/setup-micromamba@v3
       with:
-        micromamba-version: '1.5.10-0'
-        environment-name: ${{ github.event.repository.name }}-ubuntu-latest-312-${{ hashFiles('requirements/dev.txt') }}
+        micromamba-version: '2.0.5-0'
+        environment-name: ${{ github.event.repository.name }}-ubuntu-latest-3${{ matrix.py3version }}-${{ hashFiles('requirements/base.txt', 'requirements/dev.txt') }}
         environment-file: requirements/base.txt
         create-args: >-
           -f requirements/dev.txt
-          python=3.11
+          python=3.14
           coin-or-cbc
           gurobi::gurobi
         post-cleanup: all

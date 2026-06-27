@@ -1,7 +1,6 @@
 import logging
 
-import gurobipy
-import pytest  # noqa: F401
+import pytest
 import xarray as xr
 
 import calliope.exceptions as exceptions
@@ -9,10 +8,10 @@ import calliope.exceptions as exceptions
 from ..common.util import build_test_model as build_model
 from ..common.util import check_error_or_warning
 
+gurobipy = pytest.importorskip("gurobipy")
+
 
 class TestNewBackend:
-    pytest.importorskip("gurobipy")
-
     @pytest.fixture(scope="class")
     def simple_supply_longnames(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")

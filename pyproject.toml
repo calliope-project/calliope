@@ -101,10 +101,11 @@ authors = [
 maintainers = [
   { name = "Stefan Pfenninger", email = "stefan@pfenninger.org" },
   { name = "Bryn Pickering", email = "17178478+brynpickering@users.noreply.github.com" },
+  { name = "Ivan Ruiz Manuel", email = "72193617+irm-codebase@users.noreply.github.com" },
 ]
 description = "A multi-scale energy systems modelling framework."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 keywords = ["energy systems", "optimisation", "mathematical programming"]
 license = { text = "Apache 2.0" }
 classifiers = [
@@ -113,7 +114,7 @@ classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-]
+  ]
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
 [tool.setuptools.dynamic]
