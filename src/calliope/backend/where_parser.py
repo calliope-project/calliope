@@ -16,7 +16,7 @@ import xarray as xr
 from calliope.backend import expression_parser
 from calliope.util import tools
 
-pp.ParserElement.enablePackrat()
+pp.ParserElement.enable_packrat()
 BOOLEANTYPE = np.bool_ | np.typing.NDArray[np.bool_]
 
 

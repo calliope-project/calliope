@@ -5,6 +5,7 @@ from calliope.io import read_rich_yaml
 from calliope.schemas.dimension_data_schema import (
     CalliopeNode,
     CalliopeTech,
+    CalliopeTechs,
     IndexedData,
 )
 
@@ -29,7 +30,39 @@ class TestIndexedData:
 
     def test_broadcasted_definition(self):
         """Broadcasted definitons should be possible."""
-        IndexedData(data=1, dims="my_dim", index=["i1", "i2", "i3", "i4"])
+        result = IndexedData(data=1, dims="my_dim", index=["i1", "i2", "i3", "i4"])
+        assert result.data == 1
+        assert result.dims == ["my_dim"]
+        assert result.index == [["i1"], ["i2"], ["i3"], ["i4"]]
+
+    @pytest.mark.parametrize(
+        ("dims", "expected"),
+        [
+            ("techs", ["techs"]),
+            ("nodes", ["nodes"]),
+            (["techs"], ["techs"]),
+            (["techs", "nodes"], ["techs", "nodes"]),
+        ],
+    )
+    def test_listify_dims(self, dims, expected):
+        """Non-list inputs for `index` and `dims` should be converted to lists."""
+        result = IndexedData(data=1, dims=dims)
+        assert result.dims == expected
+
+    @pytest.mark.parametrize(
+        ("index", "expected"),
+        [
+            ("i1", [["i1"]]),
+            (["i1"], [["i1"]]),
+            (["i1", "i2"], [["i1"], ["i2"]]),
+            ([["i1"], ["i2"]], [["i1"], ["i2"]]),
+            ([["i1", "i2"], ["i2", "i3"]], [["i1", "i2"], ["i2", "i3"]]),
+        ],
+    )
+    def test_listify_index(self, index, expected):
+        """Non-list inputs for `index` and `dims` should be converted to lists."""
+        result = IndexedData(data=1, dims="my_dim", index=index)
+        assert result.index == expected
 
     @pytest.mark.parametrize(
         ("data", "dims", "index"),
@@ -37,16 +70,14 @@ class TestIndexedData:
             (1, 1, "monetary"),  # dims must be strings
             ("value", "techs", None),  # indexes must be strings or numeric
             (1, ["techs", "techs", "nodes"], ["i1", "i2", "i3"]),  # dims must be unique
-            (1, ["techs", "nodes"], ["costs", "costs"]),  # indexes must be unique
             ([], ["techs"], ["i1"]),  # lists must not be empty
-            ([1], [], ["i1"]),
-            ([1], ["techs"], []),
         ],
     )
     def test_invalid_definition(self, data, dims, index):
         """Catch common user mistakes."""
         with pytest.raises(
-            pydantic.ValidationError, match="errors for Indexed data definition"
+            pydantic.ValidationError,
+            match="validation error[s]* for Indexed data definition",
         ):
             IndexedData(data=data, dims=dims, index=index)
 
@@ -84,6 +115,22 @@ class TestCalliopeTech:
             CalliopeTech(**tech)
         check_error_or_warning(
             error, ["error for Technology dimension data", "base_tech"]
+        )
+
+
+class TestCalliopeTechs:
+    def test_none_top_level(self):
+        """Test that a None entry is converted to an empty dictionary in the top level."""
+        techs = CalliopeTechs.model_validate(None)
+        assert techs == CalliopeTechs.model_validate({})
+
+    def test_none_sub_level(self):
+        """Test that a None entry is converted to an empty dictionary within individual tech definitions."""
+        techs = CalliopeTechs.model_validate(
+            {"foo": None, "bar": {"param1": 1}, "baz": {}}
+        )
+        assert techs == CalliopeTechs.model_validate(
+            {"foo": {}, "bar": {"param1": 1}, "baz": {}}
         )
 
 

@@ -252,7 +252,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             name,
             component_da,
             "global_expressions",
-            definition.model_dump(),
+            definition.model_dump(exclude_unset=True),
             references=references,
         )
 
@@ -1389,11 +1389,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 otherwise an empty dataset.
         """
 
-    def load_results(self, postprocess: bool) -> xr.Dataset:
+    def load_results(self, postprocess: bool, zero_threshold: float) -> xr.Dataset:
         """Load and evaluate model results after a successful run.
 
         Evaluates backend decision variables, global expressions, parameters (if not in
         inputs), and shadow_prices (if tracked).
+
+        Args:
+            postprocess (bool): If True, will evaluate and add postprocessed arrays to the results dataset.
+            zero_threshold (float): If non-zero, will set all values in the results dataset with absolute value less than `zero_threshold` to zero.
 
         Returns:
             xr.Dataset: Dataset of optimal solution results (all numeric data).
@@ -1433,6 +1437,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             attrs=self._dataset.attrs,
         ).astype(float)
 
+        if zero_threshold != 0:
+            results = self._apply_zero_threshold(results, zero_threshold)
+
         if postprocess:
             postprocessed = self.add_postprocessed_arrays(results.assign(self.inputs))
             results = results.assign(postprocessed)
@@ -1445,6 +1452,31 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             attrs=self._dataset.attrs,
         )
         return cleaned_results
+
+    @staticmethod
+    def _apply_zero_threshold(results: xr.Dataset, zero_threshold: float) -> xr.Dataset:
+        """Remove unreasonably small values in-place.
+
+        Used to avoid floating point errors caused by solver output.
+        Reasonable value = 1e-12.
+        """
+        if zero_threshold != 0:
+            for name in list(results.data_vars):
+                # If there are any values in the data variable which fall below the
+                # threshold, note the data variable name and set those values to zero
+                results[name] = xr.where(
+                    np.abs(results[name]) < zero_threshold, 0, results[name]
+                )
+
+            LOGGER.info(
+                "Postprocessing: applied zero threshold %s to model results.",
+                zero_threshold,
+            )
+        else:
+            LOGGER.info(
+                "Postprocessing: skipping zero threshold application (threshold equals 0)."
+            )
+        return results
 
     def _find_all_references(self, initial_references: set) -> set:
         """Find all nested references to optimisation problem components from an initial set of references.

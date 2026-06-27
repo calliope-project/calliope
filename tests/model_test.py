@@ -37,22 +37,22 @@ def model_from_netcdf(tmp_path_factory, model_from_yaml):
 @pytest.fixture(scope="class")
 def model_from_dict(model_from_yaml, minimal_test_model_path):
     dict_def = {
-        "config": model_from_yaml.config.model_dump(),
-        **model_from_yaml.definition.model_dump(),
+        "config": model_from_yaml.config.model_dump(exclude_unset=True),
+        **model_from_yaml.definition.model_dump(exclude_unset=True),
     }
     return read_dict(dict_def, definition_path=minimal_test_model_path)
 
 
 @pytest.fixture(scope="class")
 def model_from_datasets(model_from_yaml):
-    return Model(model_from_yaml.inputs, model_from_yaml.all_attrs)
+    return Model(model_from_yaml.inputs, model_from_yaml.all_attrs())
 
 
 @pytest.fixture(scope="class")
 def model_from_datasets_with_results(model_from_yaml):
     return Model(
         model_from_yaml.inputs,
-        attrs=model_from_yaml.all_attrs,
+        attrs=model_from_yaml.all_attrs(),
         results=model_from_yaml.inputs,
     )
 
@@ -116,7 +116,7 @@ class TestModelInit:
     def test_model_creation_timing(self, request, model_name):
         """Check that the expected model creation timings are set."""
         model: Model = request.getfixturevalue(model_name)
-        assert not set(model.runtime.timings.keys()).symmetric_difference(
+        assert not set(model.runtime.timings.root.keys()).symmetric_difference(
             ["preprocess_start", "init_complete"]
         )
 
@@ -237,7 +237,7 @@ class TestOperateMode:
 
         model = calliope.Model(
             inputs=base_model.inputs.assign(base_model.results),
-            attrs=base_model.all_attrs,
+            attrs=base_model.all_attrs(),
             mode="operate",
         )
         model.build(operate={"window": request.param[0], "horizon": request.param[1]})
@@ -365,7 +365,7 @@ class TestSporesMode:
         model2 = calliope.Model(
             inputs=model.inputs,
             results=model.results,
-            attrs=model.all_attrs,
+            attrs=model.all_attrs(),
             mode="spores",
         )
         model2.build()

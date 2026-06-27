@@ -534,6 +534,16 @@ lookups:
     title: One way transmission.
     description: Forces a transmission technology to only move flow in one direction on the link, i.e. from `from` to `to`.
 
+  link_to:
+    dtype: string
+    title: The node a transmission technology links to.
+    description: Defines one end of a transmission technology.
+
+  link_from:
+    dtype: string
+    title: The node a transmission technology links from.
+    description: Defines one end of a transmission technology.
+
   lookup_cluster_last_timestep:
     description: The last timestep of each cluster.
     dtype: datetime
@@ -824,10 +834,12 @@ constraints:
   symmetric_transmission:
     description: >-
       Fix the flow capacity of two `transmission` technologies representing the same link in the system.
-    foreach: [nodes, techs]
+    foreach: [techs, carriers]
     where: "base_tech==transmission"
     equations:
-      - expression: sum(flow_cap, over=carriers) == link_flow_cap
+      - expression: >-
+          sum(where(flow_cap, map_dim(nodes, link_from)), over=nodes) ==
+          sum(where(flow_cap, map_dim(nodes, link_to)), over=nodes)
 
   export_balance:
     description: >-
@@ -878,18 +890,6 @@ variables:
       min: flow_cap_min
       max: flow_cap_max
 
-  link_flow_cap:
-    title: Link flow capacity
-    description: >-
-      A transmission technology's flow capacity, also known as its nominal or nameplate capacity.
-    default: 0
-    unit: power
-    foreach: [techs]
-    where: base_tech==transmission
-    bounds:
-      min: 0
-      max: .inf
-
   flow_out:
     title: Carrier outflow
     description: >-
@@ -899,7 +899,7 @@ variables:
     default: 0
     unit: energy
     foreach: [nodes, techs, carriers, timesteps]
-    where: "carrier_out"
+    where: "carrier_out AND not (one_way AND map_dim(nodes, link_from)==True)"
     bounds:
       min: 0
       max: .inf
@@ -913,7 +913,7 @@ variables:
     default: 0
     unit: energy
     foreach: [nodes, techs, carriers, timesteps]
-    where: "carrier_in"
+    where: "carrier_in AND not (one_way AND map_dim(nodes, link_to)==True)"
     bounds:
       min: 0
       max: .inf
@@ -1325,7 +1325,7 @@ postprocessed:
       This is useful for renewable energy technologies, for which unused resource in any hour is effectively lost revenue.
     unit: unitless
     foreach: [nodes, techs, timesteps]
-    where: base_tech==supply AND source_use_max>0 AND NOT source_use_max==inf AND source_cap>0
+    where: base_tech==supply AND source_use_max>0 AND NOT source_use_max==inf AND source_cap>0 AND flow_cap>0
     default: 0
     equations:
       - expression: 1 - (source_use / (source_use_max * $source_scaler))

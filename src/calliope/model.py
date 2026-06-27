@@ -14,7 +14,6 @@ import pandas as pd
 import xarray as xr
 
 from calliope import _version, backend, exceptions, io, preprocess
-from calliope.attrdict import AttrDict
 from calliope.preprocess import (
     ModelDataBuilder,
     ModelDataCleaner,
@@ -121,33 +120,29 @@ def read_dict(
     model_def = preprocess.prepare_model_definition(
         model_definition, scenario, override_dict, math_dict, definition_path, **kwargs
     )
-    log_time(
+    runtime = log_time(
         LOGGER,
-        model_def.runtime.timings,
+        model_def.runtime,
         "preprocess_start",
         comment="Model: preprocessing data",
     )
+    model_def = model_def.update({"runtime": runtime})
     math_priority = model_math.get_math_priority(model_def.config.init)
     math = model_math.build_math(
         math_priority,
-        model_def.math.init.model_dump(),
+        model_def.math.init,
         validate=model_def.config.init.pre_validate_math_strings,
     )
-
     tables = [
         data_tables.DataTable(table, table_dict, data_table_dfs, definition_path)
         for table, table_dict in model_def.definition.data_tables.root.items()
     ]
-
     model_data_factory = ModelDataBuilder(
-        model_def.config.init,
-        AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
-        math,
-        tables,
+        model_def.config.init, model_def.definition, math, tables
     )
     model_data_factory.build()
     model_def = model_def.update(
-        {"math.build": math.model_dump(), "runtime.math_priority": math_priority}
+        {"math.build": math, "runtime.math_priority": math_priority}
     )
     return Model(inputs=model_data_factory.dataset, attrs=model_def)
 
@@ -191,14 +186,11 @@ class Model(ModelStructure):
         if math_priority != attrs.runtime.math_priority:
             math = model_math.build_math(
                 math_priority,
-                attrs.math.init.model_dump(),
+                attrs.math.init,
                 validate=self.config.init.pre_validate_math_strings,
             )
             attrs = attrs.update(
-                {
-                    "runtime.math_priority": math_priority,
-                    "math.build": math.model_dump(),
-                }
+                {"runtime.math_priority": math_priority, "math.build": math}
             )
         if inputs:
             model_data_factory = ModelDataCleaner(
@@ -215,9 +207,9 @@ class Model(ModelStructure):
         self.math = attrs.math
 
         self._check_versions()
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "init_complete",
             comment="Model: initialisation complete",
         )
@@ -254,19 +246,18 @@ class Model(ModelStructure):
         """Get solved status."""
         return self._is_solved
 
-    @property
-    def all_attrs(self) -> CalliopeAttrs:
+    def all_attrs(self, exclude_unset: bool = True) -> CalliopeAttrs:
         """Get all model attributes as a CalliopeAttrs object."""
         return CalliopeAttrs(
             **{
-                k: getattr(self, k).model_dump()
+                k: getattr(self, k).model_dump(exclude_unset=exclude_unset)
                 for k in CalliopeAttrs.model_fields.keys()
             }
         )
 
-    def dump_all_attrs(self) -> dict:
+    def dump_all_attrs(self, exclude_unset: bool = True) -> dict:
         """Dump of all class pydantic model attributes as a single dictionary."""
-        return self.all_attrs.model_dump()
+        return self.all_attrs(exclude_unset).model_dump(exclude_unset=exclude_unset)
 
     def build(self, force: bool = False, **kwargs) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
@@ -282,11 +273,8 @@ class Model(ModelStructure):
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
-        log_time(
-            LOGGER,
-            self.runtime.timings,
-            "build_start",
-            comment="Model: backend build starting",
+        self.runtime = log_time(
+            LOGGER, self.runtime, "build_start", comment="Model: backend build starting"
         )
 
         self.config = self.config.update({"build": kwargs})
@@ -302,9 +290,9 @@ class Model(ModelStructure):
         )
         self.backend.add_optimisation_components()
 
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "build_complete",
             comment="Model: backend build complete",
         )
@@ -352,9 +340,9 @@ class Model(ModelStructure):
         self.backend.shadow_prices.track_constraints(self.config.solve.shadow_prices)
 
         mode = self.config.init.mode
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "solve_start",
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
@@ -365,36 +353,30 @@ class Model(ModelStructure):
         else:
             results = self.backend._solve(self.config.solve, warmstart=warmstart)
 
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "solver_exit",
             time_since_solve_start=True,
             comment="Backend: solver finished running",
         )
 
-        # Add additional post-processed result variables to results
-        if results.attrs["termination_condition"] in ["optimal", "feasible"]:
-            results = self._apply_zero_threshold(
-                results, self.config.solve.zero_threshold
-            )
-
-        self.math = self.math.update({"build": self.backend.math.model_dump()})
+        self.math = self.math.update({"build": self.backend.math})
         self.runtime = self.runtime.update(
             {"termination_condition": results.attrs.pop("termination_condition")}
         )
 
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "postprocess_complete",
             time_since_solve_start=True,
             comment="Postprocessing: ended",
         )
 
-        log_time(
+        self.runtime = log_time(
             LOGGER,
-            self.runtime.timings,
+            self.runtime,
             "solve_complete",
             time_since_solve_start=True,
             comment="Backend: model solve completed",
@@ -716,9 +698,9 @@ class Model(ModelStructure):
             return None
 
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
-            log_time(
+            self.runtime = log_time(
                 LOGGER,
-                self.runtime.timings,
+                self.runtime,
                 "solve_complete",
                 time_since_solve_start=True,
                 comment=f"Optimisation model | SPORE {spore} complete",
@@ -872,28 +854,3 @@ class Model(ModelStructure):
         )
 
         self.backend.update_input("spores_score", new_score)
-
-    @staticmethod
-    def _apply_zero_threshold(results: xr.Dataset, zero_threshold: float) -> xr.Dataset:
-        """Remove unreasonably small values in-place.
-
-        Used to avoid floating point errors caused by solver output.
-        Reasonable value = 1e-12.
-        """
-        if zero_threshold != 0:
-            for name in list(results.data_vars):
-                # If there are any values in the data variable which fall below the
-                # threshold, note the data variable name and set those values to zero
-                results[name] = xr.where(
-                    np.abs(results[name]) < zero_threshold, 0, results[name]
-                )
-
-            LOGGER.info(
-                "Postprocessing: applied zero threshold %s to model results.",
-                zero_threshold,
-            )
-        else:
-            LOGGER.info(
-                "Postprocessing: skipping zero threshold application (threshold equals 0)."
-            )
-        return results

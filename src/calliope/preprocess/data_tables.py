@@ -11,9 +11,9 @@ import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
-from calliope.attrdict import AttrDict
 from calliope.io import load_config
 from calliope.schemas.data_table_schema import CalliopeDataTable
+from calliope.schemas.dimension_data_schema import CalliopeNodes, CalliopeTechs
 from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class DataTable:
     """Class for in memory data handling."""
 
     MESSAGE_TEMPLATE = "(data_tables, {name}) | {message}."
-    PARAMS_TO_INITIALISE_YAML = ["base_tech", "link_to", "link_from"]
+    PARAMS_TO_INITIALISE_YAML: set[str] = {"base_tech", "link_to", "link_from"}
 
     def __init__(
         self,
@@ -73,35 +73,37 @@ class DataTable:
         """
         self.dataset = self.dataset.drop_vars(name, errors="ignore")
 
-    def tech_dict(self) -> tuple[AttrDict, AttrDict]:
+    def tech_def(self) -> tuple[CalliopeTechs, CalliopeTechs]:
         """Create a dummy technology definition dictionary from the dataset's "techs" dimension.
 
         This definition dictionary will ensure that the minimal YAML content is still possible.
 
-        This function should be accessed _before_ `self.node_dict`.
-
+        This function should be accessed _before_ node definition.
         """
-        tech_dict = AttrDict(
+        tech_dict = CalliopeTechs.model_validate(
             {k: {} for k in self.dataset.get("techs", xr.DataArray([])).values}
         )
-        base_tech_data = AttrDict()
-        for param in self.PARAMS_TO_INITIALISE_YAML:
-            if param in self.dataset:
-                base_tech_dict = self.dataset[param].to_dataframe().dropna().T.to_dict()
-                base_tech_data.union(base_tech_dict)
+        params = self.PARAMS_TO_INITIALISE_YAML.intersection(self.dataset.data_vars)
+        base_tech_dict: dict[str, dict] = {}
+        if params:
+            df = self.dataset[params].to_dataframe().dropna(how="all").T
+            base_tech_dict = {
+                col: series.dropna().to_dict() for col, series in df.items()
+            }
+        base_tech_data = CalliopeTechs.model_validate(base_tech_dict)
 
         return tech_dict, base_tech_data
 
-    def node_dict(self, techs_incl_inheritance: AttrDict) -> AttrDict:
+    def node_def(self, techs_incl_inheritance: CalliopeTechs) -> CalliopeNodes:
         """Create a dummy node definition dictionary from the dimensions defined across all data tables.
 
         This definition dictionary will ensure that the minimal YAML content is still possible.
 
-        This function should be run _after_ `self._update_tech_def_from_data_table`.
+        This function should be run _after_ tech definition.
 
         Args:
-            techs_incl_inheritance (AttrDict):
-                Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data tables.
+            techs_incl_inheritance (CalliopeTechs):
+                Technology definition dictionary which is a union of any YAML definition and the result of solving tech definition across all data tables.
                 Technologies should have their definition inheritance resolved.
         """
         node_tech_vars = self.dataset[
@@ -112,32 +114,37 @@ class DataTable:
             ]
         ]
         if not node_tech_vars:
-            return AttrDict()
+            return CalliopeNodes()
 
         other_dims = [i for i in node_tech_vars.dims if i not in ["nodes", "techs"]]
 
         is_defined = node_tech_vars.notnull().any(other_dims).to_dataframe().any(axis=1)
 
-        node_tech_dict = AttrDict({i: {"techs": {}} for i in self.dataset.nodes.values})
-        for node, tech_dict in node_tech_dict.items():
-            try:
-                techs_this_node = is_defined[is_defined].xs(node, level="nodes").index
-            except KeyError:
-                continue
-            for tech in techs_this_node:
-                if (
-                    techs_incl_inheritance[tech].get("base_tech", None)
-                    == "transmission"
-                ):
+        techs_by_node: dict[str, list] = {}
+        if not (defined_node_techs := is_defined[is_defined]).empty:
+            techs_by_node = (
+                defined_node_techs.index.to_frame(index=False)
+                .groupby("nodes")["techs"]
+                .apply(list)
+                .to_dict()
+            )
+        node_tech_def = CalliopeNodes.model_validate(
+            {i: {"techs": {}} for i in self.dataset.nodes.values}
+        )
+        for node in node_tech_def.root:
+            for tech in techs_by_node.get(node, []):
+                if tech not in techs_incl_inheritance.root:
+                    continue
+                if techs_incl_inheritance[tech].base_tech == "transmission":
                     self._raise_error(
                         "Cannot define transmission technology data over the `nodes` dimension"
                     )
                 else:
-                    tech_dict["techs"][tech] = None
+                    node_tech_def = node_tech_def.update({node: {"techs": {tech: {}}}})
 
-        return node_tech_dict
+        return node_tech_def
 
-    def lookup_dict_from_param(self, param: str, lookup_dim: str) -> AttrDict:
+    def lookup_def_from_param(self, param: str, lookup_dim: str) -> CalliopeTechs:
         """Convert "lookup" data loaded from file into YAML-esque format.
 
         Lookup parameters are those where in YAML the dimension index is the parameter value.
@@ -188,9 +195,8 @@ class DataTable:
             else:
                 return np.nan
 
-        lookup_dict = AttrDict()
         if param not in self.dataset:
-            return lookup_dict
+            lookup_dict = CalliopeTechs()
         elif (
             "techs" not in self.dataset[param].dims
             or lookup_dim not in self.dataset[param].dims
@@ -200,7 +206,7 @@ class DataTable:
                 f"Must contain `techs` and `{lookup_dim}`, received: {self.dataset[param].dims}"
             )
         else:
-            lookup_dict.union(
+            lookup_dict = CalliopeTechs.model_validate(
                 self.dataset[param]
                 .to_series()
                 .reset_index(lookup_dim)
