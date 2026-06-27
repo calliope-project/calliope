@@ -14,7 +14,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any, Generic, Literal, SupportsFloat, TypeVar, overload
+from typing import Any, Literal, SupportsFloat, TypeVar, overload
 
 import numpy as np
 import xarray as xr
@@ -886,7 +886,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         return self._dataset.filter_by_attrs(obj_type="postprocessed")
 
 
-class BackendModel(BackendModelGenerator, Generic[T]):
+class BackendModel[T](BackendModelGenerator):
     """Calliope's backend model functionality."""
 
     def __init__(
