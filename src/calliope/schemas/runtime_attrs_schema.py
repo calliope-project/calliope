@@ -6,7 +6,13 @@ from pydantic import Field
 
 from calliope import _version
 from calliope.schemas.config_schema import Resamples, Subsets
-from calliope.schemas.general import AttrStr, CalliopeBaseModel
+from calliope.schemas.general import AttrStr, CalliopeBaseModel, CalliopeDictModel
+
+
+class CalliopeTimings(CalliopeDictModel):
+    """Calliope runtime time logging."""
+
+    root: dict[str, float] = Field(default_factory=dict)
 
 
 class CalliopeRuntime(CalliopeBaseModel):
@@ -23,7 +29,7 @@ class CalliopeRuntime(CalliopeBaseModel):
     scenario: str | None = None
     """Scenario applied on initialising the model."""
 
-    timings: dict[str, float] = Field(default_factory=dict)
+    timings: CalliopeTimings = Field(default_factory=CalliopeTimings)
     """Dictionary of timings that is updated as the model is initialised/built/solved."""
 
     termination_condition: str | None = None

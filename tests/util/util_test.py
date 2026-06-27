@@ -4,6 +4,7 @@ import logging
 import pytest
 
 import calliope
+from calliope.schemas.runtime_attrs_schema import CalliopeRuntime
 from calliope.util.generate_runs import generate_runs
 from calliope.util.logging import log_time
 
@@ -42,26 +43,25 @@ class TestLogging:
             == expected_solver_level
         )
 
-    def test_timing_log(self):
-        timings = {}
+    @pytest.mark.parametrize(
+        ("kwargs", "expected"),
+        [
+            ({}, "test"),
+            ({"comment": "my_comment"}, "my_comment"),
+            (
+                {"time_since_solve_start": True},
+                "Time since start of solving optimisation problem:",
+            ),
+        ],
+    )
+    def test_timing_log_with_comment(self, caplog, kwargs, expected):
+        runtime = CalliopeRuntime(timings={"solve_start": 0})
+        caplog.set_level(logging.INFO, logger="calliope.testlogger")
         logger = logging.getLogger("calliope.testlogger")
-
         # TODO: capture logging output and check that comment is in string
-        log_time(logger, timings, "test", comment="test_comment", level="info")
-        assert isinstance(timings["test"], float)
-
-        log_time(logger, timings, "test2", comment=None, level="info")
-        assert isinstance(timings["test2"], float)
-
-        # TODO: capture logging output and check that time_since_solve_start is in the string
-        log_time(
-            logger,
-            timings,
-            "test",
-            comment=None,
-            level="info",
-            time_since_solve_start=True,
-        )
+        updated = log_time(logger, runtime, "test", **kwargs)
+        assert isinstance(updated.timings["test"], float)
+        assert expected in caplog.records[0].message
 
     @pytest.mark.parametrize(
         ("capture", "expected_level", "n_handlers"), [(True, 20, 1), (False, 30, 0)]

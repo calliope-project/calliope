@@ -7,6 +7,8 @@ import datetime
 import logging
 import sys
 
+from calliope.schemas.runtime_attrs_schema import CalliopeRuntime
+
 _time_format = "%Y-%m-%d %H:%M:%S"
 
 _orig_py_warning_handlers = logging.getLogger("py.warnings").handlers
@@ -95,17 +97,17 @@ def set_log_verbosity(
 
 def log_time(
     logger: logging.Logger,
-    timings: dict,
+    runtime: CalliopeRuntime,
     identifier: str,
     comment: str | None = None,
     level: str = "info",
     time_since_solve_start: bool = False,
-) -> float:
+) -> CalliopeRuntime:
     """Simultaneously log the time of a Calliope event to dictionary and to the logger.
 
     Args:
         logger (logging.Logger): Logger to use for logging the time.
-        timings (dict): Dictionary of model timings.
+        runtime (CalliopeRuntime): Calliope runtime object containing model timings.
         identifier (str): Short description to use as the event key in `timings`.
         comment (str | None, optional):
             Long description of the event.
@@ -117,19 +119,21 @@ def log_time(
             Defaults to False.
 
     Returns:
-        timestamp (float): POSIX timestamp of the logged event
+        CalliopeRuntime: input `runtime` with updated timings runtime dictionary.
     """
     if comment is None:
         comment = identifier
 
-    timings[identifier] = now = datetime.datetime.now().timestamp()
+    now = datetime.datetime.now().timestamp()
+    model_def = runtime.update({f"timings.{identifier}": now})
 
-    if time_since_solve_start and "solve_start" in timings:
-        time_diff = datetime.timedelta(seconds=now - timings["solve_start"])
+    start = runtime.timings.root.get("solve_start")
+    if time_since_solve_start and start is not None:
+        time_diff = datetime.timedelta(seconds=now - start)
         comment += f". Time since start of solving optimisation problem: {time_diff}"
 
     getattr(logger, level.lower())(comment)
-    return now
+    return model_def
 
 
 class LogWriter:

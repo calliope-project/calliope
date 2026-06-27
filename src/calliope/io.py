@@ -153,7 +153,7 @@ def save_netcdf(
 
     encoding: dict[str, dict] = {
         k: (
-            {"zlib": False, "_FillValue": None}
+            {"zlib": False, "_FillValue": str(pd.NA)}
             if v.dtype.kind in ["U", "O"]
             else {"zlib": False, "_FillValue": None, "dtype": "int8"}
             if v.dtype.kind == "b"

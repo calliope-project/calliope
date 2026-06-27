@@ -46,7 +46,7 @@ from calliope.backend.eval_attrs import EvalAttrs
 from calliope.backend.helper_functions import ParsingHelperFunction
 from calliope.exceptions import BackendError
 
-pp.ParserElement.enablePackrat()
+pp.ParserElement.enable_packrat()
 
 SUB_EXPRESSION_CLASSIFIER = "$"
 
@@ -1125,7 +1125,7 @@ def arithmetic_parser(*args, arithmetic: pp.Forward | None = None) -> pp.Forward
     if arithmetic is None:
         arithmetic = pp.Forward()
 
-    arithmetic <<= pp.infixNotation(
+    arithmetic <<= pp.infix_notation(
         # the order matters if two could capture the same string, e.g. "inf".
         pp.MatchFirst(args),
         [

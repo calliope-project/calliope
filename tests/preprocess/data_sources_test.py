@@ -8,6 +8,7 @@ from pydantic import ValidationError
 import calliope
 from calliope.preprocess import data_tables
 from calliope.schemas import data_table_schema
+from calliope.schemas.dimension_data_schema import CalliopeNodes, CalliopeTechs
 
 from ..common.util import check_error_or_warning
 
@@ -488,17 +489,17 @@ class TestDataTableLookupDictFromParam:
     @pytest.mark.parametrize(
         ("param", "expected"),
         [
-            ("FOO", {"foo1": {"FOO": ["bar1", "bar2"]}}),
-            ("BAR", {"foo1": {"BAR": "bar1"}, "foo2": {"BAR": "bar2"}}),
+            ("FOO", CalliopeTechs(foo1={"FOO": ["bar1", "bar2"]})),
+            ("BAR", CalliopeTechs(foo1={"BAR": "bar1"}, foo2={"BAR": "bar2"})),
         ],
     )
     def test_carrier_info_dict_from_model_data_var(self, table_obj, param, expected):
-        carrier_info = table_obj.lookup_dict_from_param(param, "carriers")
+        carrier_info = table_obj.lookup_def_from_param(param, "carriers")
         assert carrier_info == expected
 
     def test_carrier_info_dict_from_model_data_var_missing_dim(self, table_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            table_obj.lookup_dict_from_param("FOO", "foobar")
+            table_obj.lookup_def_from_param("FOO", "foobar")
         assert check_error_or_warning(
             excinfo,
             "Loading FOO with missing dimension(s). Must contain `techs` and `foobar`, received: ('techs', 'carriers')",
@@ -522,55 +523,54 @@ class TestDataTableTechDict:
 
     def test_tech_dict_from_one_param(self, table_obj):
         df_dict = {"test_param": {"foo1": 1, "foo2": 2}}
-        tech_dict, base_dict = table_obj(df_dict).tech_dict()
+        tech_dict, base_dict = table_obj(df_dict).tech_def()
 
-        assert tech_dict == {"foo1": {}, "foo2": {}}
-        assert base_dict == {}
+        assert tech_dict == CalliopeTechs(foo1={}, foo2={})
+        assert base_dict == CalliopeTechs()
 
     def test_tech_dict_from_two_param(self, table_obj):
         df_dict = {"foo": {"foo1": 1, "foo2": 2}, "bar": {"bar1": 1, "bar2": 2}}
-        tech_dict, base_dict = table_obj(df_dict).tech_dict()
+        tech_dict, base_dict = table_obj(df_dict).tech_def()
 
-        assert tech_dict == {"foo1": {}, "foo2": {}, "bar1": {}, "bar2": {}}
-        assert base_dict == {}
+        assert tech_dict == CalliopeTechs(foo1={}, foo2={}, bar1={}, bar2={})
+        assert base_dict == CalliopeTechs()
 
     def test_tech_dict_from_parent(self, table_obj):
         df_dict = {"base_tech": {"foo1": "transmission", "foo2": "supply"}}
-        tech_dict, base_dict = table_obj(df_dict).tech_dict()
+        tech_dict, base_dict = table_obj(df_dict).tech_def()
 
-        assert tech_dict == {"foo1": {}, "foo2": {}}
-        assert base_dict == {
-            "foo1": {"base_tech": "transmission"},
-            "foo2": {"base_tech": "supply"},
-        }
+        assert tech_dict == CalliopeTechs(foo1={}, foo2={})
+        assert base_dict == CalliopeTechs(
+            foo1={"base_tech": "transmission"}, foo2={"base_tech": "supply"}
+        )
 
     def test_tech_dict_from_parent_and_param(self, table_obj):
         df_dict = {"base_tech": {"foo1": "transmission"}, "other_param": {"bar1": 1}}
-        tech_dict, base_dict = table_obj(df_dict).tech_dict()
+        tech_dict, base_dict = table_obj(df_dict).tech_def()
 
-        assert tech_dict == {"foo1": {}, "bar1": {}}
-        assert base_dict == {"foo1": {"base_tech": "transmission"}}
+        assert tech_dict == CalliopeTechs(foo1={}, bar1={})
+        assert base_dict == CalliopeTechs(foo1={"base_tech": "transmission"})
 
     def test_tech_dict_from_to_from(self, table_obj):
         df_dict = {
             "link_from": {"foo1": "bar1", "foo2": "bar2"},
             "link_to": {"foo1": "bar2", "foo3": "bar1"},
         }
-        tech_dict, base_dict = table_obj(df_dict).tech_dict()
+        tech_dict, base_dict = table_obj(df_dict).tech_def()
 
-        assert tech_dict == {"foo1": {}, "foo2": {}, "foo3": {}}
-        assert base_dict == {
-            "foo1": {"link_from": "bar1", "link_to": "bar2"},
-            "foo2": {"link_from": "bar2"},
-            "foo3": {"link_to": "bar1"},
-        }
+        assert tech_dict == CalliopeTechs(foo1={}, foo2={}, foo3={})
+        assert base_dict == CalliopeTechs(
+            foo1={"link_from": "bar1", "link_to": "bar2"},
+            foo2={"link_from": "bar2"},
+            foo3={"link_to": "bar1"},
+        )
 
     def test_tech_dict_empty(self, table_obj):
         df_dict = {"available_area": {"foo1": 1}}
-        tech_dict, base_dict = table_obj(df_dict, rows="nodes").tech_dict()
+        tech_dict, base_dict = table_obj(df_dict, rows="nodes").tech_def()
 
-        assert not tech_dict
-        assert not base_dict
+        assert not tech_dict.root
+        assert not base_dict.root
 
 
 class TestDataTableNodeDict:
@@ -588,72 +588,72 @@ class TestDataTableNodeDict:
 
     def test_node_dict_from_one_param(self, table_obj):
         df_dict = {"available_area": {("foo1", "bar1"): 1, ("foo2", "bar2"): 2}}
-        tech_dict = calliope.AttrDict({"bar1": {}, "bar2": {}})
-        node_dict = table_obj(df_dict).node_dict(tech_dict)
+        tech_dict = CalliopeTechs(bar1={}, bar2={})
+        node_dict = table_obj(df_dict).node_def(tech_dict)
 
-        assert node_dict == {
-            "foo1": {"techs": {"bar1": None}},
-            "foo2": {"techs": {"bar2": None}},
-        }
+        assert node_dict == CalliopeNodes(
+            foo1={"techs": {"bar1": {}}}, foo2={"techs": {"bar2": {}}}
+        )
 
     def test_node_dict_from_two_param(self, table_obj):
         df_dict = {
             "available_area": {("foo1", "bar1"): 1, ("foo1", "bar2"): 2},
             "other_param": {("foo2", "bar2"): 1},
         }
-        tech_dict = calliope.AttrDict({"bar1": {}, "bar2": {}})
-        node_dict = table_obj(df_dict).node_dict(tech_dict)
+        tech_dict = CalliopeTechs(bar1={}, bar2={})
+        node_dict = table_obj(df_dict).node_def(tech_dict)
 
-        assert node_dict == {
-            "foo1": {"techs": {"bar1": None, "bar2": None}},
-            "foo2": {"techs": {"bar2": None}},
-        }
+        assert node_dict == CalliopeNodes(
+            foo1={"techs": {"bar1": {}, "bar2": {}}}, foo2={"techs": {"bar2": {}}}
+        )
 
     def test_node_dict_extra_dim_in_param(self, table_obj):
         df_dict = {
             "available_area": {("foo1", "bar1", "baz1"): 1, ("foo2", "bar2", "baz2"): 2}
         }
-        tech_dict = calliope.AttrDict({"bar1": {}, "bar2": {}})
-        node_dict = table_obj(df_dict, rows=["nodes", "techs", "carriers"]).node_dict(
+        tech_dict = CalliopeTechs(bar1={}, bar2={})
+        node_dict = table_obj(df_dict, rows=["nodes", "techs", "carriers"]).node_def(
             tech_dict
         )
 
-        assert node_dict == {
-            "foo1": {"techs": {"bar1": None}},
-            "foo2": {"techs": {"bar2": None}},
-        }
+        assert node_dict == CalliopeNodes(
+            foo1={"techs": {"bar1": {}}}, foo2={"techs": {"bar2": {}}}
+        )
 
     def test_node_dict_node_not_in_ds(self, table_obj):
         node_tech_df_dict = {"my_param": {("foo1", "bar1"): 1, ("foo1", "bar2"): 2}}
         node_df_dict = {"available_area": {"foo2": 1}}
-        tech_dict = calliope.AttrDict({"bar1": {}, "bar2": {}})
+        tech_dict = CalliopeTechs(bar1={}, bar2={})
         node_tech_ds = table_obj(node_tech_df_dict)
         node_ds = table_obj(node_df_dict, rows="nodes")
         node_tech_ds.dataset = node_tech_ds.dataset.merge(node_ds.dataset)
 
-        node_dict = node_tech_ds.node_dict(tech_dict)
-        assert node_dict == {
-            "foo1": {"techs": {"bar1": None, "bar2": None}},
-            "foo2": {"techs": {}},
-        }
+        node_dict = node_tech_ds.node_def(tech_dict)
+        assert node_dict == CalliopeNodes(
+            foo1={"techs": {"bar1": {}, "bar2": {}}}, foo2={"techs": {}}
+        )
 
     def test_node_dict_no_info(self, table_obj):
         df_dict = {"param": {"foo1": 1, "foo2": 2}}
-        tech_dict = calliope.AttrDict(
-            {"bar1": {"base_tech": "transmission"}, "bar2": {}}
-        )
-        node_dict = table_obj(df_dict, rows="techs").node_dict(tech_dict)
+        tech_dict = CalliopeTechs(bar1={"base_tech": "transmission"}, bar2={})
+        node_dict = table_obj(df_dict, rows="techs").node_def(tech_dict)
 
-        assert node_dict == {}
+        assert node_dict == CalliopeNodes()
+
+    def test_node_dict_skips_inactive_tech(self, table_obj):
+        """Techs in the data table but missing from techs_incl_inheritance because of active=False should be skipped."""
+        df_dict = {"available_area": {("foo1", "bar1"): 1, ("foo1", "bar2"): 2}}
+        tech_dict = CalliopeTechs(bar1={})  # bar2 is inactive / filtered out
+        node_dict = table_obj(df_dict).node_def(tech_dict)
+
+        assert node_dict == CalliopeNodes(foo1={"techs": {"bar1": {}}})
 
     def test_transmission_tech_with_nodes(self, table_obj):
         df_dict = {"param": {("foo1", "bar1"): 1, ("foo2", "bar2"): 2}}
-        tech_dict = calliope.AttrDict(
-            {"bar1": {"base_tech": "transmission"}, "bar2": {}}
-        )
+        tech_dict = CalliopeTechs(bar1={"base_tech": "transmission"}, bar2={})
 
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            table_obj(df_dict).node_dict(tech_dict)
+            table_obj(df_dict).node_def(tech_dict)
 
         assert check_error_or_warning(
             excinfo,

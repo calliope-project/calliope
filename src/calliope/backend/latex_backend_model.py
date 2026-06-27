@@ -584,7 +584,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     ),
                     "uses": sorted(list(uses[name] - set([name]))),
                     "yaml_snippet": to_yaml(
-                        self.math[objtype][name].model_dump(exclude_defaults=True)
+                        self.math[objtype][name].model_dump(exclude_unset=True)
                     ),
                     **self.math[objtype][name].model_dump(),
                 }
