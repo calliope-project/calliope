@@ -178,14 +178,14 @@ class TestCLI:
             assert os.path.isfile(os.path.join(tempdir, "test.sh.array.sh"))
 
     def test_fail_no_debug_no_stderr(self):
-        """Trackeback should not be printed if debug mode not active."""
+        """Traceback should not be printed if debug mode not active."""
         runner = CliRunner()
         result = runner.invoke(cli.run, ["nonexistent_model.yaml"])
         assert result.exit_code == 1
         assert not result.stderr
 
     def test_fail_debug_stderr(self):
-        """Trackeback should be printed in debug mode."""
+        """Traceback should be printed in debug mode."""
         runner = CliRunner()
         result = runner.invoke(cli.run, ["nonexistent_model.yaml", "--debug"])
         assert result.exit_code == 1
