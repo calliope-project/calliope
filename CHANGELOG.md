@@ -2,8 +2,6 @@
 
 ### User-facing changes
 
-|fixed| Documentation now clarifies more expicitly that Calliope is unit-agnostic and that capacity and its costs are relative to carrier flow (#775).
-
 |removed| `link_flow_cap` decision variable, for constraining the `flow_cap` either end of a transmission link to the same value.
 Instead, rather than via this auxiliary variable, the constraint is applied directly to each `flow_cap` entry.
 
@@ -35,6 +33,10 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 |fixed| Reloading a clustered model from file was attempting to re-cluster (#824).
 
 |fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
+
+|fixed| Documentation now clarifies more expicitly that Calliope is unit-agnostic and that capacity and its costs are relative to carrier flow (#775).
+
+|fixed| Documentation explains better how dimensions and broadcasting work (#667).
 
 ### Internal changes
 

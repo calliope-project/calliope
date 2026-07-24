@@ -154,6 +154,8 @@ Once you start looking at Calliope model data from a successful model run, you w
 
 The `inputs` correspond your input data and can either be **parameters** or **lookups**.
 Lookups are simply non-numeric parameters, for example, a boolean (true/false) switch used to choose between two possible constraint formulations.
+Each parameter is only stored over the dimensions it was defined over, so the dimensions of a given array can vary with how you defined your data.
+See [dimensions and broadcasting](analysing.md#dimensions-and-broadcasting) for more explanation.
 
 The `results` correspond to variables, global expressions, or post-processed results.
 They can be one of three things:

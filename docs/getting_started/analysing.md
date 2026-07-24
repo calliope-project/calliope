@@ -41,6 +41,43 @@ In Python you can quickly "densify" your data to look at only filled data points
 !!! note
     On [saving to CSV][calliope.Model.to_csv], each data variable is saved to its own file with all empty data points removed.
 
+### Dimensions and broadcasting
+
+Each parameter is only stored over the dimensions it was actually defined over, so that Calliope keeps its model data as small as possible.
+For example, if you set `flow_cap_max` to the same value for every technology, defining it only at the technology level, then `#!python model.inputs.flow_cap_max` will be indexed over `techs` alone. This means that it will _not_ have a `nodes` dimension.
+
+As soon as you override the value for one technology at one node, a `nodes` dimension appears.
+Calliope only broadcasts a parameter up to the full set of dimensions it needs when it builds the optimisation problem, so the inputs and results you save reflect as minimal a form as possible.
+
+This means the dimensions of a saved array can change depending on how you defined your data.
+If your post-processing relies on a parameter always having, say, a `nodes` dimension, you should broadcast the data to the dimensions you expect on your end when you read it in.
+
+The cleanest target to broadcast over is `#!python model.inputs.definition_matrix`, a boolean array over `[nodes, techs, carriers]` that is `True` exactly for the valid technology/carrier combinations at each node.
+Broadcasting against it therefore only adds dimensions where a technology is actually defined:
+
+```python
+# Give flow_cap_max a nodes dimension
+model.inputs.flow_cap_max.broadcast_like(model.inputs.definition_matrix).where(
+    model.inputs.definition_matrix
+)
+```
+
+!!! tip
+    Broadcasting is easiest to do in [xarray][], so we recommend saving to NetCDF ([calliope.Model.to_netcdf][]) if your post-processing script will be doing broadcasting after reading the data back in.
+
+!!! info "See also"
+    If you would rather have Calliope produce an output over a fixed set of dimensions for you, you can define a [post-processed result](../basic/postprocessing.md) in your math with an explicit `foreach`, and reference the parameter in its expression.
+    For example, to get `flow_cap_max` indexed over a known set of dimensions:
+
+    ```yaml
+    postprocessed:
+      flow_cap_max_known_dims:
+        foreach: [nodes, techs, carriers] # `results_flow_cap_max_known_dims.csv` will be indexed over these dimensions
+        where: flow_cap_max
+        equations:
+          - expression: flow_cap_max
+    ```
+
 ## Reading solutions
 
 Calliope provides functionality to read a previously-saved model from a single NetCDF file:
