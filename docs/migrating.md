@@ -713,7 +713,7 @@ It is up to you to ensure the math formulation is set up to handle this change, 
 
 ### Plotting
 
-Visualisation has moved to a separate tool, [Calligraph](https://calligraph.readthedocs.io/).
+Visualisation has moved to a separate tool, [Calligraph](https://calligraph.readthedocs.io/) (see [Analysing a model](getting_started/analysing.md) for how to use it).
 We made this decision due to the wide variety of visualisations that we saw being created outside our plotting module.
 It has proven impossible to keep our plotting methods agile given the almost infinite tweaks that libraries like [matplotlib](https://matplotlib.org/) and [plotly](https://plotly.com/) allow.
 
