@@ -45,7 +45,6 @@ plugins:
       include: ["examples/**/*.py", "examples/*.py"]
       ignore: ["examples/.*/*.py"]
       allow_errors: false
-      kernel_name: calliope_docs_build
       include_source: True
       execute: true
       include_requirejs: true

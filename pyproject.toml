@@ -197,12 +197,12 @@ python = "3.13.*"
 python = "3.14.*"
 
 [tool.pixi.tasks]
-init-dev-env = { cmd = "python -m ipykernel install --user --name calliope && pre-commit install", default-environment = "dev" }
+init-dev-env = { cmd = "pre-commit install", default-environment = "dev" }
 test = { cmd = "pytest --no-cov", default-environment = "dev", depends-on = ["init-dev-env"] }
 test-ci = { cmd = "pytest --no-cov -m 'not time_intensive' -m 'not needs_gurobi_license'", default-environment = "dev", depends-on = ["init-dev-env"]  }
 test-cov = { cmd = "pytest --cov", default-environment = "dev", depends-on = ["init-dev-env"] }
-docs-build = { cmd = "PLOTLY_RENDERER=notebook mkdocs build", default-environment = "docs", depends-on = ["init-dev-env"] }
-docs-serve = { cmd = "PLOTLY_RENDERER=notebook mkdocs serve", default-environment = "docs", depends-on = ["init-dev-env"] }
+docs-build = { cmd = "PLOTLY_RENDERER=notebook mkdocs build", default-environment = "docs" }
+docs-serve = { cmd = "PLOTLY_RENDERER=notebook mkdocs serve", default-environment = "docs" }
 
 [tool.pixi.environments]
 default = { solve-group = "py314" }
