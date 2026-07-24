@@ -181,7 +181,7 @@ After trying to solve the model, if there is an infeasibility you want to addres
 If you change them in `model.inputs`, rebuild the model `model.build(force=True)`.
 
 Particularly if your problem is large, you may not want to rebuild the backend to change a few small values.
-Instead you can interface directly with the backend using the `model.backend` functions, to update individual parameter values ([`model.backend.update_parameter`][calliope.backend.backend_model.BackendModel.update_parameter]) and variable bounds ([`model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds]).
+Instead you can interface directly with the backend using the `model.backend` functions, to update individual input values ([`model.backend.update_input`][calliope.backend.backend_model.BackendModel.update_input]) and variable bounds ([`model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds]).
 By rerunning the backend specifically, you can optimise your problem with these backend changes, without rebuilding the backend entirely: `model.solve(force=True)`.
 
 !!! note
