@@ -33,7 +33,7 @@ Calliope is a framework to develop energy system models, with a focus on flexibi
 
 A Calliope model consists of a collection of text files (in YAML and CSV formats) that fully define a model, with details on technologies, locations, resource potentials, etc. Calliope takes these files, constructs an optimization problem, solves it, and reports back results. Results can be saved to CSV or NetCDF files for further processing, or analysed directly in Python through Python's extensive scientific data processing capabilities provided by libraries like [Pandas](http://pandas.pydata.org/) and [xarray](https://docs.xarray.dev/en/stable/).
 
-Model results can be explored interactively with [Calligraph](https://calligraph.readthedocs.io/), our companion visualisation tool, or analysed directly in Python. Having some knowledge of the Python programming language helps when running Calliope, but is not a prerequisite.
+Model results can be explored interactively with [Calligraph](https://calligraph.readthedocs.io/), our companion visualisation tool. Having some knowledge of the Python programming language helps when running Calliope, but is not a prerequisite.
 
 ## Quick start
 
