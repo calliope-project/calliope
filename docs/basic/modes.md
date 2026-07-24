@@ -204,7 +204,7 @@ This is useful to further explore the option space, restart a run that was stopp
     import calliope
 
     # This model already has results from running in `base` mode.
-    model = calliope.Model(...)
+    model = calliope.read_yaml(...)
 
     model.build(mode="spores")
     model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
@@ -220,7 +220,7 @@ This is useful to further explore the option space, restart a run that was stopp
     import xarray as xr
 
     # This model already has results from running in `base` mode.
-    model = calliope.Model(...)
+    model = calliope.read_yaml(...)
 
     model.build(mode="spores")
     model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
@@ -238,7 +238,7 @@ This is useful to further explore the option space, restart a run that was stopp
     import xarray as xr
 
     # Load the model from scratch to get access to input data
-    m_init = calliope.Model(...)
+    m_init = calliope.read_yaml(...)
 
     # Load the most recent SPORE run to continue from.
     m_most_recent = calliope.read_netcdf("/path/to/spore/runs/spore_3.nc")

@@ -38,6 +38,8 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 
 |fixed| Documentation explains better how dimensions and broadcasting work (#667).
 
+|fixed| Documentation improvements: Clarify dimension subsetting documentation, always reference `calliope.read_yaml(path)` rather than `calliope.Model(path)` (#829)
+
 ### Internal changes
 
 |fixed| example user-defined math tests that were missing global expressions in the resulting LP files.

@@ -7,7 +7,7 @@
 `config.init.subset` allows you to specify a subset of dimensions to be used.
 This can be useful for debugging purposes as it can dramatically speed up model solution times.
 Usually, we recommend you subset the time dimensions (`timesteps`) as it is often the largest dimension.
-The timestep subset can be specified as `[startdate, enddate]`, e.g. `config.init.subset.timesteps: ['2005-01-01', '2005-01-31']`.
+A subset can be specified as `[start, end]`, e.g. for timesteps, `config.init.subset.timesteps: ['2005-01-01', '2005-01-31']`.
 The subsets are processed before building the model and applying time resolution adjustments, so time resolution reduction functions will only see the reduced set of data.
 
 ### Retaining logs and temporary files
@@ -181,7 +181,7 @@ After trying to solve the model, if there is an infeasibility you want to addres
 If you change them in `model.inputs`, rebuild the model `model.build(force=True)`.
 
 Particularly if your problem is large, you may not want to rebuild the backend to change a few small values.
-Instead you can interface directly with the backend using the `model.backend` functions, to update individual parameter values ([`model.backend.update_parameter`][calliope.backend.backend_model.BackendModel.update_parameter]) and variable bounds ([`model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds]).
+Instead you can interface directly with the backend using the `model.backend` functions, to update individual input values ([`model.backend.update_input`][calliope.backend.backend_model.BackendModel.update_input]) and variable bounds ([`model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds]).
 By rerunning the backend specifically, you can optimise your problem with these backend changes, without rebuilding the backend entirely: `model.solve(force=True)`.
 
 !!! note
