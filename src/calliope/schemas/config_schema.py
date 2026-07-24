@@ -68,7 +68,7 @@ class Init(CalliopeBaseModel):
     assuming hourly timestep data, `timesteps: ["2005-01", "2005-04"]` will create a time
     subset starting at "2005-01-01 00:00" up to and including "2005-04-30 23:00".
 
-    For date dimensions, strings must be ISO8601-compatible, i.e. of the form `YYYY-mm-dd HH:MM:SS`
+    For date dimensions, strings must be ISO8601-compatible, i.e. of the form `YYYY-MM-DD HH:MM:SS`
     (such as '2005-01', '2005-01-01', or '2005-01-01 00:00').
     """
 
