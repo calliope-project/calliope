@@ -12,39 +12,60 @@ Running Calliope requires four things:
    Any other solver that is compatible with Pyomo should also work.
 4. The Calliope software itself.
 
-## Recommended installation method
+## Recommended installation methods
 
-The easiest way to get a working Calliope installation is to use the free `mamba` package manager, which can install all of the four things described above in a single step.
+We recommend two installation paths depending on your use-case:
 
-To get `mamba`, the most straightforward approach is to [download and install the "Miniforge" distribution for your operating system](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html).
+1. **As a user with `conda` or `pixi` (recommended)**: use conda or [pixi](https://pixi.sh/latest/).
+   This is the recommended option when you want Calliope plus solver and binary dependencies managed together.
+1. **As a user with `uv` or `pip`**: use pip or [`uv`](https://docs.astral.sh/uv/) for fast Python package installation.
+   You will need to ensure you have all non-Python libraries installed and available if taking this approach.
+1. **Local development**: use [pixi](https://pixi.sh/latest/).
 
-!!! tip
+### As a User with `conda` or `pixi` (recommended)
 
-    Another option is to use the commercially developed [Anaconda Python distribution](https://www.anaconda.com/download), which is available for all operating systems and comes with a graphical user interface to install and manage packages.
-    If you use the Anaconda distribution, you have to replace `mamba` with `conda` in the installation instructions below.
+=== "`pixi`"
+    Install `pixi` by following the [official installation instructions](https://pixi.sh/latest/installation/).
+    Then add `calliope` to your project workspace:
 
-With the package manager installed, you can create a new environment called `calliope` with Calliope as well as the free and open source CBC solver.
-Run the following command in a terminal or command-line window:
+    ```shell
+    pixi add conda-forge::calliope
+    ```
 
-```shell
-mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
-```
+    !!! note
+        If you cannot directly install `pixi` due to organisational restrictions, you can also install it in a `conda` environment and use it from there:
 
-!!! note
-    The `conda-forge/label/calliope_dev` channel allows you to access the pre-release of Calliope v0.7, with which this version of the documentation aligns.
-    To install the most recent _stable_ version of Calliope, see our [v0.6.10 documentation](https://calliope.readthedocs.io/en/v0.6.10/).
+        ```shell
+        conda install pixi
+        ```
 
-This will install calliope with Python version {{ max_python_version }}.
+=== "`conda`"
+    Install `conda` by following the [official installation instructions](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
+    Then, create an environment including `calliope`:
 
-To use Calliope, you need to activate the `calliope` environment each time
+    ```shell
+    conda create -n calliope conda-forge::calliope
+    ```
 
-```bash
-mamba activate calliope
-```
+To run commands in the environment, use `pixi run -e dev ...` (or `pixi shell -e dev`).
+
+### As a user with `uv` or `pip`
+
+If you only need to install Calliope from PyPI, use:
+
+=== "`uv`"
+    ```shell
+    uv pip install calliope
+    ```
+
+=== "`pip`"
+    ```shell
+    pip install calliope
+    ```
 
 !!! warning
 
-    Although possible, we do not recommend installing Calliope directly via `pip` (`pip install calliope`).
+    Although possible, we do not recommend installing Calliope directly via `pip` or `uv`.
     Non-python binaries are not installed with `pip`, some of which are necessary for stable operation (e.g., `libnetcdf`).
 
 ## Choosing a solver
