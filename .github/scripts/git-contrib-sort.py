@@ -57,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         "--path",
         type=Path,
         default=DEFAULT_PATH,
-        help="path to .all-contributorsrc (default: alongside this script)",
+        help="path to .all-contributorsrc (default: repo root .all-contributorsrc)",
     )
     parser.add_argument(
         "--check",
