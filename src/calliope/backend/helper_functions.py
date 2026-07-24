@@ -233,7 +233,7 @@ class WhereAny(ParsingHelperFunction):
             )
         available_dims = set(input_component.dims).intersection(self._to_str_list(over))
 
-        return input_component.any(dim=available_dims, keep_attrs=True)
+        return input_component.any(dim=available_dims)
 
 
 class Defined(ParsingHelperFunction):
@@ -436,6 +436,8 @@ class SelectFromLookupArrays(ParsingHelperFunction):
     NAME = "select_from_lookup_arrays"
     #:
     ALLOWED_IN = ["expression"]
+    #:
+    ignore_where = True
 
     def as_math_string(self, array: str, **lookup_arrays: str) -> str:  # noqa: D102, override
         new_strings = {
@@ -597,11 +599,8 @@ class Roll(ParsingHelperFunction):
     NAME = "roll"
     #:
     ALLOWED_IN = ["expression"]
-
-    @property
-    def ignore_where(self) -> bool:
-        """Whether or not to ignore `where` functionality."""
-        return True
+    #:
+    ignore_where = True
 
     def as_math_string(self, array: str, **roll_kwargs: str) -> str:  # noqa: D102, override
         new_strings = {
@@ -645,6 +644,8 @@ class Where(ParsingHelperFunction):
     NAME = "where"
     #:
     ALLOWED_IN = ["expression"]
+    #:
+    ignore_where = True
 
     def as_math_string(self, array: str, condition: str) -> str:  # noqa: D102, override
         return rf"({array} \text{{if }} {condition} == True)"
@@ -692,6 +693,65 @@ class Where(ParsingHelperFunction):
         return array.where(condition.fillna(False).astype(bool))
 
 
+class MapDim(ParsingHelperFunction):
+    """Select a specific member of a dimension in math expressions."""
+
+    #:
+    NAME = "map_dim"
+    #:
+    ALLOWED_IN = ["expression", "where"]
+    #:
+    ignore_where = True
+
+    def as_math_string(self, dim: str, mapper: str) -> str:  # noqa: D102, override
+        return f"[{dim} = {mapper}]"
+
+    def as_array(self, dim: xr.DataArray, mapper: xr.DataArray) -> xr.DataArray:
+        """Create a boolean array which maps the contents of an array onto a dimension.
+
+        Contents of the array should be items of the dimension,
+        The output will be a boolean array with True where the dimension matches the contents of the array.
+
+        Args:
+            dim (xr.DataArray): dimension to select over
+            mapper (xr.DataArray):
+                mapping from the dimension to the array.
+
+        Returns:
+            xr.DataArray: `array` with only the selected member of the dimension.
+
+        Examples:
+            To select a specific node from a `flow` variable, you would do the following:
+
+
+            1. Define `tech_to_node` as an array whose data is node names and whose index is _not_ the `nodes` dimension.
+               It could, for instance, be the techs dimension:
+               ```yaml
+               data_definitions:
+                 tech_to_node:
+                   data: ["a", "b"]
+                   index: ["tech1", "tech2"]
+                   dims: [techs]
+               ```
+            1. Define the math to link the two, using `map_dim`:
+            ```yaml
+            variables:
+              var1:
+                foreach: [techs, nodes]
+                bounds: {min: 0, max: .inf}
+            constraints:
+              node_flow_max:
+                foreach: [techs, nodes]
+                where: map_dim(nodes, tech_to_node)==True
+                equations:
+                    - expression: flow_out <= 10
+            ```
+            The resulting constraint will only apply to the (tech, node) combinations of (tech1, a) and (tech2, b),
+            as defined in the `tech_to_node` array.
+        """
+        return dim == mapper
+
+
 class GroupSum(ParsingHelperFunction):
     """Apply a summation over an array grouping."""
 
@@ -699,8 +759,6 @@ class GroupSum(ParsingHelperFunction):
     NAME = "group_sum"
     #:
     ALLOWED_IN = ["expression"]
-
-    ignore_where = True
 
     def as_math_string(self, array: str, groupby: str, group_dim: str) -> str:  # noqa: D102, override
         group_dim_singular = self._dim_iterator(group_dim)
@@ -776,7 +834,7 @@ class GroupSum(ParsingHelperFunction):
 
         array = xr.concat(
             grouped.values(), dim=pd.Index(grouped.keys(), name=group_dim.name)
-        )
+        ).rename(array.name)
         return array
 
 
@@ -786,8 +844,6 @@ class GroupDatetime(ParsingHelperFunction):
     NAME = "group_datetime"
     #:
     ALLOWED_IN = ["expression"]
-
-    ignore_where = True
 
     def as_math_string(self, array: str, over: str, group: str) -> str:  # noqa: D102, override
         overstring = self._instr(over)
@@ -940,5 +996,7 @@ class SumNextN(ParsingHelperFunction):
                     str(over.name), min_count=1
                 )
             )
-        final_array = xr.concat(results, dim=over).broadcast_like(array)
+        final_array = (
+            xr.concat(results, dim=over).broadcast_like(array).rename(array.name)
+        )
         return final_array

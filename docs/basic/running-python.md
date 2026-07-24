@@ -1,6 +1,6 @@
 # Running a model in Python
 
-The most basic way to run a model programmatically from within a Python interpreter is to create a [calliope.Model][] instance with a given `model.yaml` configuration file, and then call its [calliope.Model.build][] followed by [calliope.Model.solve][] methods:
+The most basic way to run a model programmatically from within a Python interpreter is to load a model from a given `model.yaml` configuration file with `#!python calliope.read_yaml(...)`, and then call the resulting model's [calliope.Model.build][] followed by [calliope.Model.solve][] methods:
 
 ```python
 import calliope
@@ -10,8 +10,7 @@ model.solve()
 ```
 
 !!! note
-    If the model definition is not specified (i.e. `model = Model()`), an error is raised.
-    See the example models introduced in the [examples and tutorials](../examples/overview.md) section for information on instantiating a simple model without specifying a custom model configuration.
+    See the example models introduced in the [examples and tutorials](../examples/index.md) section for information on instantiating a simple model without specifying a custom model configuration.
 
 Other ways to load a model in Python are:
 
@@ -26,7 +25,7 @@ After the model has been solved, an xarray Dataset containing results (`model.re
 At this point, the model can be saved with either [calliope.Model.to_csv][] or [calliope.Model.to_netcdf][], which saves all inputs and results, and is equivalent to the corresponding `--save` options of the command-line tool.
 
 !!! example
-    An example of running in an interactive Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the [tutorials](../examples/overview.md).
+    An example of running in an interactive Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the [tutorials](../examples/index.md).
     You can download and run the embedded notebooks on your own machine (if both Calliope and the Jupyter Notebook are installed).
 
 ## Applying a scenario or override when running in Python

@@ -46,12 +46,19 @@ nodes:
 
 Using `sum(..., over=)` in an expression allows you to sum over one or more dimensions of your component array (be it a parameter, decision variable, or global expression).
 
+!!! note
+    Invalid variable default values such as `.inf` or `.nan` can enter into the summation if they are not properly masked in the `where` string.
+    If this occurs, consider masking these values by applying the [`where`](#where) helper function to first strip out unwanted entries before the `sum` function is applied.
+
 ## select_from_lookup_arrays
 
 Some of our arrays in [`model.inputs`][calliope.Model.inputs] are not data arrays, but "lookup" arrays.
-These arrays are used to map the array's index items to other index items.
+These arrays are used to map the array's data from one index item to another.
 For instance when using [time clustering](../advanced/time.md#time-clustering), the `lookup_cluster_last_timestep` array is used to get the timestep resolution and the stored energy for the last timestep in each cluster.
 Using `select_from_lookup_arrays(..., dim_name=lookup_array)` allows you to apply this lookup array to your data array.
+
+The lookup array data must be indexed over the same dimension as the data they contain.
+So, a lookup array that will move data in the `timestep` dimension must be indexed over the `timestep` dimension.
 
 ## get_val_at_index
 
@@ -60,6 +67,15 @@ For example, `get_val_at_index(timesteps=0)` will get the first timestep in your
 This is mostly used when conditionally applying a different expression in the first / final timestep of the timeseries.
 
 It can be used in the `where` string (e.g., `timesteps=get_val_at_index(timesteps=0)` to mask all other timesteps) and the `expression string` (via [slices](syntax.md#slices) - `storage[timesteps=$first_timestep]` and `first_timestep` expression being `get_val_at_index(timesteps=0)`).
+
+## map_dim
+
+Most of the time, your lookup arrays will be boolean, defining where a combination of dimensions is valid.
+In some cases, you may define a lookup array in which one dimension is given by its _values_.
+For instance, instead of a boolean array indexed over `(nodes, techs)`, you may have a string array indexed over `techs` that has `nodes` entries per `tech` as its values.
+
+For example, this is used internally to define the nodes that `transmission` techs connect.
+We can access a boolean `(nodes, techs)` array from the `link_from` `techs`-only array by calling `map_dim(nodes=link_from)`.
 
 ## roll
 

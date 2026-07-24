@@ -88,6 +88,16 @@ def expression_sum_next_n(expression, parsing_kwargs):
     return expression["sum_next_n"](**parsing_kwargs)
 
 
+@pytest.fixture(scope="class")
+def expression_map_dim(expression, parsing_kwargs):
+    return expression["map_dim"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def where_map_dim(where, parsing_kwargs):
+    return where["map_dim"](**parsing_kwargs)
+
+
 class TestAsArray:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data, dummy_model_math):
@@ -503,6 +513,19 @@ class TestAsArray:
         )
         assert result.equals(expected.transpose(*result.dims))
 
+    @pytest.mark.parametrize("fixture", ["where_map_dim", "expression_map_dim"])
+    def test_map_dim(self, request, fixture, dummy_model_data):
+        map_dim = request.getfixturevalue(fixture)
+        mapper = xr.DataArray(
+            ["foo", np.nan, "bar", "foo"], coords={"techs": dummy_model_data.techs}
+        )
+        expected = xr.DataArray(
+            [[True, False, False, True], [False, False, True, False]],
+            coords={"nodes": dummy_model_data.nodes, "techs": dummy_model_data.techs},
+        )
+        result = map_dim(dummy_model_data.nodes, mapper)
+        assert result.equals(expected.transpose(*result.dims))
+
 
 class TestAsMathString:
     @pytest.fixture(scope="class")
@@ -694,3 +717,9 @@ class TestAsMathString:
             expression_sum_next_n_string
             == r"\sum\limits_{\text{t}=\text{timestep}}^{\text{timestep}+4} (\textbf{foo}_\text{t,node})"
         )
+
+    @pytest.mark.parametrize("fixture", ["where_map_dim", "expression_map_dim"])
+    def test_map_dim(self, request, fixture):
+        map_dim = request.getfixturevalue(fixture)
+        map_dim_string = map_dim(r"\text{foo}", r"\textit{bar}_\text{techs}")
+        assert map_dim_string == r"[\text{foo} = \textit{bar}_\text{techs}]"

@@ -2,6 +2,17 @@
 
 ### User-facing changes
 
+|removed| `link_flow_cap` decision variable, for constraining the `flow_cap` either end of a transmission link to the same value.
+Instead, rather than via this auxiliary variable, the constraint is applied directly to each `flow_cap` entry.
+
+|changed| `link_from`/`link_to` and `one_way` transmission technology parameters persist in the `inputs` array and their handling is deferred to the math.
+
+|new| `map_dim` math helper function, to map from a string lookup array indexed over dimension(s) != `<dim>`, where entries are references to values of dimension `<dim>`, to a boolean array.
+|fixed| "Running in Python" docs to load models with `calliope.read_yaml` instead of the removed `calliope.Model(path)` instantiation form (#870).
+
+|fixed| Default values on masked array entries entering into math expression summation.
+In particular, fixes `sum(flow_cap, over=carriers)` on the constraint `source_availability_supply` erroneously returning `inf` (#862).
+
 |fixed| Time clustering method, to handle cases where floating point errors can lead to index mismatches and dropped clusters (#826).
 
 |new| user-defined math example introducing monthly peak charges (#727).
