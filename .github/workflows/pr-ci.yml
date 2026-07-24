@@ -51,9 +51,6 @@ jobs:
         environments: ${{ format('py3{0}', matrix.py3version) }}
         manifest-path: pyproject.toml
 
-    - name: Install jupyter kernel
-      run: pixi run -e ${{ format('py3{0}', matrix.py3version) }} install-kernel
-
     - name: run tests with coverage
       if: matrix.os == 'ubuntu-latest' && matrix.py3version == '12'
       run: pixi run -e ${{ format('py3{0}', matrix.py3version) }} test-cov

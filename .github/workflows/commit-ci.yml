@@ -33,9 +33,6 @@ jobs:
         environments: py314
         manifest-path: pyproject.toml
 
-    - name: Install jupyter kernel
-      run: pixi run -e py311 install-kernel
-
     - name: run tests without coverage and without time intensive tests
       if: github.ref != 'refs/heads/main'
       run: pixi run -e py314 test-ci

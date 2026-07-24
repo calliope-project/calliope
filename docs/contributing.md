@@ -35,14 +35,14 @@ To create a development environment for calliope, use [pixi](https://pixi.sh/lat
 1. Install pixi following the [official instructions](https://pixi.sh/latest/installation/).
 1. Download (a.k.a., clone) the calliope repository: `git clone git@github.com:calliope-project/calliope.git`
 1. Change into the `calliope` directory: `cd calliope`
-1. Install the interactive python shell kernel (necessary when testing our documentation locally): `pixi run install-kernel`
+1. Run a task in a `pixi` environment
 
 All together:
 
 ``` shell
 git clone git@github.com:calliope-project/calliope.git
 cd calliope
-pixi run install-dev
+pixi run ...
 ```
 
 If you plan to make changes to the code then please make regular use of the following tools to verify the codebase while you work:
