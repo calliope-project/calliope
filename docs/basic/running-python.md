@@ -43,7 +43,7 @@ There are two ways to override a base model when running in Python which are ana
     ```python
     model = calliope.read_yaml(
         "model.yaml",
-        override_dict={"config.solve.solver"": "gurobi"}
+        override_dict={"config.solve.solver": "gurobi"}
     )
     ```
 
