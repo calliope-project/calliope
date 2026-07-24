@@ -199,8 +199,8 @@ init-dev-env = { cmd = "python -m ipykernel install --user --name calliope && pr
 test = { cmd = "pytest --no-cov", default-environment = "dev", depends-on = ["init-dev-env"] }
 test-ci = { cmd = "pytest --no-cov -m 'not time_intensive' -m 'not needs_gurobi_license'", default-environment = "dev", depends-on = ["init-dev-env"]  }
 test-cov = { cmd = "pytest --cov", default-environment = "dev", depends-on = ["init-dev-env"] }
-docs-build = { cmd = "mkdocs build", default-environment = "docs", depends-on = ["init-dev-env"] }
-docs-serve = { cmd = "mkdocs serve", default-environment = "docs", depends-on = ["init-dev-env"] }
+docs-build = { cmd = "PLOTLY_RENDERER=notebook mkdocs build", default-environment = "docs", depends-on = ["init-dev-env"] }
+docs-serve = { cmd = "PLOTLY_RENDERER=notebook mkdocs serve", default-environment = "docs", depends-on = ["init-dev-env"] }
 
 [tool.pixi.environments]
 default = { solve-group = "py314" }
