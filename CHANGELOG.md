@@ -40,6 +40,8 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 
 |fixed| Documentation improvements: Clarify dimension subsetting documentation, always reference `calliope.read_yaml(path)` rather than `calliope.Model(path)` (#829)
 
+|changed| Community and help links now point to Zulip (https://calliope-modelblocks.zulipchat.com/) instead of GitHub Discussions.
+
 ### Internal changes
 
 |fixed| example user-defined math tests that were missing global expressions in the resulting LP files.
