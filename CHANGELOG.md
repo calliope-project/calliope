@@ -34,6 +34,10 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 
 |fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
 
+|fixed| Documentation now clarifies more explicitly that Calliope is unit-agnostic and that capacity and its costs are relative to carrier flow (#775).
+
+|fixed| Documentation explains better how dimensions and broadcasting work (#667).
+
 |fixed| Documentation improvements: Clarify dimension subsetting documentation, always reference `calliope.read_yaml(path)` rather than `calliope.Model(path)` (#829)
 
 ### Internal changes
