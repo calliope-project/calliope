@@ -46,7 +46,7 @@ config:
 Finally, when working in an interactive Python session, you can add math as a dictionary at model instantiation:
 
 ```python
-calliope.from_yaml(..., math_dict={"my_new_math_1": {...}, ...})
+calliope.read_yaml(..., math_dict={"my_new_math_1": {...}, ...})
 ```
 
 This will be applied after the pre-defined mode math and any extra math listed in `config.init.extra_math`.

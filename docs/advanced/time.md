@@ -58,7 +58,7 @@ We were previously using this in our internal clustering.
     import calliope
 
     # Load data at full time resolution
-    model = calliope.Model(...)
+    model = calliope.read_yaml(...)
     # Get all timeseries data from model, with timesteps on the rows and all other dimensions on the columns
     raw_data = (
         model.inputs[[

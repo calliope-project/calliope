@@ -3,15 +3,15 @@
 
 The configuration is grouped into three top-level items:
 
-* The `init` configuration items are used when you initialise your model (`calliope.Model(...)`).
+* The `init` configuration items are used when you initialise your model (`calliope.read_yaml(...)`).
 * The `build` configuration items are used when you build your optimisation problem (`calliope.Model.build(...)`).
 * The `solve` configuration items are used when you solve your optimisation problem (`calliope.Model.solve(...)`).
 
 At each of these stages you can override what you have put in your YAML file (or if not in your YAML file, [the default that Calliope uses][model-configuration-schema]).
-You do this by providing additional keyword arguments on calling `calliope.Model` or its methods. E.g.,:
+You do this by providing additional keyword arguments on calling `calliope.read_yaml` or the model's methods. E.g.,:
 
 ```python
-# Overriding `config.init` items in `calliope.Model`
+# Overriding `config.init` items in `calliope.read_yaml`
 model = calliope.read_yaml("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
 # Overriding `config.build` items in `calliope.Model.build`
 model.build(ensure_feasibility=True)

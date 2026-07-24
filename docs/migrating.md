@@ -146,7 +146,7 @@ This creates the [calliope.Model.backend][] object, which you can query and use 
 
 The model configuration is now split based on the stages of going from a model definition to solving your Calliope model:
 
-* All the options in `config.init` are applied when you create your model (`calliope.Model(...)`).
+* All the options in `config.init` are applied when you create your model (`calliope.read_yaml(...)`).
 * All the options in `config.build` are applied when you build your optimisation problem (`calliope.Model.build(...)`).
 * All the options in `config.solve` are applied when you solve your optimisation problem (`calliope.Model.solve(...)`).
 
@@ -169,7 +169,7 @@ This split means you can change configuration options on-the-fly if you are work
 
     ```python
     import calliope
-    model = calliope.Model(subset={"timesteps": ["2005-01", "2005-02"]})
+    model = calliope.read_yaml(subset={"timesteps": ["2005-01", "2005-02"]})
     model.build(mode="base")
     model.solve(solver="cbc")
     ```
