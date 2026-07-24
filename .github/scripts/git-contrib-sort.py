@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Sort ``.all-contributorsrc`` by contribution count, then first-contribution date.
 
 Contributors are ordered by:
@@ -6,32 +5,27 @@ Contributors are ordered by:
 1. number of contributions/emojis (``len(contributions)``), descending;
 2. ``firstContribution`` date (``YYYY-MM-DD``), ascending — earliest first;
 3. ``login`` (case-insensitive), as a deterministic final tiebreak.
-
-Every contributor entry must carry a ``firstContribution`` field. This is stored
-directly in ``.all-contributorsrc`` (the all-contributors tooling preserves the
-extra key), so no separate cache is needed. When the all-contributors bot adds a
-new contributor it lands without this field, so add it by hand (the date of their
-first commit/contribution) before re-running this script.
-
-This is the only script needed to maintain the ordering going forward; the
-``git-contrib-*.sh`` helpers were one-time tooling used to seed the dates.
-
-Usage (run from anywhere):
-    python .github/scripts/git-contrib-sort.py          # sort the file in place
-    python .github/scripts/git-contrib-sort.py --check  # verify only, non-zero if unsorted
-    python .github/scripts/git-contrib-sort.py --path X # operate on another config file
 """
-
-from __future__ import annotations
 
 import argparse
 import json
 import sys
+from datetime import date
 from pathlib import Path
 
-# This script lives in .github/scripts/; the config is at the repository root.
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / ".all-contributorsrc"
 DATE_FIELD = "firstContribution"
+
+
+def is_valid_date(value: object) -> bool:
+    """Check that a value is a valid date in YYYY-MM-DD format."""
+    valid = False
+    if isinstance(value, str):
+        try:
+            valid = date.fromisoformat(value).isoformat() == value
+        except ValueError:
+            pass
+    return valid
 
 
 def sort_key(contributor: dict) -> tuple[int, str, str]:
@@ -70,16 +64,17 @@ def main(argv: list[str] | None = None) -> int:
     data = json.loads(original)
     contributors = data["contributors"]
 
-    missing = [c["login"] for c in contributors if not c.get(DATE_FIELD)]
-    if missing:
+    invalid = [c["login"] for c in contributors if not is_valid_date(c.get(DATE_FIELD))]
+    if invalid:
         print(
-            f"error: contributors missing a '{DATE_FIELD}' (YYYY-MM-DD) date "
+            f"error: contributors missing a valid '{DATE_FIELD}' (YYYY-MM-DD) date "
             f"in {args.path.name}:",
             file=sys.stderr,
         )
-        for login in missing:
+        for login in invalid:
             print(
-                f"  - {login}: add a '{DATE_FIELD}' date to this entry", file=sys.stderr
+                f"  - {login}: set '{DATE_FIELD}' to a valid YYYY-MM-DD date",
+                file=sys.stderr,
             )
         return 1
 
