@@ -234,10 +234,17 @@ class ModelDataBuilder(ModelDTypeUpdater):
             data_vars="minimal",
             combine_attrs="no_conflicts",
             coords="minimal",
+            join="outer",
+            compat="no_conflicts",
         )
 
         node_ds = self._definition_to_ds(active_node_def, {"techs"})
-        ds = xr.merge([node_tech_ds, node_ds])
+        ds = xr.merge(
+            [node_tech_ds, node_ds],
+            join="outer",
+            compat="no_conflicts",
+            combine_attrs="no_conflicts",
+        )
 
         self._add_to_dataset(ds, "YAML definition")
 
@@ -709,7 +716,7 @@ class ModelDataCleaner(ModelDTypeUpdater):
                 distances[tech.item()] = self._get_distance(node1, node2)
             distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
             if self.config.distance_unit == "km":
-                distance_array /= 1000
+                distance_array = distance_array / 1000
         else:
             LOGGER.debug(
                 "Link distances will not be computed automatically since lat/lon coordinates are not defined."

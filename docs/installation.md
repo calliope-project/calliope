@@ -50,20 +50,50 @@ mamba activate calliope
 ## Choosing a solver
 
 You cannot solve a Calliope model until you have installed a solver.
-The easiest solver to install is [CBC](#cbc), which is included if you follow the [recommended installation instructions](#recommended-installation-method) above.
+The easiest solver to install is [CBC](#cbc), which is included if you follow the [recommended installation instructions](#as-a-user-with-conda-or-pixi-recommended) above.
 [CBC](#cbc) (open-source) or [Gurobi](#gurobi) (commercial) are recommended for large problems, and have been confirmed to work with Calliope.
 The following subsections provide additional detail on how to install a solver.
 This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.readthedocs.io/en/latest/reference/topical/appsi/appsi.solvers.html) can be used.
 
+!!! note
+
+    We currently know that the HiGHS solver _cannot_ be used with our Pyomo backend.
+    This is due to the HiGHS interface not being supported by the Pyomo kernel interface, which we use.
+
 ### CBC
 
 [CBC](https://github.com/coin-or/Cbc) is our recommended option if you want a free and open-source solver.
-If you do not have it in your working environment (i.e. there is nothing listed when you call `conda list cbc`) then it can be installed by running `mamba install conda-forge::coin-or-cbc`.
+If you do not have it in your working environment (i.e. there is nothing listed when you call `conda list cbc`/`pixi list cbc`) then it can be installed on all platforms:
+
+=== "`pixi`"
+
+    ```shell
+    pixi add conda-forge::coin-or-cbc
+    ```
+
+=== "`conda`"
+
+    ```shell
+    conda install conda-forge::coin-or-cbc
+    ```
 
 ### GLPK
 
 [GLPK](https://anaconda.org/conda-forge/glpk) is free and open-source, but can take too much time and/or too much memory on larger problems.
-`GLPK` can be installed from `conda-forge` on all platforms: `mamba install conda-forge::glpk`.
+`GLPK` can be installed from `conda-forge` on all platforms:
+
+=== "`pixi`"
+
+    ```shell
+    pixi add conda-forge::glpk
+    ```
+
+=== "`conda`"
+
+    ```shell
+    conda install conda-forge::glpk
+    ```
+
 Unlike [CBC](#cbc), it is possible to extract [shadow prices](./advanced/shadow_prices.md) from a model solved with GLPK, which is why you may with to use it instead of CBC.
 
 ### Gurobi

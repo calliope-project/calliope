@@ -174,6 +174,7 @@ mkdocstrings-python = ">=1.7"
 plotly = ">=5"
 
 [tool.pixi.feature.dev.dependencies]
+identify = ">=2.5.24"
 mypy = ">=1.13.0"
 pandas-stubs = "*"
 pre-commit = ">=3"
@@ -181,6 +182,7 @@ pytest = ">=8"
 pytest-cov = ">=4"
 pytest-order = ">=1"
 pytest-xdist = ">=3"
+platformdirs = ">=4.11.0"
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"

@@ -52,7 +52,8 @@ The checks include:
   1. check no large files have been staged,
   1. lint python files for major errors,
   1. format python files to conform with the [PEP8 standard](https://peps.python.org/pep-0008/).
-- `pytest` - run the unit test suite and check test coverage.
+- `pytest` - run `pixi run test` to run the full test suite.
+  Run `pixi run test-cov` to also check test coverage.
 
 !!! note
     If you already have an environment called `calliope` on your system (e.g., for a stable installation of the package), you will need to choose a different environment name, e.g. `calliope-dev`.
@@ -106,20 +107,17 @@ If tests are failing, you can debug them by using the pytest arguments ``-x`` (s
 The following options allow you to strip down the test suite to the bare essentials:
 
 1. The test suite includes unit tests and integration tests.
-The integration tests can be slow, so if you want to avoid them during development, you should run `pytest -m "not time_intensive"` to ignore those tests flagged as `time_intensive`.
-1. You can avoid tracking code coverage (which can be slow), by adding the `--no-cov` argument: `pytest --no-cov`.
+   The integration tests can be slow, so if you want to avoid them during development, you should run:
 
-All together:
+   ```shell
+   pixi run test -m "not time_intensive"
+   ```
 
-``` shell
-pytest -m "not time_intensive" --no-cov
-```
+2. If you are developing your own tests, you can focus on those with the `::` syntax:
 
-If you are developing your own tests, you can focus on those with the `::` syntax:
-
-``` shell
-pytest tests/test_my_tests.py::TestMyTestClass::test_my_test_function
-```
+   ``` shell
+   pixi run test tests/test_my_tests.py::TestMyTestClass::test_my_test_function
+   ```
 
 ### Committing changes
 
@@ -195,7 +193,7 @@ We have chosen to use [`ruff`](https://docs.astral.sh/ruff/) for code formatting
 When run from the root directory of this repository, `pyproject.toml` should ensure that formatting and linting fixes are in line with our custom preferences (e.g., 88 character maximum line length).
 The philosophy behind using the `ruff` linter is that it's based on [`black`](https://black.readthedocs.io/en/stable/), an uncompromising formatter that ensures uniform style throughout the project.
 Since `black` is designed to minimise diffs, and make patches more human readable, this also makes code reviews more efficient.
-To make this a smooth experience, you should run `pre-commit install` after setting up your development environment, so that `ruff` makes all the necessary formatting fixes to your code each time you commit, and so that it also highlights any style issues in your code.
+To make this a smooth experience, you should run `pixi run pre-commit install` after setting up your development environment, so that `ruff` makes all the necessary formatting fixes to your code each time you commit, and so that it also highlights any style issues in your code.
 If you prefer, you can also set up your IDE to run `ruff` formatting whenever you save your files, and to have `ruff` highlight erroneous code directly as you type.
 Take a look at its documentation for more information on configuring this.
 

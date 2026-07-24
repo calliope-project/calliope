@@ -418,39 +418,6 @@ class TestResampling:
         ).all()
 
 
-class TestMissingTimeData:
-    """Test detection of missing timeseries data."""
-
-    def test_warn_missing_timeseries_data(self):
-        """Test warning when timeseries has gaps."""
-        import numpy as np
-        import xarray as xr
-
-        ds = xr.Dataset(
-            {"demand": (["timesteps", "nodes"], [[1, 2], [np.nan, 4], [5, 6]])},
-            coords={"timesteps": pd.date_range("2005-01-01", periods=3, freq="h")},
-        )
-
-        with pytest.warns(match="Possibly missing data on the timesteps dimension"):
-            time._check_missing_data(ds, "timesteps")
-
-    def test_no_warn_all_data_present(self):
-        """Test no warning when all data present."""
-        import xarray as xr
-
-        ds = xr.Dataset(
-            {"demand": (["timesteps", "nodes"], [[1, 2], [3, 4], [5, 6]])},
-            coords={"timesteps": pd.date_range("2005-01-01", periods=3, freq="h")},
-        )
-
-        # Should not raise warning - use context manager to verify
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            time._check_missing_data(ds, "timesteps")
-
-
 class TestDatetimeConversion:
     """Test datetime format conversion."""
 

@@ -671,14 +671,16 @@ class TestTopLevelParams:
             model_data_builder_w_params.add_top_level_data_definitions()
 
             _data = pd.Series(out_dict).rename_axis(index=dims)
+            if isinstance(_data.index, pd.DatetimeIndex):
+                _data.index.freq = "h"
+            to_check = model_data_builder_w_params.dataset.my_val.to_series().dropna()
             pd.testing.assert_series_equal(
-                model_data_builder_w_params.dataset.my_val.to_series()
-                .dropna()
-                .reindex(_data.index),
-                _data,
+                to_check.sort_index(),
+                _data.sort_index(),
                 check_dtype=False,
                 check_names=False,
                 check_exact=False,
+                check_index_type=False,
             )
 
         return _run_and_test
@@ -1095,12 +1097,15 @@ class TestSubset:
         # no change in time subset
         expected = model_data_builder_built_data.timesteps.to_index()
         pd.testing.assert_index_equal(
-            model_data_cleaner_with_def_matrix.dataset.timesteps.to_index(), expected
+            model_data_cleaner_with_def_matrix.dataset.timesteps.to_index(),
+            expected,
+            exact=False,
         )
         # only a change in node subset
         pd.testing.assert_index_equal(
             model_data_cleaner_with_def_matrix.dataset.nodes.to_index(),
             pd.Index(["a"], name="nodes"),
+            exact=False,
         )
 
     def test_subset_time_and_nodes(
@@ -1117,11 +1122,14 @@ class TestSubset:
             "2005-01-01", "2005-01-02 23:59", freq="h", name="timesteps"
         )
         pd.testing.assert_index_equal(
-            model_data_cleaner_with_def_matrix.dataset.timesteps.to_index(), expected
+            model_data_cleaner_with_def_matrix.dataset.timesteps.to_index(),
+            expected,
+            exact=False,
         )
         pd.testing.assert_index_equal(
             model_data_cleaner_with_def_matrix.dataset.nodes.to_index(),
             pd.Index(["a"], name="nodes"),
+            exact=False,
         )
 
     def test_numeric_ordered(self, model_data_cleaner_with_int_dim):

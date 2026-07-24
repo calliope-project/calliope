@@ -239,26 +239,6 @@ def check_time_subset(ts_index: pd.Index, time_subset: list[str]):
         )
 
 
-def _check_missing_data(ds: xr.Dataset, dim_name: str):
-    """Check if there are any parameters with timeseries data that doesn't cover the whole time period.
-
-    We assume this is _not_ intended (e.g. loading in one dataset with a shorter time length than expected).
-
-    Args:
-        ds (xr.Dataset): Dataset with timeseries dimension `dim_name` present.
-        dim_name (str): Name of the timeseries dimension.
-    """
-    datetime_ds = ds[[k for k, v in ds.data_vars.items() if dim_name in v.dims]]
-    is_missing = (
-        datetime_ds.notnull().any(dim_name) & ~datetime_ds.notnull().all(dim_name)
-    ).to_dataframe()
-    missing_data = is_missing[is_missing].stack()
-    if not missing_data.empty:
-        exceptions.warn(
-            f"Possibly missing data on the {dim_name} dimension for:\n{missing_data}"
-        )
-
-
 def _lookup_clusters(dataset: xr.Dataset, grouper: pd.Series) -> xr.Dataset:
     """Clustering lookup functionality.
 
