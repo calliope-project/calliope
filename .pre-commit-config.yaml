@@ -25,6 +25,7 @@ repos:
       - id: check-illegal-windows-names
       - id: check-added-large-files
         args: [--enforce-all --maxkb=100000]
+        exclude: "pixi.lock"
       - id: trailing-whitespace
         exclude: ".*.(svg|png|csv|lp)$"
       - id: end-of-file-fixer

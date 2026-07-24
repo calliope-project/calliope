@@ -70,7 +70,7 @@ max-doc-length = 200
 ignore-overlong-task-comments = true
 
 [tool.codespell]
-skip = 'tests/*.py,AUTHORS'
+skip = 'tests/*.py,AUTHORS,pixi.lock'
 count = ''
 quiet-level = 3
 ignore-words-list = "socio-economic"  # British english spelling that isn't covered by the inbuilt dictionary
