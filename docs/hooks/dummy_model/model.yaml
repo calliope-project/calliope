@@ -22,10 +22,6 @@ overrides:
       solve.spores.number: 2
     data_definitions:
       spores_slack: 0.1
-  operate:
-    config:
-      init.name: Operate mode
-      init.mode: operate
 
 config.init.name: base
 config.build.ensure_feasibility: true
