@@ -34,6 +34,8 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 
 |fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
 
+|changed| Community and help links now point to Zulip (https://calliope-modelblocks.zulipchat.com/) instead of GitHub Discussions.
+
 ### Internal changes
 
 |fixed| example user-defined math tests that were missing global expressions in the resulting LP files.

@@ -8,7 +8,7 @@ We believe these changes will make your life easier in the long run.
 Some might seem like steps back, as you have to write _more_ YAML for the same definition.
 However, the resulting definition should be easier to understand when you come back to it in the future, and the changes made to model definition have made the internal code much easier - leading to (hopefully) fewer bugs!
 
-Since v0.7 is in a pre-release phase, if there are changes that you don't agree with or bugs when you try implementing something, please [raise an issue](https://github.com/calliope-project/calliope/issues/new/choose) or [start/join a discussion thread](https://github.com/calliope-project/calliope/discussions) on our GitHub repository.
+Since v0.7 is in a pre-release phase, if there are changes that you don't agree with or bugs when you try implementing something, please [raise an issue](https://github.com/calliope-project/calliope/issues/new/choose) on our GitHub repository or [chat with us on Zulip](https://calliope-modelblocks.zulipchat.com/).
 
 ## Changes
 

@@ -20,7 +20,7 @@ __Want to submit an idea?__
 
 __Have a question or need help?__
 
-[:material-chat-question: Ask a question](https://github.com/calliope-project/calliope/discussions "Ask questions on our discussion board and get in touch with our community"){ .md-button }
+[:simple-zulip: Chat with us on Zulip](https://calliope-modelblocks.zulipchat.com/ "Chat with the Calliope community on Zulip and get help"){ .md-button }
 
 ## Developing Calliope
 

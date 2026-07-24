@@ -1,4 +1,4 @@
-[![GitHub Discussions](https://img.shields.io/github/discussions/calliope-project/calliope)](https://github.com/calliope-project/calliope/discussions)
+[![Zulip chat](https://img.shields.io/badge/chat-Zulip-blue?logo=zulip)](https://calliope-modelblocks.zulipchat.com/)
 [![Main branch build status](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml/badge.svg?branch=main)](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml)
 [![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?version=latest)](https://readthedocs.org/projects/calliope/builds/)
 [![Test coverage](https://codecov.io/gh/calliope-project/calliope/graph/badge.svg?token=UM542yaYrh)](https://codecov.io/gh/calliope-project/calliope)
