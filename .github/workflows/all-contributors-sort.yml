@@ -25,8 +25,8 @@ jobs:
             const marker = '<!-- all-contributors-date-reminder -->';
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
-            const { data: comments } = await github.rest.issues.listComments({
-              owner, repo, issue_number,
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number, per_page: 100,
             });
             if (comments.some((c) => c.body && c.body.includes(marker))) {
               return;
