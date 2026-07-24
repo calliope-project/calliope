@@ -9,7 +9,7 @@ build:
     - asdf install pixi latest
     - asdf global pixi latest
     install:
-    - pixi install -e docs --frozen
+    - pixi install -e docs
     build:
       html:
       - pixi run docs-build $READTHEDOCS_OUTPUT
