@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Documentation now clarifies more expicitly that Calliope is unit-agnostic and that capacity and its costs are relative to carrier flow (#775).
+
 |removed| `link_flow_cap` decision variable, for constraining the `flow_cap` either end of a transmission link to the same value.
 Instead, rather than via this auxiliary variable, the constraint is applied directly to each `flow_cap` entry.
 

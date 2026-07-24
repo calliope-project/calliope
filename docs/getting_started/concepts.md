@@ -122,10 +122,14 @@ Note that you can define your data directly in the YAML text files that make up 
 More on this will follow in the next "getting started" section, [Creating a model](creating.md).
 
 !!! note "Note on units"
-    Calliope does not ensure consistency of units across a model.
+    Calliope is unit-agnostic and does not ensure consistency of units across a model.
     It is the responsibility of the modeller to ensure that units are consistent.
     Our math definitions do specify a `unit` for variables and parameters, but we keep these at a generic level, for example `energy` for `flow_out` and `power` for `flow_cap`.
     These unit definitions are listed in the [math documentation][base-math] and there for you to double-check the consistency of your data.
+
+!!! warning "Capacity and its costs are measured on the carrier flow"
+    A technology's capacity (`flow_cap`, i.e. its nominal/nameplate capacity) and any cost defined per unit of capacity (e.g. `cost_flow_cap`, `cost_om_annual`) are measured relative to a technology's carrier flow.
+    For a generation technology (`supply`), the capacity limits the output flow, so an investment cost per capacity is effectively a cost per unit of output (e.g. EUR/kW of electricity produced).
 
 ### Model configuration
 

@@ -32,7 +32,7 @@ ccgt:
     index: monetary
     dims: costs
   cost_flow_cap:
-    data: 750  # USD per kW
+    data: 750  # USD per kW of output capacity
     index: monetary
     dims: costs
   cost_flow_in:
