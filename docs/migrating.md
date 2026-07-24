@@ -169,7 +169,7 @@ This split means you can change configuration options on-the-fly if you are work
 
     ```python
     import calliope
-    model = calliope.read_yaml(subset={"timesteps": ["2005-01", "2005-02"]})
+    model = calliope.read_yaml("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
     model.build(mode="base")
     model.solve(solver="cbc")
     ```
