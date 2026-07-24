@@ -129,7 +129,7 @@ More on this will follow in the next "getting started" section, [Creating a mode
 
 !!! warning "Capacity and its costs are measured on the carrier flow"
     A technology's capacity (`flow_cap`, i.e. its nominal/nameplate capacity) and any cost defined per unit of capacity (e.g. `cost_flow_cap`, `cost_om_annual`) are measured relative to a technology's carrier flow.
-    For a generation technology (`supply`), the capacity limits the output flow, so an investment cost per capacity is effectively a cost per unit of output (e.g. EUR/kW of electricity produced).
+    For a generation technology (`supply`), the capacity limits the output flow, so an investment cost per capacity is effectively a cost per unit of output (e.g. EUR/kW of electrical output capacity).
 
 ### Model configuration
 
@@ -152,7 +152,7 @@ Again, more on this will follow in the next "getting started" section, [Creating
 
 Once you start looking at Calliope model data from a successful model run, you will see `inputs` and `results`.
 
-The `inputs` correspond your input data and can either be **parameters** or **lookups**.
+The `inputs` correspond to your input data and can either be **parameters** or **lookups**.
 Lookups are simply non-numeric parameters, for example, a boolean (true/false) switch used to choose between two possible constraint formulations.
 Each parameter is only stored over the dimensions it was defined over, so the dimensions of a given array can vary with how you defined your data.
 See [dimensions and broadcasting](analysing.md#dimensions-and-broadcasting) for more explanation.

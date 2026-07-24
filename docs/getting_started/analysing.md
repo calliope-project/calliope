@@ -56,7 +56,7 @@ The cleanest target to broadcast over is `#!python model.inputs.definition_matri
 Broadcasting against it therefore only adds dimensions where a technology is actually defined:
 
 ```python
-# Give flow_cap_max a nodes dimension
+# Give flow_cap_max a nodes and carriers dimension
 model.inputs.flow_cap_max.broadcast_like(model.inputs.definition_matrix).where(
     model.inputs.definition_matrix
 )
@@ -72,7 +72,7 @@ model.inputs.flow_cap_max.broadcast_like(model.inputs.definition_matrix).where(
     ```yaml
     postprocessed:
       flow_cap_max_known_dims:
-        foreach: [nodes, techs, carriers] # `results_flow_cap_max_known_dims.csv` will be indexed over these dimensions
+        foreach: [nodes, techs, carriers]
         where: flow_cap_max
         equations:
           - expression: flow_cap_max
