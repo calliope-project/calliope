@@ -91,8 +91,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.check:
         print(
-            f"error: {args.path.name} is not sorted; run "
-            "`python git-contrib-sort.py` to fix.",
+            f"error: {args.path.name} is not sorted; run this script without --check to fix.",
             file=sys.stderr,
         )
         return 1
