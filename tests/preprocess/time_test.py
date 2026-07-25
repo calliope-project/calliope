@@ -62,7 +62,8 @@ class TestTimeFormat:
 
 class TestSubsetTime:
     @pytest.fixture(scope="class")
-    def ts_index(self):
+    @classmethod
+    def ts_index(cls):
         return pd.date_range("2005-01-01", "2005-01-05", freq="h")
 
     @pytest.mark.parametrize(
@@ -108,12 +109,14 @@ class TestSubsetTime:
 
 class TestClustering:
     @pytest.fixture(scope="class", params=["datetime", "string"])
-    def cluster_dtype(self, request):
+    @classmethod
+    def cluster_dtype(cls, request):
         """The method should be able to handle datetime and string lookup data"""
         return request.param
 
     @pytest.fixture(scope="class")
-    def dummy_model_to_cluster(self, dummy_int, cluster_dtype):
+    @classmethod
+    def dummy_model_to_cluster(cls, dummy_int, cluster_dtype):
         """Create a dummy model with a parameter to cluster 3 years of data into 5 representative days."""
         ts = pd.date_range(
             "2025-01-01", "2028-01-01", freq="h", inclusive="left", name="timesteps"
@@ -139,7 +142,8 @@ class TestClustering:
         return ds
 
     @pytest.fixture(scope="class")
-    def dummy_clustered_model(self, dummy_model_to_cluster):
+    @classmethod
+    def dummy_clustered_model(cls, dummy_model_to_cluster):
         return time.cluster(
             dummy_model_to_cluster,
             clustering_param="clustering_param",
@@ -201,7 +205,8 @@ class TestClustering:
     @pytest.fixture(
         scope="class", params=["cluster_days", "cluster_days_diff_dateformat"]
     )
-    def clustered_model(self, request):
+    @classmethod
+    def clustered_model(cls, request):
         cluster_init = {
             "subset": {"timesteps": ["2005-01-01", "2005-01-04"]},
             "time_cluster": request.param,

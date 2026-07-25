@@ -69,8 +69,9 @@ class TestNewBackend:
     LOGGER = logging.getLogger("calliope.backend.backend_model")
 
     @pytest.fixture(scope="class")
+    @classmethod
     def simple_supply_updated_cost_flow_cap(
-        self, simple_supply: calliope.Model, dummy_int: int
+        cls, simple_supply: calliope.Model, dummy_int: int
     ) -> calliope.Model:
         simple_supply.backend.verbose_strings()
         simple_supply.backend.update_input("cost_flow_cap", dummy_int)
@@ -429,7 +430,8 @@ class TestNewBackend:
 
 class TestVerboseStrings:
     @pytest.fixture(scope="class")
-    def simple_supply_longnames(self):
+    @classmethod
+    def simple_supply_longnames(cls):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build()
         m.backend.verbose_strings()
@@ -540,7 +542,8 @@ class TestVerboseStrings:
 
 
 class TestPiecewiseConstraints:
-    def gen_params(self, data, index=[0, 1, 2], dim="breakpoints"):
+    @staticmethod
+    def gen_params(data, index=[0, 1, 2], dim="breakpoints"):
         return {
             "data_definitions": {
                 "piecewise_x": {"data": data, "index": index, "dims": dim},
@@ -553,7 +556,8 @@ class TestPiecewiseConstraints:
         }
 
     @pytest.fixture(scope="class")
-    def working_math(self):
+    @classmethod
+    def working_math(cls):
         return {
             "foreach": ["nodes", "techs", "carriers"],
             "where": "[test_supply_elec] in techs AND piecewise_x AND piecewise_y",
@@ -565,7 +569,8 @@ class TestPiecewiseConstraints:
         }
 
     @pytest.fixture(scope="class")
-    def add_math(self):
+    @classmethod
+    def add_math(cls):
         return {
             "parameters": {"piecewise_x": {}, "piecewise_y": {}},
             "dimensions": {
@@ -574,19 +579,23 @@ class TestPiecewiseConstraints:
         }
 
     @pytest.fixture(scope="class")
-    def working_params(self):
-        return self.gen_params([0, 5, 10])
+    @classmethod
+    def working_params(cls):
+        return cls.gen_params([0, 5, 10])
 
     @pytest.fixture(scope="class")
-    def length_mismatch_params(self):
-        return self.gen_params([0, 10], [0, 1])
+    @classmethod
+    def length_mismatch_params(cls):
+        return cls.gen_params([0, 10], [0, 1])
 
     @pytest.fixture(scope="class")
-    def not_reaching_var_bound_with_breakpoint_params(self):
-        return self.gen_params([0, 5, 8])
+    @classmethod
+    def not_reaching_var_bound_with_breakpoint_params(cls):
+        return cls.gen_params([0, 5, 8])
 
     @pytest.fixture(scope="class")
-    def working_model(self, working_params, working_math, add_math):
+    @classmethod
+    def working_model(cls, working_params, working_math, add_math):
         m = build_model(
             working_params,
             "simple_supply,two_hours,investment_costs",

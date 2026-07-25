@@ -1194,7 +1194,8 @@ class TestDataTableBuilding:
             ],
         ],
     )
-    def diff_dim_tables(self, request, minimal_test_model_path, config, math):
+    @classmethod
+    def diff_dim_tables(cls, request, minimal_test_model_path, config, math):
         """
         Create a ModelDataBuilder with data tables that have parameters defined over different dimensions,
         to test that loading works correctly regardless of the order in which they are defined.
