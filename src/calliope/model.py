@@ -552,7 +552,9 @@ class Model(ModelStructure):
             iteration_results.coords["timesteps"] = new_ts
 
         results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
-        results = xr.concat(results_list, dim="timesteps", combine_attrs="drop")
+        results = xr.concat(
+            results_list, dim="timesteps", data_vars="all", combine_attrs="drop"
+        )
         results.attrs["termination_condition"] = ",".join(
             set(
                 result.attrs["termination_condition"]

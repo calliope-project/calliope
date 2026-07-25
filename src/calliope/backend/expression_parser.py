@@ -402,7 +402,16 @@ class EvalComparisonOp(EvalArrayOrMath):
                 op = np.less_equal
             case ">=":
                 op = np.greater_equal
-        constraint = op(lhs_where, rhs_where, where=where.values, dtype=np.object_)
+        broadcast_where, lhs_where, rhs_where = xr.broadcast(
+            where, lhs_where, rhs_where
+        )
+        constraint = op(
+            lhs_where,
+            rhs_where,
+            where=broadcast_where.values,
+            out=(np.empty(broadcast_where.shape, dtype=object),),
+            dtype=np.object_,
+        )
         return xr.DataArray(constraint)
 
 

@@ -120,7 +120,7 @@ class TestClustering:
         )
         da = pd.Series(dummy_int, index=ts).to_xarray()
         cluster_ts = pd.date_range(
-            "2025-01-01", "2028-01-01", freq="1d", inclusive="left", name="datesteps"
+            "2025-01-01", "2028-01-01", freq="1D", inclusive="left", name="datesteps"
         )
         if cluster_dtype == "string":
             cluster_ts = cluster_ts.strftime("%Y-%m-%d")

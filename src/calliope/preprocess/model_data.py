@@ -363,7 +363,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
                 )
                 input_data_das.append(self._input_data_to_array(name, validated_data))
             input_data_ds = xr.merge(
-                [input_data_ds, xr.combine_by_coords(input_data_das)],
+                [input_data_ds, xr.combine_by_coords(input_data_das, join="outer")],
                 join="outer",
                 compat="no_conflicts",
             )
