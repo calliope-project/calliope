@@ -1,3 +1,0 @@
-# Deprecated: development dependencies are now managed in pyproject.toml.
-# Dev feature dependencies are defined under [tool.pixi.feature.dev.*].
-# Use `pixi install -e dev` to provision local development dependencies.

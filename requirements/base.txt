@@ -1,3 +1,0 @@
-# Deprecated: dependencies are now defined in pyproject.toml.
-# Runtime Python dependencies: [project.dependencies]
-# Local/CI development environments: [tool.pixi.*]
