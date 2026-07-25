@@ -192,10 +192,10 @@ python = "3.13.*"
 python = "3.14.*"
 
 [tool.pixi.tasks]
-init-dev-env = { cmd = "pre-commit install", default-environment = "dev" }
-test = { cmd = "pytest --no-cov", default-environment = "dev", depends-on = ["init-dev-env"] }
-test-ci = { cmd = "pytest --no-cov -m 'not time_intensive and not needs_gurobi_license'", default-environment = "dev", depends-on = ["init-dev-env"] }
-test-cov = { cmd = "pytest --cov", default-environment = "dev", depends-on = ["init-dev-env"] }
+pre-commit-install = { cmd = "pre-commit install", default-environment = "dev" }
+test = { cmd = "pytest --no-cov", default-environment = "dev", depends-on = ["pre-commit-install"] }
+test-ci = { cmd = "pytest --no-cov -m 'not time_intensive and not needs_gurobi_license'", default-environment = "dev", depends-on = ["pre-commit-install"] }
+test-cov = { cmd = "pytest --cov", default-environment = "dev", depends-on = ["pre-commit-install"] }
 docs-build = { cmd = "PLOTLY_RENDERER=notebook mkdocs build", default-environment = "docs" }
 docs-serve = { cmd = "PLOTLY_RENDERER=notebook mkdocs serve", default-environment = "docs" }
 
