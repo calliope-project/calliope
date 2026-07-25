@@ -12,6 +12,6 @@ build:
     - pixi install -e docs
     build:
       html:
-      - pixi run docs-build -d $READTHEDOCS_OUTPUT
+      - pixi run docs-build -d $READTHEDOCS_OUTPUT/html
 mkdocs:
   configuration: mkdocs.yml
