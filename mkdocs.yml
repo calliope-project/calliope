@@ -12,8 +12,8 @@ hooks:
   - docs/hooks/add_notebooks.py
   - docs/hooks/clean_search.py
 extra:
-  min_python_version: "3.10"
-  max_python_version: "3.12"
+  min_python_version: "3.12"
+  max_python_version: "3.14"
   calliope_version: !!python/name:calliope._version.__version__
 theme:
   font:

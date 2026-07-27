@@ -16,18 +16,21 @@ Running Calliope requires four things:
 
 We recommend two installation paths depending on your use-case:
 
-1. **As a user with `conda` or `pixi` (recommended)**: use conda or [pixi](https://pixi.sh/latest/).
-   This is the recommended option when you want Calliope plus solver and binary dependencies managed together.
-1. **As a user with `uv` or `pip`**: use pip or [`uv`](https://docs.astral.sh/uv/) for fast Python package installation.
+1. **`conda` or `pixi` (recommended)**: use [conda](https://docs.conda.io/projects/conda/en/latest) or [pixi](https://pixi.sh/latest/) to ensure you have all necessary solver and binary dependencies.
+1. **`uv` or `pip`**: use pip or [`uv`](https://docs.astral.sh/uv/) for fast Python package installation.
    You will need to ensure you have all non-Python libraries installed and available if taking this approach.
 
-### As a User with `conda` or `pixi` (recommended)
+If you are interested in developing Calliope, see our [dedicate page](./contributing.md) for specific installation instructions.
+
+### `conda` or `pixi` (recommended)
 
 === "`pixi`"
     Install `pixi` by following the [official installation instructions](https://pixi.sh/latest/installation/).
     Then add `calliope` to your project workspace:
 
     ```shell
+    cd <my-project-directory>
+    pixi init
     pixi add conda-forge::calliope
     ```
 
@@ -46,9 +49,7 @@ We recommend two installation paths depending on your use-case:
     conda create -n calliope conda-forge::calliope
     ```
 
-To run commands in the environment, use `pixi run -e dev ...` (or `pixi shell -e dev`).
-
-### As a user with `uv` or `pip`
+### `uv` or `pip`
 
 If you only need to install Calliope from PyPI, use:
 
@@ -121,11 +122,8 @@ Unlike [CBC](#cbc), it is possible to extract [shadow prices](./advanced/shadow_
 [Gurobi](https://www.gurobi.com/) is commercial but significantly faster than CBC and GLPK, which is relevant for larger problems.
 It needs a license to work, which [can be obtained for free for academic use](https://www.gurobi.com/academia/academic-program-and-licenses/).
 
-=== "`pixi`"
-
-    
-
-After installing, log on to the [Gurobi website](https://www.gurobi.com/) and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the `grbgetkey` command).
+The Gurobi solver interface can be installed via conda (`mamba install gurobi::gurobi`).
+This also gives you access to the `grbgetkey` command in your command line, which you will need to activate your license for use locally.
 
 !!! note
     If using the Gurobi solver, you can also leverage the reduced time and memory consumption of our [Gurobi optimisation problem backend](advanced/backend_choice.md) - this circumvents Pyomo entirely.
