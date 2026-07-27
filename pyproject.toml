@@ -93,7 +93,7 @@ description = "A multi-scale energy systems modelling framework."
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = ["energy systems", "optimisation", "mathematical programming"]
-license = {"text" = "Apache 2.0"}
+license = "Apache-2.0"
 license-files = ["LICENSE", "CITATION"]
 classifiers = [
   "Intended Audience :: Science/Research",
@@ -147,7 +147,6 @@ documentation = "https://calliope.readthedocs.io"
 changelog = "https://github.com/calliope-project/calliope/changelog.rst"
 
 [tool.pixi.workspace]
-name = "calliope"
 channels = ["conda-forge", "gurobi"]
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 preview = ["pixi-build"]

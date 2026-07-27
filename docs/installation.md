@@ -20,7 +20,6 @@ We recommend two installation paths depending on your use-case:
    This is the recommended option when you want Calliope plus solver and binary dependencies managed together.
 1. **As a user with `uv` or `pip`**: use pip or [`uv`](https://docs.astral.sh/uv/) for fast Python package installation.
    You will need to ensure you have all non-Python libraries installed and available if taking this approach.
-1. **Local development**: use [pixi](https://pixi.sh/latest/).
 
 ### As a User with `conda` or `pixi` (recommended)
 
@@ -78,7 +77,7 @@ This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.read
 
 !!! note
 
-    We currently know that the HiGHS solver _cannot_ be used with our Pyomo backend.
+    The HiGHS solver _is not supported_ by our Pyomo backend.
     This is due to the HiGHS interface not being supported by the Pyomo kernel interface, which we use.
 
 ### CBC
@@ -122,7 +121,9 @@ Unlike [CBC](#cbc), it is possible to extract [shadow prices](./advanced/shadow_
 [Gurobi](https://www.gurobi.com/) is commercial but significantly faster than CBC and GLPK, which is relevant for larger problems.
 It needs a license to work, which [can be obtained for free for academic use](https://www.gurobi.com/academia/academic-program-and-licenses/).
 
-The Gurobi solver interface can be installed via conda (`mamba install gurobi::gurobi`).
+=== "`pixi`"
+
+    
 
 After installing, log on to the [Gurobi website](https://www.gurobi.com/) and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the `grbgetkey` command).
 
