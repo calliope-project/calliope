@@ -47,7 +47,7 @@ pixi run ...
 
 If you plan to make changes to the code then please make regular use of the following tools to verify the codebase while you work:
 
-- `pre-commit`: run `pixi run pre-commit` in your command line to load and run inbuilt checks.
+- `pre-commit`: run `pixi run -e dev pre-commit` in your command line to load and run inbuilt checks.
 The checks include:
   1. check no large files have been staged,
   1. lint python files for major errors,
