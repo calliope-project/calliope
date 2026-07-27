@@ -392,9 +392,6 @@ class EvalComparisonOp(EvalArrayOrMath):
                 raise self.error_msg(
                     f"The {side}-hand side of the equation is indexed over dimensions not present in `foreach`: {extra_dims}"
                 )
-        lhs_where = self._apply_where_array(lhs)
-        rhs_where = self._apply_where_array(rhs)
-
         match self.op:
             case "==":
                 op = np.equal
@@ -402,9 +399,7 @@ class EvalComparisonOp(EvalArrayOrMath):
                 op = np.less_equal
             case ">=":
                 op = np.greater_equal
-        broadcast_where, lhs_where, rhs_where = xr.broadcast(
-            where, lhs_where, rhs_where
-        )
+        broadcast_where, lhs_where, rhs_where = xr.broadcast(where, lhs, rhs)
         constraint = op(
             lhs_where,
             rhs_where,
