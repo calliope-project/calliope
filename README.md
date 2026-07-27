@@ -37,7 +37,8 @@ Model results can be explored interactively with [Calligraph](https://calligraph
 
 ## Quick start
 
-Calliope can run on Windows, macOS and Linux. It can be installed using `pixi` (`pixi add calliope`), `conda` (`conda install calliope`), or `uv` (`uv pip install calliope`). For local development, use pixi as described in the documentation.
+Calliope can run on Windows, macOS and Linux. It can be installed using `pixi` (`pixi add calliope`), `conda` (`conda install calliope`), or `uv` (`uv pip install calliope`).
+For local development, use pixi as described in the documentation.
 
 See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html).
 
