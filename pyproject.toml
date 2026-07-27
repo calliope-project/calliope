@@ -192,7 +192,7 @@ python = "3.13.*"
 python = "3.14.*"
 
 [tool.pixi.tasks]
-pre-commit-install = { cmd = "pre-commit install", default-environment = "dev" }
+pre-commit-install = { cmd = "pre-commit install > /dev/null", default-environment = "dev" }
 test = { cmd = "pytest --no-cov", default-environment = "dev", depends-on = ["pre-commit-install"] }
 test-ci = { cmd = "pytest --no-cov -m 'not time_intensive and not needs_gurobi_license'", default-environment = "dev", depends-on = ["pre-commit-install"] }
 test-cov = { cmd = "pytest --cov", default-environment = "dev", depends-on = ["pre-commit-install"] }

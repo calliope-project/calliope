@@ -191,7 +191,7 @@ We have chosen to use [`ruff`](https://docs.astral.sh/ruff/) for code formatting
 When run from the root directory of this repository, `pyproject.toml` should ensure that formatting and linting fixes are in line with our custom preferences (e.g., 88 character maximum line length).
 The philosophy behind using the `ruff` linter is that it's based on [`black`](https://black.readthedocs.io/en/stable/), an uncompromising formatter that ensures uniform style throughout the project.
 Since `black` is designed to minimise diffs, and make patches more human readable, this also makes code reviews more efficient.
-To make this a smooth experience, you should run `pixi run pre-commit-install` after setting up your development environment, so that `ruff` makes all the necessary formatting fixes to your code each time you commit, and so that it also highlights any style issues in your code.
+To make this a smooth experience, you should run `pixi run pre-commit install` after setting up your development environment, so that `ruff` makes all the necessary formatting fixes to your code each time you commit, and so that it also highlights any style issues in your code.
 If you prefer, you can also set up your IDE to run `ruff` formatting whenever you save your files, and to have `ruff` highlight erroneous code directly as you type.
 Take a look at its documentation for more information on configuring this.
 
