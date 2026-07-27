@@ -103,7 +103,7 @@ ccgt:
     index: monetary
     dims: costs
   cost_flow_cap:
-    data: 750  # USD per kW
+    data: 750  # USD per kW of output capacity
     index: monetary
     dims: costs
   cost_flow_in:
@@ -200,7 +200,7 @@ data_tables:
 
 More detail on how to use this powerful feature and how to structure your CSV files is in the [data tables documentation](../basic/data_tables.md).
 
-The [examples and tutorials section](../examples/overview.md) is also particularly useful to see in small example models how this feature works.
+The [examples and tutorials section](../examples/index.md) is also particularly useful to see in small example models how this feature works.
 
 ## Data definitions
 

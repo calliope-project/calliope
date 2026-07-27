@@ -4,7 +4,7 @@ This page explains the basic concepts and ideas behind Calliope.
 We then move on to describing how to [create](creating.md), [run](running.md), and [analyse](analysing.md) a Calliope model.
 
 !!! note
-    The [examples and tutorials section](../examples/overview.md) contains more hands-on examples of how to build and work with Calliope models.
+    The [examples and tutorials section](../examples/index.md) contains more hands-on examples of how to build and work with Calliope models.
     We still recommend that you first read the section you are currently looking at - "Getting started" - before going to the examples and tutorials.
 
 ## What Calliope does
@@ -122,10 +122,14 @@ Note that you can define your data directly in the YAML text files that make up 
 More on this will follow in the next "getting started" section, [Creating a model](creating.md).
 
 !!! note "Note on units"
-    Calliope does not ensure consistency of units across a model.
+    Calliope is unit-agnostic and does not ensure consistency of units across a model.
     It is the responsibility of the modeller to ensure that units are consistent.
     Our math definitions do specify a `unit` for variables and parameters, but we keep these at a generic level, for example `energy` for `flow_out` and `power` for `flow_cap`.
     These unit definitions are listed in the [math documentation][base-math] and there for you to double-check the consistency of your data.
+
+!!! warning "Capacity and its costs are measured on the carrier flow"
+    A technology's capacity (`flow_cap`, i.e. its nominal/nameplate capacity) and any cost defined per unit of capacity (e.g. `cost_flow_cap`, `cost_om_annual`) are measured relative to a technology's carrier flow.
+    For a generation technology (`supply`), the capacity limits the output flow, so an investment cost per capacity is effectively a cost per unit of output (e.g. EUR/kW of electrical output capacity).
 
 ### Model configuration
 
@@ -148,8 +152,10 @@ Again, more on this will follow in the next "getting started" section, [Creating
 
 Once you start looking at Calliope model data from a successful model run, you will see `inputs` and `results`.
 
-The `inputs` correspond your input data and can either be **parameters** or **lookups**.
+The `inputs` correspond to your input data and can either be **parameters** or **lookups**.
 Lookups are simply non-numeric parameters, for example, a boolean (true/false) switch used to choose between two possible constraint formulations.
+Each parameter is only stored over the dimensions it was defined over, so the dimensions of a given array can vary with how you defined your data.
+See [dimensions and broadcasting](analysing.md#dimensions-and-broadcasting) for more explanation.
 
 The `results` correspond to variables, global expressions, or post-processed results.
 They can be one of three things:

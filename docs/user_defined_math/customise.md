@@ -3,7 +3,7 @@
 Once you understand the [math components](components.md) and the [formulation syntax](syntax.md), you'll be ready to introduce your own math to a model.
 
 !!! info
-    You can find examples of additional math that we have put together in our [math example gallery](../examples/overview.md).
+    You can find examples of additional math that we have put together in our [math example gallery](../examples/index.md).
 
 Whenever you introduce your own math, it can either be _added_ on top of our pre-defined math or _replace_ it entirely.
 
@@ -46,7 +46,7 @@ config:
 Finally, when working in an interactive Python session, you can add math as a dictionary at model instantiation:
 
 ```python
-calliope.from_yaml(..., math_dict={"my_new_math_1": {...}, ...})
+calliope.read_yaml(..., math_dict={"my_new_math_1": {...}, ...})
 ```
 
 This will be applied after the pre-defined mode math and any extra math listed in `config.init.extra_math`.
@@ -124,7 +124,7 @@ To write a LaTeX, reStructuredText, or Markdown file that includes only the math
 ```python
 from calliope.postprocess.math_documentation import MathDocumentation
 
-model = calliope.Model("path/to/model.yaml")
+model = calliope.read_yaml("path/to/model.yaml")
 model.build()
 
 math_documentation = MathDocumentation(model, include="valid")

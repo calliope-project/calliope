@@ -27,6 +27,8 @@ overrides:
           timesteps: "6h"
 
   time_clustering:
+    data_definitions:
+      cyclic_storage: false
     config:
       init:
         name: "National-scale example model with time clustering"

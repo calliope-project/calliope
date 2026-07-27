@@ -402,7 +402,6 @@ class TestGetters:
                 "balance_storage",
                 "flow_in_inc_eff",
                 "balance_conversion",
-                "link_flow_cap",
                 "balance_supply_no_storage",
                 "balance_supply_with_storage",
                 "balance_supply_min_use",

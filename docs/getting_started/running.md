@@ -7,7 +7,7 @@ There are essentially three ways to run a Calliope model:
 3. By generating and then executing scripts with the `#!shell calliope generate_runs` command-line tool, which is primarily designed for running many scenarios on a high-performance cluster (see the [Generating scripts](../advanced/scripts.md) section in the advanced docs).
 
 !!! note
-    Refer to the [examples and tutorials section](../examples/overview.md) for a more practical look at how to run a Calliope model.
+    Refer to the [examples and tutorials section](../examples/index.md) for a more practical look at how to run a Calliope model.
 
 ## Easiest to start: using the command line interface
 
@@ -24,6 +24,11 @@ $ calliope run model.yaml --save_csv=results_directory
 ```
 
 For more details, including how to apply a scenario or override, see the [documentation on running in the command line](../basic/running-cli.md).
+
+!!! tip
+    Once you have saved your results (e.g. to `results.nc`), head to
+    [Analysing a model](analysing.md) — the quickest way to explore them is with
+    [Calligraph](https://calligraph.readthedocs.io/), our interactive visualisation tool.
 
 ## Improving solution times
 

@@ -16,7 +16,7 @@ import xarray as xr
 from calliope.backend import expression_parser
 from calliope.util import tools
 
-pp.ParserElement.enablePackrat()
+pp.ParserElement.enable_packrat()
 BOOLEANTYPE = np.bool_ | np.typing.NDArray[np.bool_]
 
 
@@ -60,10 +60,6 @@ class EvalAndOr(
             case "or":
                 val = operator.or_(val, evaluated_operand)
         return val
-
-    def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
-        """Override func from parent class to effectively do nothing."""
-        return evaluated
 
     def as_math_string(self) -> str:  # noqa: D102, override
         return super().as_math_string()
@@ -439,7 +435,7 @@ def comparison_parser(
         pp.ParserElement:
             Parser which will return a bool/boolean array as a result of the comparison.
     """
-    comparison_operators = pp.oneOf(["<", ">", "==", ">=", "<="])
+    comparison_operators = pp.one_of(["<", ">", "==", ">=", "<="])
     comparison_expression = (
         pp.MatchFirst(lhs) + comparison_operators + pp.MatchFirst(rhs)
     )
@@ -460,7 +456,7 @@ def subset_parser(
     Returns:
         pp.ParserElement: subset parser.
     """
-    subset = pp.Group(pp.delimited_list(pp.MatchFirst(subset_items)))
+    subset = pp.Group(pp.DelimitedList(pp.MatchFirst(subset_items)))
     subset_expression = (
         pp.Suppress("[")
         + subset
@@ -488,7 +484,7 @@ def where_parser(*args: pp.ParserElement) -> pp.ParserElement:
     notop = pp.Keyword("not", caseless=True)
     andorop = pp.Keyword("and", caseless=True) | pp.Keyword("or", caseless=True)
 
-    where_rules = pp.infixNotation(
+    where_rules = pp.infix_notation(
         pp.MatchFirst(args),
         [
             (notop, 1, pp.opAssoc.RIGHT, EvalNot),

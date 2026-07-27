@@ -64,10 +64,12 @@ class Init(CalliopeBaseModel):
 
     subset: Subsets = Subsets()
     """
-    Subset of timesteps as an two-element list giving the **inclusive** range.
-    For example, ["2005-01", "2005-04"] will create a time subset from "2005-01-01 00:00:00" to "2005-04-31 23:59:59".
+    Subset of dimensions as a two-element list giving the **inclusive** range. For example,
+    assuming hourly timestep data, `timesteps: ["2005-01", "2005-04"]` will create a time
+    subset starting at "2005-01-01 00:00" up to and including "2005-04-30 23:00".
 
-    Strings must be ISO8601-compatible, i.e. of the form `YYYY-mm-dd HH:MM:SS` (e.g, '2005-01 ', '2005-01-01', '2005-01-01 00:00', ...)
+    For date dimensions, strings must be ISO8601-compatible, i.e. of the form `YYYY-MM-DD HH:MM:SS`
+    (such as '2005-01', '2005-01-01', or '2005-01-01 00:00').
     """
 
     resample: Resamples = Resamples()

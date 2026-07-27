@@ -14,8 +14,8 @@ The data of all these components are stored as [xarray.DataArray][]s and you can
 For instance, [`#!python model.backend.parameters`][calliope.backend.backend_model.BackendModel.parameters] will provide you with an [xarray.Dataset][] of input parameters transformed into mutable objects that are used in the optimisation.
 In addition to the input data you provided, these arrays fill in missing data with default values if the parameter is one of those [predefined in Calliope] (see the `Parameters` section of our [pre-defined base math documentation][base-math]).
 
-1. Update a parameter value.
-If you are interested in updating a few values in the model, you can run [`#!python model.backend.update_parameter`][calliope.backend.backend_model.BackendModel.update_parameter].
+1. Update an input value.
+If you are interested in updating a few values in the model, you can run [`#!python model.backend.update_input`][calliope.backend.backend_model.BackendModel.update_input].
 For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run:
 
     ```python
@@ -27,7 +27,7 @@ This will not affect results at this stage, you'll need to rerun the backend (po
 
 1. Update decision variable bounds.
 Most of the time, decision variable bounds are actually input parameters (e.g., `flow_cap_max` for the upper bound of the `flow_cap` decision variable).
-Therefore, to update the bounds you will update the parameter with [`#!python model.backend.update_parameter`][calliope.backend.backend_model.BackendModel.update_parameter].
+Therefore, to update the bounds you will update the parameter with [`#!python model.backend.update_input`][calliope.backend.backend_model.BackendModel.update_input].
 If a fixed numeric value is instead used, e.g. in [math that you have additionally defined](../user_defined_math/index.md), you can update bounds using [`#!python model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds].
 For instance, to update `flow_out` lower bound to 70 for `battery` at `region2`:
 
@@ -39,7 +39,7 @@ For instance, to update `flow_out` lower bound to 70 for `battery` at `region2`:
 1. Fix a decision variable.
 If you have already run your optimisation once and you want to re-run it with some decisions fixed to their previous optimal values, you can use [`#!python model.backend.fix_variable`][calliope.backend.backend_model.BackendModel.fix_variable].
 This can be useful if you change an input parameter and wish to see its effect on a limited set of decisions.
-As with [`#!python model.backend.update_parameter`][calliope.backend.backend_model.BackendModel.update_parameter], you pass an [xarray.DataArray][] to the method, this time with binary values.
+As with [`#!python model.backend.update_input`][calliope.backend.backend_model.BackendModel.update_input], you pass an [xarray.DataArray][] to the method, this time with binary values.
 Where the value is `True` in the array, that variable will be fixed. E.g., to fix all `pv` area use:
 
     ```python

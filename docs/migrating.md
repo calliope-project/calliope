@@ -8,7 +8,7 @@ We believe these changes will make your life easier in the long run.
 Some might seem like steps back, as you have to write _more_ YAML for the same definition.
 However, the resulting definition should be easier to understand when you come back to it in the future, and the changes made to model definition have made the internal code much easier - leading to (hopefully) fewer bugs!
 
-Since v0.7 is in a pre-release phase, if there are changes that you don't agree with or bugs when you try implementing something, please [raise an issue](https://github.com/calliope-project/calliope/issues/new/choose) or [start/join a discussion thread](https://github.com/calliope-project/calliope/discussions) on our GitHub repository.
+Since v0.7 is in a pre-release phase, if there are changes that you don't agree with or bugs when you try implementing something, please [raise an issue](https://github.com/calliope-project/calliope/issues/new/choose) on our GitHub repository or [chat with us on Zulip](https://calliope-modelblocks.zulipchat.com/).
 
 ## Changes
 
@@ -146,7 +146,7 @@ This creates the [calliope.Model.backend][] object, which you can query and use 
 
 The model configuration is now split based on the stages of going from a model definition to solving your Calliope model:
 
-* All the options in `config.init` are applied when you create your model (`calliope.Model(...)`).
+* All the options in `config.init` are applied when you create your model (`calliope.read_yaml(...)`).
 * All the options in `config.build` are applied when you build your optimisation problem (`calliope.Model.build(...)`).
 * All the options in `config.solve` are applied when you solve your optimisation problem (`calliope.Model.solve(...)`).
 
@@ -169,7 +169,7 @@ This split means you can change configuration options on-the-fly if you are work
 
     ```python
     import calliope
-    model = calliope.Model(subset={"timesteps": ["2005-01", "2005-02"]})
+    model = calliope.read_yaml("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
     model.build(mode="base")
     model.solve(solver="cbc")
     ```
@@ -713,11 +713,11 @@ It is up to you to ensure the math formulation is set up to handle this change, 
 
 ### Plotting
 
-Visualisation has moved to a separate tool, [Calligraph](https://calligraph.readthedocs.io/).
+Visualisation has moved to a separate tool, [Calligraph](https://calligraph.readthedocs.io/) (see [Analysing a model](getting_started/analysing.md) for how to use it).
 We made this decision due to the wide variety of visualisations that we saw being created outside our plotting module.
 It has proven impossible to keep our plotting methods agile given the almost infinite tweaks that libraries like [matplotlib](https://matplotlib.org/) and [plotly](https://plotly.com/) allow.
 
-If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/overview.md).
+If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/index.md).
 
 ### Clustering
 

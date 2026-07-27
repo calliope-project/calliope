@@ -437,7 +437,7 @@ class TestVerboseStrings:
         return m
 
     def test_object_string_representation(self, simple_supply):
-        assert (
+        repr = (
             simple_supply.backend.variables.flow_out.sel(
                 nodes="a",
                 techs="test_supply_elec",
@@ -446,8 +446,9 @@ class TestVerboseStrings:
             )
             .item()
             .name
-            == "variables[flow_out][8]"
         )
+        assert repr == "variables[flow_out][4]"
+
         assert not simple_supply.backend.variables.flow_out.coords_in_name
 
     def test_new_build_get_constraint_as_vals_no_solve(self, simple_supply_longnames):

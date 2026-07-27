@@ -1,4 +1,4 @@
-[![GitHub Discussions](https://img.shields.io/github/discussions/calliope-project/calliope)](https://github.com/calliope-project/calliope/discussions)
+[![Zulip chat](https://img.shields.io/badge/chat-Zulip-blue?logo=zulip)](https://calliope-modelblocks.zulipchat.com/)
 [![Main branch build status](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml/badge.svg?branch=main)](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml)
 [![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?version=latest)](https://readthedocs.org/projects/calliope/builds/)
 [![Test coverage](https://codecov.io/gh/calliope-project/calliope/graph/badge.svg?token=UM542yaYrh)](https://codecov.io/gh/calliope-project/calliope)
@@ -33,7 +33,7 @@ Calliope is a framework to develop energy system models, with a focus on flexibi
 
 A Calliope model consists of a collection of text files (in YAML and CSV formats) that fully define a model, with details on technologies, locations, resource potentials, etc. Calliope takes these files, constructs an optimization problem, solves it, and reports back results. Results can be saved to CSV or NetCDF files for further processing, or analysed directly in Python through Python's extensive scientific data processing capabilities provided by libraries like [Pandas](http://pandas.pydata.org/) and [xarray](https://docs.xarray.dev/en/stable/).
 
-Calliope comes with several built-in analysis and visualisation tools. Having some knowledge of the Python programming language helps when running Calliope and using these tools, but is not a prerequisite.
+Model results can be explored interactively with [Calligraph](https://calligraph.readthedocs.io/), our companion visualisation tool. Having some knowledge of the Python programming language helps when running Calliope, but is not a prerequisite.
 
 ## Quick start
 
@@ -80,3 +80,46 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+## Contributors ✨
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/en/reference/emoji-key/)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/sjpfenninger"><img src="https://avatars.githubusercontent.com/u/141709?v=4?s=100" width="100px;" alt="Stefan Pfenninger-Lee"/><br /><sub><b>Stefan Pfenninger-Lee</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=sjpfenninger" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/commits?author=sjpfenninger" title="Documentation">📖</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3Asjpfenninger" title="Bug reports">🐛</a> <a href="#fundingFinding-sjpfenninger" title="Funding Finding">🔍</a> <a href="#projectManagement-sjpfenninger" title="Project Management">📆</a> <a href="#promotion-sjpfenninger" title="Promotion">📣</a> <a href="#maintenance-sjpfenninger" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/brynpickering"><img src="https://avatars.githubusercontent.com/u/17178478?v=4?s=100" width="100px;" alt="Bryn Pickering"/><br /><sub><b>Bryn Pickering</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=brynpickering" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/commits?author=brynpickering" title="Documentation">📖</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3Abrynpickering" title="Bug reports">🐛</a> <a href="#fundingFinding-brynpickering" title="Funding Finding">🔍</a> <a href="#projectManagement-brynpickering" title="Project Management">📆</a> <a href="#promotion-brynpickering" title="Promotion">📣</a> <a href="#maintenance-brynpickering" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://orcid.org/0000-0003-2288-6423"><img src="https://avatars.githubusercontent.com/u/72193617?v=4?s=100" width="100px;" alt="Ivan Ruiz Manuel"/><br /><sub><b>Ivan Ruiz Manuel</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=irm-codebase" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/commits?author=irm-codebase" title="Documentation">📖</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3Airm-codebase" title="Bug reports">🐛</a> <a href="#promotion-irm-codebase" title="Promotion">📣</a> <a href="#maintenance-irm-codebase" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://cp.ethz.ch/people/person-detail.tim-troendle.html"><img src="https://avatars.githubusercontent.com/u/3090386?v=4?s=100" width="100px;" alt="Tim Tröndle"/><br /><sub><b>Tim Tröndle</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=timtroendle" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/commits?author=timtroendle" title="Documentation">📖</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3Atimtroendle" title="Bug reports">🐛</a> <a href="#promotion-timtroendle" title="Promotion">📣</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/FLomb"><img src="https://avatars.githubusercontent.com/u/26432077?v=4?s=100" width="100px;" alt="Francesco Lombardi"/><br /><sub><b>Francesco Lombardi</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=FLomb" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/commits?author=FLomb" title="Documentation">📖</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3AFLomb" title="Bug reports">🐛</a> <a href="#promotion-FLomb" title="Promotion">📣</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/jnnr"><img src="https://avatars.githubusercontent.com/u/32454596?v=4?s=100" width="100px;" alt="Jann Launer"/><br /><sub><b>Jann Launer</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=jnnr" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3Ajnnr" title="Bug reports">🐛</a> <a href="https://github.com/calliope-project/calliope/commits?author=jnnr" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/FraSanvit"><img src="https://avatars.githubusercontent.com/u/68587472?v=4?s=100" width="100px;" alt="Francesco Sanvito"/><br /><sub><b>Francesco Sanvito</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=FraSanvit" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3AFraSanvit" title="Bug reports">🐛</a> <a href="#promotion-FraSanvit" title="Promotion">📣</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="http://www.strath.ac.uk/staff/hawkergraemedr/"><img src="https://avatars.githubusercontent.com/u/26121052?v=4?s=100" width="100px;" alt="Graeme Hawker"/><br /><sub><b>Graeme Hawker</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=GraemeHawker" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3AGraemeHawker" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://mammouth.ai/"><img src="https://avatars.githubusercontent.com/u/16239564?v=4?s=100" width="100px;" alt="Martial Garchery"/><br /><sub><b>Martial Garchery</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=mlgarchery" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3Amlgarchery" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/smorgenthaler"><img src="https://avatars.githubusercontent.com/u/41112077?v=4?s=100" width="100px;" alt="smorgenthaler"/><br /><sub><b>smorgenthaler</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=smorgenthaler" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3Asmorgenthaler" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://ahilbers.github.io/"><img src="https://avatars.githubusercontent.com/u/31656517?v=4?s=100" width="100px;" alt="Adriaan Hilbers"/><br /><sub><b>Adriaan Hilbers</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=ahilbers" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3Aahilbers" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/sstroemer"><img src="https://avatars.githubusercontent.com/u/8915976?v=4?s=100" width="100px;" alt="Stefan Strömer"/><br /><sub><b>Stefan Strömer</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=sstroemer" title="Code">💻</a> <a href="https://github.com/calliope-project/calliope/issues?q=author%3Asstroemer" title="Bug reports">🐛</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/katrinleinweber"><img src="https://avatars.githubusercontent.com/u/9948149?v=4?s=100" width="100px;" alt="Katrin Leinweber"/><br /><sub><b>Katrin Leinweber</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=katrinleinweber" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/brmanuel"><img src="https://avatars.githubusercontent.com/u/22857883?v=4?s=100" width="100px;" alt="brmanuel"/><br /><sub><b>brmanuel</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=brmanuel" title="Code">💻</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/suvayu"><img src="https://avatars.githubusercontent.com/u/229540?v=4?s=100" width="100px;" alt="Suvayu Ali"/><br /><sub><b>Suvayu Ali</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=suvayu" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/omahs"><img src="https://avatars.githubusercontent.com/u/73983677?v=4?s=100" width="100px;" alt="omahs"/><br /><sub><b>omahs</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=omahs" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/marijacveevska"><img src="https://avatars.githubusercontent.com/u/94995858?v=4?s=100" width="100px;" alt="Marija Cveevska"/><br /><sub><b>Marija Cveevska</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=marijacveevska" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://sayportfolio.vercel.app/"><img src="https://avatars.githubusercontent.com/u/240962040?v=4?s=100" width="100px;" alt="Sai Asish Y"/><br /><sub><b>Sai Asish Y</b></sub></a><br /><a href="https://github.com/calliope-project/calliope/commits?author=SAY-5" title="Documentation">📖</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!

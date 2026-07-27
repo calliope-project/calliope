@@ -12,7 +12,7 @@ from calliope.backend import parsing
 from calliope.exceptions import ModelError, print_warnings_and_raise_errors
 from calliope.io import read_rich_yaml
 from calliope.schemas.config_schema import Init
-from calliope.schemas.math_schema import CalliopeBuildMath
+from calliope.schemas.math_schema import CalliopeBuildMath, CalliopeInputMath
 from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ def get_math_priority(init_config: Init) -> list[str]:
 
 def build_math(
     priority: list[str],
-    math_dataset: dict,
+    math_dataset: CalliopeInputMath,
     overwrite: dict | None = None,
     validate: bool = True,
 ) -> CalliopeBuildMath:
@@ -73,7 +73,7 @@ def build_math(
 
     Args:
         priority (list[str]): name of the math to apply in order of priority (lower->upper).
-        math_dataset (dict): initialised math dataset.
+        math_dataset (CalliopeInputMath): initialised math dataset.
         overwrite (dict | None, optional): additional math to apply at the end. Defaults to None.
         validate (bool, optional): whether to validate the math strings. Defaults to True.
 
@@ -84,16 +84,15 @@ def build_math(
         AttrDict: constructed and validated math dataset.
     """
     LOGGER.info(f"Math build | building applied math with {priority}.")
-    math = AttrDict()
+    math_model = CalliopeBuildMath()
     for name in priority:
         try:
-            math.union(math_dataset[name], allow_override=True)
+            math_model = math_model.update(math_dataset[name])
         except KeyError:
             raise ModelError(f"Requested math '{name}' was not initialised.")
     if overwrite:
         LOGGER.info("Math build | appending additional math.")
-        math.union(overwrite, allow_override=True)
-    math_model = CalliopeBuildMath(**math)
+        math_model = math_model.update(overwrite)
     if validate:
         _validate_math_string_parsing(math_model)
     return math_model

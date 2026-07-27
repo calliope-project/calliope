@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from calliope import AttrDict, exceptions, io
+from calliope import exceptions, io
 from calliope.preprocess import (
     ModelDataBuilder,
     ModelDataCleaner,
@@ -14,17 +14,30 @@ from calliope.preprocess import (
     prepare_model_definition,
 )
 from calliope.schemas.data_table_schema import CalliopeDataTables
+from calliope.schemas.dimension_data_schema import (
+    CalliopeNodes,
+    CalliopeTechs,
+    IndexedData,
+)
 from calliope.util import DATETIME_DTYPE
 
 from ..common.util import build_test_model as build_model
 from ..common.util import check_error_or_warning
 
 
-@pytest.fixture(scope="class")
-def model_def(minimal_test_model_path):
+@pytest.fixture(
+    scope="class",
+    params=[
+        "",
+        ",link_data_table_base_tech",
+        ",link_data_table_from_to",
+        ",link_data_table_from_only",
+    ],
+)
+def model_def(request, minimal_test_model_path):
     model_def_override = prepare_model_definition(
         io.read_rich_yaml(minimal_test_model_path),
-        scenario="simple_supply,empty_tech_node",
+        scenario=f"simple_supply,empty_tech_node{request.param}",
         definition_path=minimal_test_model_path,
     )
     return model_def_override
@@ -73,17 +86,13 @@ def timeseries_da():
         ("2005-01-01 01:00", "bar"): [False, 20],
     }
     da = pd.Series(data).rename_axis(index=["timesteps", "foobaz"]).to_xarray()
-    da.coords["timesteps"] = da.coords["timesteps"].astype("M")
+    da.coords["timesteps"] = da.coords["timesteps"].astype("datetime64[ns]")
     return da
 
 
 @pytest.fixture
-def model_data_builder(model_def, config, math):
-    return ModelDataBuilder(
-        config.init,
-        AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
-        math,
-    )
+def model_data_builder(model_def, config, math, tables):
+    return ModelDataBuilder(config.init, model_def.definition, math, tables)
 
 
 @pytest.fixture
@@ -94,12 +103,7 @@ def model_data_builder_w_params(model_data_builder: ModelDataBuilder):
 
 @pytest.fixture(scope="class")
 def model_data_builder_built_data(config, model_def, math, tables):
-    builder = ModelDataBuilder(
-        config.init,
-        AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
-        math,
-        tables,
-    )
+    builder = ModelDataBuilder(config.init, model_def.definition, math, tables)
     builder.build()
     return builder.dataset
 
@@ -151,10 +155,13 @@ class TestModelDataBuilder:
             "flow_cap_max",
             "source_use_max",
             "flow_out_eff",
+            "sink_use_equals",
+            "link_from",
+            "link_to",
         }
 
     def test_get_relevant_node_refs_ts_data(self, model_data_builder: ModelDataBuilder):
-        techs_dict = AttrDict(
+        techs_def = CalliopeTechs.model_validate(
             {
                 "foo": {
                     "key3": {"data": None, "index": [["foo"]], "dims": ["foobar"]},
@@ -164,7 +171,7 @@ class TestModelDataBuilder:
                 "bar": None,
             }
         )
-        expected_tech_dict = AttrDict(
+        expected_tech_def = CalliopeTechs.model_validate(
             {
                 "foo": {
                     "key3": {"data": None, "index": [["foo"]], "dims": ["foobar"]},
@@ -174,13 +181,13 @@ class TestModelDataBuilder:
                 "bar": None,
             }
         )
-        model_data_builder._get_relevant_node_refs(techs_dict, "A")
-        assert techs_dict == expected_tech_dict
+        model_data_builder._get_relevant_node_refs(techs_def, "A")
+        assert techs_def == expected_tech_def
 
     def test_get_relevant_node_refs_no_ts_data(
         self, model_data_builder: ModelDataBuilder
     ):
-        techs_dict = AttrDict(
+        techs_def = CalliopeTechs.model_validate(
             {
                 "foo": {
                     "key1": 1,
@@ -190,17 +197,17 @@ class TestModelDataBuilder:
                 "bar": None,
             }
         )
-        refs = model_data_builder._get_relevant_node_refs(techs_dict, "A")
+        refs = model_data_builder._get_relevant_node_refs(techs_def, "A")
         assert set(refs) == set(["key1", "key2", "key3"])
 
     def test_get_relevant_node_refs_parent_at_node_not_supported(
         self, model_data_builder: ModelDataBuilder
     ):
-        techs_dict = AttrDict(
-            {"bar": {"key1": 1}, "foo": {"base_tech": "foobar"}, "baz": None}
+        techs_def = CalliopeTechs.model_validate(
+            {"bar": {"key1": 1}, "foo": {"base_tech": "supply"}, "baz": None}
         )
         with pytest.raises(exceptions.ModelError) as excinfo:
-            model_data_builder._get_relevant_node_refs(techs_dict, "A")
+            model_data_builder._get_relevant_node_refs(techs_def, "A")
 
         assert check_error_or_warning(
             excinfo,
@@ -220,23 +227,27 @@ class TestModelDataBuilder:
     def test_param_dict_to_array(
         self, model_data_builder: ModelDataBuilder, param_data, expected_da
     ):
-        da = model_data_builder._input_data_dict_to_array("foo", param_data)
+        da = model_data_builder._input_data_to_array(
+            "foo", IndexedData.model_validate(param_data)
+        )
         assert da.equals(expected_da)
 
     def test_definition_dict_to_ds(self, model_data_builder: ModelDataBuilder):
-        def_dict = {
-            "test_idx": {
-                "foo": 1,
-                "bar": {"data": True, "index": "foobaz", "dims": "foobar"},
+        definition = CalliopeTechs.model_validate(
+            {
+                "test_idx": {
+                    "foo": 1,
+                    "bar": {"data": True, "index": "foobaz", "dims": "foobar"},
+                }
             }
-        }
-        dim_name = "test_dim"
-        param_ds = model_data_builder._definition_dict_to_ds(def_dict, dim_name)
+        )
+        dim_name = "techs"
+        param_ds = model_data_builder._definition_to_ds(definition, dim_name)
         expected_ds = xr.Dataset(
             {
-                "foo": pd.Series({"test_idx": 1}).rename_axis(index="test_dim"),
+                "foo": pd.Series({"test_idx": 1}).rename_axis(index=dim_name),
                 "bar": pd.Series({("test_idx", "foobaz"): True})
-                .rename_axis(index=["test_dim", "foobar"])
+                .rename_axis(index=[dim_name, "foobar"])
                 .to_xarray(),
             }
         )
@@ -256,10 +267,10 @@ class TestModelDataBuilder:
         self, model_data_builder: ModelDataBuilder, input_idx, expected_idx
     ):
         dict_skeleton = {"data": 1, "dims": ["foo"]}
-        output = model_data_builder._prepare_input_data_dict(
+        output = model_data_builder._prepare_input_data(
             "foo", {"index": input_idx, **dict_skeleton}
         )
-        assert output == {"index": expected_idx, **dict_skeleton}
+        assert output == IndexedData(data=1, dims=["foo"], index=expected_idx)
 
     @pytest.mark.parametrize(
         ("input_dim", "expected_dim"),
@@ -269,14 +280,14 @@ class TestModelDataBuilder:
         self, model_data_builder: ModelDataBuilder, input_dim, expected_dim
     ):
         dict_skeleton = {"data": 1, "index": [["foo"]]}
-        output = model_data_builder._prepare_input_data_dict(
+        output = model_data_builder._prepare_input_data(
             "foo", {"dims": input_dim, **dict_skeleton}
         )
-        assert output == {"dims": expected_dim, **dict_skeleton}
+        assert output == IndexedData(data=1, dims=expected_dim, index=[["foo"]])
 
     def test_prepare_param_dict_unindexed(self, model_data_builder: ModelDataBuilder):
-        output = model_data_builder._prepare_input_data_dict("foo", 1)
-        assert output == {"data": 1, "index": [[]], "dims": []}
+        output = model_data_builder._prepare_input_data("foo", 1)
+        assert output == IndexedData(data=1, index=[[]], dims=[])
 
     def test_prepare_param_dict_lookup(
         self, model_data_builder: ModelDataBuilder, simple_da: xr.DataArray
@@ -289,16 +300,16 @@ class TestModelDataBuilder:
             }
         )
         model_data_builder.dataset["orig"] = simple_da
-        output = model_data_builder._prepare_input_data_dict(
-            "lookup_arr", ["foo", "bar"]
+        output = model_data_builder._prepare_input_data("lookup_arr", ["foo", "bar"])
+        assert output == IndexedData(
+            data=True, index=[["foo"], ["bar"]], dims=["foobar"]
         )
-        assert output == {"data": True, "index": [["foo"], ["bar"]], "dims": ["foobar"]}
 
     def test_prepare_param_dict_not_lookup(self, model_data_builder: ModelDataBuilder):
         with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
-            model_data_builder._prepare_input_data_dict("foo", ["foo", "bar"])
+            model_data_builder._prepare_input_data("foo", ["foo", "bar"])
         assert check_error_or_warning(
-            excinfo, "foo | Cannot pass un-indexed input data"
+            excinfo, "foo | Cannot pass un-indexed list input data"
         )
 
     @pytest.mark.parametrize("param_data", [1, [1], [1, 2, 3]])
@@ -309,79 +320,96 @@ class TestModelDataBuilder:
         model_data_builder.config = new_config
         param_dict = {"data": param_data, "index": [["foo"], ["bar"]], "dims": "foobar"}
         with pytest.raises(exceptions.ModelError) as excinfo:  # noqa: PT011, false positive
-            model_data_builder._prepare_input_data_dict("foo", param_dict)
+            model_data_builder._prepare_input_data("foo", param_dict)
         assert check_error_or_warning(
             excinfo,
             f"foo | Length mismatch between data ({param_data}) and index ([['foo'], ['bar']]) in input definition",
         )
 
-    def test_inherit_defs_inactive(
+    def test_inherit_techs_inactive(
         self, my_caplog, model_data_builder: ModelDataBuilder
     ):
-        def_dict = {"A": {"active": False}}
-        new_def_dict = model_data_builder._inherit_defs(
-            dim_name="nodes", dim_dict=AttrDict(def_dict)
+        def_dict = {"test_supply_gas": {"active": False}}
+        new_def = model_data_builder._inherit_techs(
+            base_def=CalliopeTechs.model_validate(def_dict)
         )
-        assert "(nodes, A) | Deactivated." in my_caplog.text
-        assert not new_def_dict
+        assert "(techs, test_supply_gas) | Deactivated." in my_caplog.text
+        assert not new_def.root.keys()
 
-    def test_inherit_defs_nodes_from_base(self, model_data_builder: ModelDataBuilder):
-        """Without a `dim_dict` to start off inheritance chaining, the `dim_name` will be used to find keys."""
-        new_def_dict = model_data_builder._inherit_defs(dim_name="nodes")
-        assert set(new_def_dict.keys()) == {"a", "b", "c"}
+    def test_inherit_techs_from_full_model(self, model_data_builder: ModelDataBuilder):
+        """Without a `base_def` to start off inheritance chaining, the full model tech definition will be used to find keys."""
+        new_def_dict = model_data_builder._inherit_techs()
+        assert new_def_dict.root.keys() == {
+            "test_supply_gas",
+            "test_supply_elec",
+            "test_supply_coal",
+            "test_supply_plus",
+            "test_storage",
+            "test_conversion",
+            "test_conversion_plus",
+            "test_chp",
+            "test_demand_elec",
+            "test_demand_heat",
+            "test_demand_coal",
+            "test_link_a_b_elec",
+            "test_link_a_b_heat",
+        }
 
-    def test_inherit_defs_techs(self, model_data_builder: ModelDataBuilder):
-        """`dim_dict` overrides content of base model definition."""
-        model_data_builder.model_definition.set_key("techs.foo.base_tech", "supply")
-        model_data_builder.model_definition.set_key("techs.foo.my_param", 2)
-
-        def_dict = {"foo": {"my_param": 1}}
-        new_def_dict = model_data_builder._inherit_defs(
-            dim_name="techs", dim_dict=AttrDict(def_dict)
+    def test_inherit_techs(self, model_data_builder: ModelDataBuilder, dummy_int):
+        """`dim_def` overrides content of base model definition."""
+        model_data_builder.model_definition = (
+            model_data_builder.model_definition.update(
+                {"techs.foo.base_tech": "supply", "techs.foo.param1": 2}
+            )
         )
-        assert new_def_dict == {"foo": {"my_param": 1, "base_tech": "supply"}}
 
-    def test_inherit_defs_techs_empty_def(self, model_data_builder: ModelDataBuilder):
-        """An empty `dim_dict` entry can be handled, by returning the model definition for that entry."""
-        model_data_builder.model_definition.set_key("techs.foo.base_tech", "supply")
-        model_data_builder.model_definition.set_key("techs.foo.my_param", 2)
+        def_dict = {"foo": {"param1": dummy_int}}
+        new_def_dict = model_data_builder._inherit_techs(
+            base_def=CalliopeTechs.model_validate(def_dict)
+        )
+        assert new_def_dict == CalliopeTechs.model_validate(
+            {"foo": {"param1": dummy_int, "base_tech": "supply"}}
+        )
+
+    def test_inherit_techs_empty_def(self, model_data_builder: ModelDataBuilder):
+        """An empty `base_def` entry can be handled, by returning the model definition for that entry."""
+        model_data_builder.model_definition = (
+            model_data_builder.model_definition.update(
+                {"techs.foo.base_tech": "supply", "techs.foo.my_param": 2}
+            )
+        )
 
         def_dict = {"foo": None}
-        new_def_dict = model_data_builder._inherit_defs(
-            dim_name="techs", dim_dict=AttrDict(def_dict)
+        new_def_dict = model_data_builder._inherit_techs(
+            base_def=CalliopeTechs.model_validate(def_dict)
         )
-        assert new_def_dict == {"foo": {"my_param": 2, "base_tech": "supply"}}
+        assert new_def_dict == CalliopeTechs.model_validate(
+            {"foo": {"my_param": 2, "base_tech": "supply"}}
+        )
 
-    def test_inherit_defs_techs_missing_base_def(
-        self, model_data_builder: ModelDataBuilder
+    def test_deactivate_single_dim(
+        self, my_caplog, model_data_builder_w_params: ModelDataBuilder
     ):
-        """If inheriting from a template, checks against the schema will still be undertaken."""
-        def_dict = {"foo": {"base_tech": "supply"}}
-        with pytest.raises(KeyError) as excinfo:
-            model_data_builder._inherit_defs(
-                dim_name="techs", dim_dict=AttrDict(def_dict), foobar="bar"
-            )
-        assert check_error_or_warning(
-            excinfo,
-            "(foobar, bar), (techs, foo) | Reference to item not defined in base techs",
-        )
-
-    def test_deactivate_single_dim(self, model_data_builder_w_params: ModelDataBuilder):
         assert "a" in model_data_builder_w_params.dataset.nodes
         model_data_builder_w_params._deactivate_item(nodes="a")
         assert "a" not in model_data_builder_w_params.dataset.nodes
+        assert "(nodes, a) | Deactivated." in my_caplog.text
 
-    def test_deactivate_two_dims(self, model_data_builder_w_params: ModelDataBuilder):
+    def test_deactivate_two_dims(
+        self, my_caplog, model_data_builder_w_params: ModelDataBuilder
+    ):
+        """We drop a tech at a single node, so it isn't removed entirely from the dataset since it is present at the other node."""
         to_drop = {"nodes": "a", "techs": "test_supply_elec"}
         model_data_builder_w_params._deactivate_item(**to_drop)
         assert "a" in model_data_builder_w_params.dataset.nodes
         assert "test_supply_elec" in model_data_builder_w_params.dataset.techs
         assert (
-            model_data_builder_w_params.dataset.carrier_in.sel(**to_drop) == 0
+            model_data_builder_w_params.dataset[["carrier_in", "carrier_out"]].sel(
+                **to_drop
+            )
+            == 0
         ).all()
-        assert (
-            model_data_builder_w_params.dataset.carrier_out.sel(**to_drop) == 0
-        ).all()
+        assert "(nodes, a), (techs, test_supply_elec) | Deactivated." in my_caplog.text
 
     @pytest.mark.parametrize(
         "to_drop",
@@ -402,68 +430,46 @@ class TestModelDataBuilder:
     def test_links_to_node_format_all_active(
         self, my_caplog, model_data_builder: ModelDataBuilder
     ):
-        node_dict = {
-            "a": {"foo": {"base_tech": "supply"}},
-            "b": {"bar": {"base_tech": "demand"}},
-        }
-        link_dict = model_data_builder._links_to_node_format(node_dict)
+        node_def = CalliopeNodes.model_validate(
+            {
+                "a": {"techs": {"foo": {"base_tech": "supply"}}},
+                "b": {"techs": {"bar": {"base_tech": "demand"}}},
+            }
+        )
+        link_def = model_data_builder._links_to_node_format(node_def)
         assert "Deactivated" not in my_caplog.text
-        assert set(link_dict.keys()) == {"a", "b"}
+        assert set(link_def.root.keys()) == {"a", "b"}
         assert all(
-            set(subdict.keys()) == {"test_link_a_b_heat", "test_link_a_b_elec"}
-            for subdict in link_dict.values()
-        )
-        assert not any(
-            "link_to" in subdict["test_link_a_b_elec"] for subdict in link_dict.values()
-        )
-        assert not any(
-            "link_from" in subdict["test_link_a_b_elec"]
-            for subdict in link_dict.values()
+            set(node.techs.root.keys()) == {"test_link_a_b_heat", "test_link_a_b_elec"}
+            for node in link_def.root.values()
         )
 
     def test_links_to_node_format_none_active(
         self, my_caplog, model_data_builder: ModelDataBuilder
     ):
-        node_dict = {"c": {"foo": {"base_tech": "supply"}}}
-        link_dict = model_data_builder._links_to_node_format(node_dict)
+        node_def = CalliopeNodes.model_validate(
+            {"c": {"techs": {"foo": {"base_tech": "supply"}}}}
+        )
+        link_def = model_data_builder._links_to_node_format(node_def)
         assert (
             "(links, test_link_a_b_elec) | Deactivated due to missing" in my_caplog.text
         )
-        assert not link_dict
+        assert not link_def.root.keys()
 
     def test_links_to_node_format_one_active(
         self, my_caplog, model_data_builder: ModelDataBuilder
     ):
-        node_dict = {
-            "a": {"foo": {"base_tech": "supply"}},
-            "c": {"bar": {"base_tech": "demand"}},
-        }
-        link_dict = model_data_builder._links_to_node_format(node_dict)
+        node_def = CalliopeNodes.model_validate(
+            {
+                "a": {"techs": {"foo": {"base_tech": "supply"}}},
+                "c": {"techs": {"bar": {"base_tech": "demand"}}},
+            }
+        )
+        link_def = model_data_builder._links_to_node_format(node_def)
         assert (
             "(links, test_link_a_b_elec) | Deactivated due to missing" in my_caplog.text
         )
-        assert not link_dict
-
-    def test_links_to_node_format_one_way(self, model_data_builder: ModelDataBuilder):
-        model_data_builder.model_definition["techs"]["test_link_a_b_elec"][
-            "one_way"
-        ] = True
-        node_dict = {
-            "a": {"foo": {"base_tech": "supply"}},
-            "b": {"bar": {"base_tech": "demand"}},
-        }
-        link_dict = model_data_builder._links_to_node_format(node_dict)
-        assert "carrier_out" not in link_dict["a"]["test_link_a_b_elec"]
-        assert "carrier_in" not in link_dict["b"]["test_link_a_b_elec"]
-
-        assert "carrier_in" in link_dict["a"]["test_link_a_b_elec"]
-        assert "carrier_out" in link_dict["b"]["test_link_a_b_elec"]
-
-        assert (
-            f"carrier_{j}" in link_dict[node]["test_link_a_b_heat"]
-            for node in ["a", "b"]
-            for j in ["in", "out"]
-        )
+        assert not link_def.root.keys()
 
     @pytest.mark.parametrize("coord_name", ["foosteps", "barsteps"])
     def test_add_to_dataset_timeseries(
@@ -645,7 +651,7 @@ class TestModelDataBuilder:
         }
         with pytest.raises(exceptions.ModelError) as excinfo:
             model_data_builder._raise_error_on_transmission_tech_def(
-                AttrDict(tech_def), "foo"
+                CalliopeTechs.model_validate(tech_def), "foo"
             )
         assert check_error_or_warning(
             excinfo,
@@ -657,9 +663,11 @@ class TestTopLevelParams:
     @pytest.fixture
     def run_and_test(self, model_data_builder_w_params):
         def _run_and_test(in_dict, out_dict, dims):
-            model_data_builder_w_params.model_definition["data_definitions"] = {
-                "my_val": in_dict
-            }
+            model_data_builder_w_params.model_definition = (
+                model_data_builder_w_params.model_definition.update(
+                    {"data_definitions.my_val": in_dict}
+                )
+            )
             model_data_builder_w_params.add_top_level_data_definitions()
 
             _data = pd.Series(out_dict).rename_axis(index=dims)
@@ -1233,10 +1241,7 @@ class TestDataTableBuilding:
             for table, table_dict in data_table_def.root.items()
         ]
         return ModelDataBuilder(
-            config.init,
-            AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
-            math,
-            tables=data_tables_,
+            config.init, model_def.definition, math, tables=data_tables_
         )
 
     def test_different_dims_ts_in_both(self, diff_dim_tables):
@@ -1421,6 +1426,9 @@ class TestUpdateAndResample:
         assert model_data_cleaner_with_def_matrix.runtime.resample.root == resample
         assert model_data_cleaner_with_def_matrix.dataset.timesteps.size == 2
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Only one timestep defined. Inferring timestep resolution to be 1 hour:calliope.exceptions.ModelWarning"
+    )
     def test_resample_update_runtime_from_something(
         self, model_data_cleaner_with_def_matrix: ModelDataCleaner
     ):

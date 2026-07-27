@@ -10,6 +10,7 @@ build:
       - mamba install python=3.12 coin-or-cbc gurobi::gurobi --file requirements/base.txt --file requirements/dev.txt
       - pip install --no-deps .
       - python -m ipykernel install --user --name calliope_docs_build
+      - export PLOTLY_RENDERER="notebook"
 
 mkdocs:
   configuration: mkdocs.yml
