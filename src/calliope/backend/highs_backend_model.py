@@ -172,13 +172,18 @@ class HighsBackendModel(backend_model.BackendModel):
         variable = self.variables.get(name, None)
         if variable is None:
             raise KeyError(f"Unknown variable: {name}")
-        if as_backend_objs:
+        if as_backend_objs or variable.isnull().all():
             return variable
         else:
             try:
-                return self._apply_func(
-                    self._instance.variableValue, variable.notnull(), 1, variable
-                )
+                if not variable.dims:
+                    da = xr.DataArray(self._instance.val(variable.item()))
+                else:
+                    df = pd.Series(
+                        self._instance.vals(variable.to_series().dropna().to_dict())
+                    ).reindex(variable.coords.to_index())
+                    da = df.to_xarray()
+                return da.rename(variable.name).assign_attrs(variable.attrs)
             except AttributeError:
                 return self._apply_func(
                     self._expr_to_str, variable.notnull(), 1, variable
@@ -239,7 +244,9 @@ class HighsBackendModel(backend_model.BackendModel):
         self._instance.solve()
         termination = self._instance.getModelStatus()
         if termination == highspy.HighsModelStatus.kOptimal:
-            results = self.load_results(solve_config.postprocessing_active)
+            results = self.load_results(
+                solve_config.postprocessing_active, solve_config.zero_threshold
+            )
         else:
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
             results = xr.Dataset()
