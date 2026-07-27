@@ -792,9 +792,12 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         if kwargs:
             func = partial(func, **kwargs)
         vectorised_func = np.frompyfunc(func, len(args), n_out)
-        da = vectorised_func(
-            *(arg.broadcast_like(where) for arg in args), where=where.values
+
+        broadcast_where, *broadcast_args = xr.broadcast(where, *args)
+        outputs = tuple(
+            np.empty(broadcast_where.shape, dtype=object) for _ in range(n_out)
         )
+        da = vectorised_func(*broadcast_args, where=broadcast_where.values, out=outputs)
         if isinstance(da, xr.DataArray):
             da = da.fillna(np.nan)
         else:

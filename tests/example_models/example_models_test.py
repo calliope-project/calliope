@@ -97,7 +97,8 @@ class TestModelMathDocs:
 
 class TestNationalScaleExampleModelSenseChecks:
     @pytest.fixture(scope="class")
-    def nat_model_from_data_tables(self):
+    @classmethod
+    def nat_model_from_data_tables(cls):
         df = pd.read_csv(
             calliope.examples._EXAMPLE_MODEL_DIR
             / "national_scale"
@@ -115,7 +116,8 @@ class TestNationalScaleExampleModelSenseChecks:
         return model
 
     @pytest.fixture(scope="class")
-    def nat_model(self):
+    @classmethod
+    def nat_model(cls):
         model = calliope.examples.national_scale(
             subset={"timesteps": ["2005-01-01", "2005-01-01"]}
         )
