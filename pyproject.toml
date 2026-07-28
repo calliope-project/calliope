@@ -91,7 +91,7 @@ maintainers = [
 ]
 description = "A multi-scale energy systems modelling framework."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 keywords = ["energy systems", "optimisation", "mathematical programming"]
 license = "Apache-2.0"
 license-files = ["LICENSE", "CITATION"]
@@ -217,3 +217,9 @@ version = "0.*"
 
 [tool.pixi.package.build.config]
 ignore-pypi-mapping = false  # Enable automatic PyPI-to-conda mapping
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true

@@ -205,12 +205,12 @@ When adding docstrings, we request you use the [Google docstring style](https://
 - [ ] Create a release branch
 - [ ] Bump the version number in `src/calliope/_version.py`
 - [ ] Update the `CHANGELOG.md` with final version number of the form `vX.Y.Z` and the release date.
-- [ ] Commit your changes and create a release pull request with the title `Release vX.Y.Z` to have all the tests run and to verify that the pip package builds successfully.
+- [ ] Commit your changes and create a release pull request with the title `Release vX.Y.Z` to have all the tests run and to verify that the `pypi` package builds successfully.
 - [ ] Once the PR is approved and merged, tag the commit in main with the version `vX.Y.Z`.
 - [ ] Create a release through the GitHub web interface, using the same tag, titling it `Release vX.Y.Z` and include all the changelog elements that are `User-facing`.
 
 !!! note
-    The pull request _must_ have the title `Release vX.Y.Z` to trigger the pip package build and the test-pypi upload.
+    The pull request _must_ have the title `Release vX.Y.Z` to trigger the test `pypi` package build and the test-pypi upload.
 
 ### Post-release
 
@@ -220,4 +220,4 @@ When adding docstrings, we request you use the [Google docstring style](https://
 
 ## Licensing
 
-Note that by contributing to Calliope, e.g. through opening a pull request or submitting a patch, you represent that your contributions are your own original work and that you have the right to license them, and you agree that your contributions are licensed under the Apache 2.0 license.
+Note that by contributing to Calliope, e.g., through opening a pull request or submitting a patch, you represent that your contributions are your own original work and that you have the right to license them, and you agree that your contributions are licensed under the Apache 2.0 license.

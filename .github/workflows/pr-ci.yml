@@ -25,21 +25,25 @@ concurrency:
   # Use github.ref on other branches, so it's unique per branch
   group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
 jobs:
   test:
     if: github.event.pull_request.draft == false
     strategy:
       matrix:
         os: [ubuntu-latest]
-        py3version: ["12", "13", "14"]
+        py3version:
+          - "12"
+          - "13"
+          - &py_latest "14"
         include:
           - os: windows-latest
-            py3version: "14"
+            py3version: *py_latest
           - os: macos-latest
-            py3version: "14"
+            py3version: *py_latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    env:
+      PY_LATEST: *py_latest
     steps:
     - uses: actions/checkout@v6
 
@@ -52,16 +56,16 @@ jobs:
         manifest-path: pyproject.toml
 
     - name: run tests with coverage
-      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '12'
+      if: matrix.os == 'ubuntu-latest' && matrix.py3version == env.PY_LATEST
       run: pixi run -e ${{ format('py3{0}', matrix.py3version) }} test-cov
 
     - name: run tests without coverage
-      if: matrix.os != 'ubuntu-latest' || matrix.py3version != '12'
+      if: matrix.os != 'ubuntu-latest' || matrix.py3version != env.PY_LATEST
       run: pixi run -e ${{ format('py3{0}', matrix.py3version) }} test
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
-      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '12'
+      if: matrix.os == 'ubuntu-latest' && matrix.py3version == env.PY_LATEST
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true

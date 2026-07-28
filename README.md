@@ -29,28 +29,35 @@
 
 ## About
 
-Calliope is a framework to develop energy system models, with a focus on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data). Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents. In an optional operational it can also test a pre-defined system under different operational conditions.
+Calliope is a framework to develop energy system models, with a focus on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
+Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents.
+In an optional operational it can also test a pre-defined system under different operational conditions.
 
-A Calliope model consists of a collection of text files (in YAML and CSV formats) that fully define a model, with details on technologies, locations, resource potentials, etc. Calliope takes these files, constructs an optimization problem, solves it, and reports back results. Results can be saved to CSV or NetCDF files for further processing, or analysed directly in Python through Python's extensive scientific data processing capabilities provided by libraries like [Pandas](http://pandas.pydata.org/) and [xarray](https://docs.xarray.dev/en/stable/).
+A Calliope model consists of a collection of text files (in YAML and CSV formats) that fully define a model, with details on technologies, locations, resource potentials, etc.
+Calliope takes these files, constructs an optimization problem, solves it, and reports back results.
+Results can be saved to CSV or NetCDF files for further processing, or analysed directly in Python through Python's extensive scientific data processing capabilities provided by libraries like [Pandas](http://pandas.pydata.org/) and [xarray](https://docs.xarray.dev/en/stable/).
 
-Model results can be explored interactively with [Calligraph](https://calligraph.readthedocs.io/), our companion visualisation tool. Having some knowledge of the Python programming language helps when running Calliope, but is not a prerequisite.
+Model results can be explored interactively with [Calligraph](https://calligraph.readthedocs.io/), our companion visualisation tool.
+Having some knowledge of the Python programming language helps when running Calliope, but is not a prerequisite.
 
 ## Quick start
 
-Calliope can run on Windows, macOS and Linux. It can be installed using `pixi` (`pixi add calliope`), `conda` (`conda install calliope`), or `uv` (`uv pip install calliope`).
-For local development, use pixi as described in the documentation.
+Calliope can run on Windows, macOS and Linux.
+It can be installed using `pixi` (`pixi add calliope`), `conda` (`conda install calliope`), or `uv` (`uv pip install calliope`).
+For local development, use `pixi` as described in the [documentation](http://calliope.readthedocs.io/en/latest/contributing/).
 
-See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html).
+See the documentation for more [information on installing](https://calliope.readthedocs.io/en/latest/user/installation.html).
 
 Several easy to understand example models are [included with Calliope](https://github.com/calliope-project/calliope/tree/main/src/calliope/example_models) and accessible through the `calliope.examples` submodule.
 
-The [tutorials in the documentation run through these examples](https://calliope.readthedocs.io/en/stable/user/tutorials.html). A good place to start is to look at these tutorials to get a feel for how Calliope works, and then to read the "Introduction", "Building a model", "Running a model", and "Analysing a model" sections in the online documentation.
+The [tutorials in the documentation run through these examples](https://calliope.readthedocs.io/en/latest/examples/).
+A good place to start is to look at these tutorials to get a feel for how Calliope works, and then to read the "Getting Started" pages in the [online documentation](https://calliope.readthedocs.io/en/latest/installation/).
 
 More fully-featured examples that have been used in peer-reviewed scientific publications are available in our [model gallery](https://www.callio.pe/research/#models).
 
 ## Documentation
 
-Documentation is available on [Read the Docs](https://calliope.readthedocs.io/en/stable/).
+Documentation is available on [Read the Docs](https://calliope.readthedocs.io/en/latest/).
 
 ## Contributing
 
@@ -64,23 +71,23 @@ See changes made in recent versions in the [changelog](https://github.com/callio
 
 If you use Calliope for academic work please cite:
 
-Stefan Pfenninger and Bryn Pickering (2018). Calliope: a multi-scale energy systems modelling framework. *Journal of Open Source Software*, 3(29), 825. [doi: 10.21105/joss.00825](https://doi.org/10.21105/joss.00825)
+Stefan Pfenninger and Bryn Pickering (2018).
+Calliope: a multi-scale energy systems modelling framework. *Journal of Open Source Software*, 3(29), 825. [doi: 10.21105/joss.00825](https://doi.org/10.21105/joss.00825)
 
 ## License
 
 Copyright since 2013 Calliope contributors listed in AUTHORS
 
-Licensed under the Apache License, Version 2.0 (the "License"); you
-may not use this file except in compliance with the License. You may
-obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
 <http://www.apache.org/licenses/LICENSE-2.0>
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+See the License for the specific language governing permissions and limitations under the License.
 
 ## Contributors ✨
 
@@ -123,4 +130,5 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/e
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.
+Contributions of any kind welcome!

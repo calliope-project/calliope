@@ -12,7 +12,32 @@ Since larger models tend to require a commercial solver to successfully complete
 Our tests show that this reduces peak memory consumption and time to solution compared to using the Pyomo backend with Gurobi as the solver in both cases.
 If you have access to a Gurobi license, this does not require any extra effort on your part, besides having to:
 
-1. Ensure the Gurobi Python library is installed in your Calliope environment (e.g., `pixi add gurobi::gurobi` or `conda install gurobi::gurobi`).
-1. Select the Gurobi backend in your YAML configuration (`!#yaml config.build.backend: gurobi`) or at build time if running in a Python script or interactively (`!#python model.build(backend="gurobi")`).
+1. Ensure the Gurobi Python library is installed in your Calliope environment:
+
+    === "`pixi`"
+
+        ```shell
+        pixi add gurobi::gurobi
+        ```
+
+    === "`conda`"
+
+        ```shell
+        conda install gurobi::gurobi
+        ```
+
+2. Select the Gurobi backend:
+
+    === "In YAML"
+
+        ```yaml
+        config.build.backend: gurobi
+        ```
+
+    === "In Python"
+
+        ```python
+        model.build(backend="gurobi")
+        ```
 
 You can still [interface with your optimisation problem](backend_interface.md), but some methods will raise an exception when the Gurobi Python API does not allow for something that the Pyomo API does.

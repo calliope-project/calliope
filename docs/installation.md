@@ -20,7 +20,7 @@ We recommend two installation paths depending on your use-case:
 1. **`uv` or `pip`**: use pip or [`uv`](https://docs.astral.sh/uv/) for fast Python package installation.
    You will need to ensure you have all non-Python libraries installed and available if taking this approach.
 
-If you are interested in developing Calliope, see our [dedicated page](./contributing.md) for specific installation instructions.
+If you are interested in developing Calliope, see our [contributing page](./contributing.md) for specific installation instructions.
 
 ### `conda` or `pixi` (recommended)
 
@@ -84,7 +84,7 @@ This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.read
 ### CBC
 
 [CBC](https://github.com/coin-or/Cbc) is our recommended option if you want a free and open-source solver.
-If you do not have it in your working environment (i.e. there is nothing listed when you call `conda list cbc`/`pixi list cbc`) then it can be installed on all platforms:
+If you do not have it in your working environment (i.e., there is no,thing listed when you call `conda list cbc`/`pixi list cbc`) then it can be installed on all platforms:
 
 === "`pixi`"
 
@@ -122,7 +122,20 @@ Unlike [CBC](#cbc), it is possible to extract [shadow prices](./advanced/shadow_
 [Gurobi](https://www.gurobi.com/) is commercial but significantly faster than CBC and GLPK, which is relevant for larger problems.
 It needs a license to work, which [can be obtained for free for academic use](https://www.gurobi.com/academia/academic-program-and-licenses/).
 
-The Gurobi solver interface can be installed via conda (`mamba install gurobi::gurobi`).
+The Gurobi solver interface can be installed on all platforms:
+
+=== "`pixi`"
+
+    ```shell
+    pixi add gurobi::gurobi
+    ```
+
+=== "`conda`"
+
+    ```shell
+    conda install gurobi::gurobi
+    ```
+
 This also gives you access to the `grbgetkey` command in your command line, which you will need to activate your license for use locally.
 
 !!! note
@@ -131,11 +144,14 @@ This also gives you access to the `grbgetkey` command in your command line, whic
 ### CPLEX
 
 Another commercial alternative is [CPLEX](https://www.ibm.com/products/ilog-cplex-optimization-studio).
-IBM offers academic licenses for CPLEX. Refer to the IBM website for details.
+IBM offers academic licenses for CPLEX; refer to the IBM website for details.
 
 !!! tip
-    After installing CPLEX, it is important to ensure that the path to the solver is part of the environment variables, which is typically not automatic. Please follow the steps given for your operating system on CPLEX's [dedicated documentation](https://www.ibm.com/docs/en/icos/22.1.0?topic=cplex-setting-up).
+    After installing CPLEX, it is important to ensure that the path to the solver is part of the environment variables, which is typically not automatic.
+    Please follow the steps given for your operating system on CPLEX's [dedicated documentation](https://www.ibm.com/docs/en/icos/22.1.0?topic=cplex-setting-up).
 
 ## Customising the solver's performance
 
-Solvers typically allow users to specify custom `solver_options`, by which you may tailor their performance to what best suits the features of the model you are working with. For further information, see our guide on [solver options customisation ](advanced/solver.md).
+Solvers typically allow users to specify custom `solver_options`, by which you may tailor their performance to what
+best suits the features of the model you are working with.
+For further nformation, see our guide on [solver options customisation](advanced/solver.md).

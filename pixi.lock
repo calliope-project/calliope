@@ -10281,7 +10281,7 @@ packages:
   - pyparsing>=3.2
   - ruamel-yaml>=0.18
   - xarray>=2026.4
-  requires_python: '>=3.10'
+  requires_python: '>=3.12'
 - pypi: https://files.pythonhosted.org/packages/02/dc/c7043cab6fed8ae159fc1923ce829ada35c4dbd797d408a43858ffaf9639/tornado-6.5.7-cp39-abi3-macosx_10_9_universal2.whl
   name: tornado
   version: 6.5.7

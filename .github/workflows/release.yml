@@ -1,4 +1,4 @@
-name: Publish
+name: Publish to PyPI
 
 on:
   release:
@@ -6,20 +6,18 @@ on:
 
 jobs:
   pip-publish:
+    permissions:
+      id-token: write
     runs-on: ubuntu-latest
-    environment: production
-    env:
-      PACKAGENAME: "pip-build-${{ inputs.package_name }}-${{ github.ref_name }}"
+    environment: pypi
     steps:
-
-    - name: Download built package from another workflow
-      uses: dawidd6/action-download-artifact@v6
-      with:
-        name: ${{ env.PACKAGENAME }}
-        workflow: pr-ci.yml
-        path: dist/
-
-    - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Download built package from pre-release workflow artifacts
+        uses: dawidd6/action-download-artifact@v21
+        with:
+          name: dist
+          workflow: pre-release.yml
+          path: dist/
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Publish
+        run: uv publish
