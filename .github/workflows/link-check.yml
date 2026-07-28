@@ -1,5 +1,8 @@
 name: Markdown link check
 
+permissions:
+  contents: read
+
 on:
   schedule:  # runs every monday at 9 am
     - cron: "0 9 * * 1"

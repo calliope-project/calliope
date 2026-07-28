@@ -206,11 +206,13 @@ When adding docstrings, we request you use the [Google docstring style](https://
 - [ ] Bump the version number in `src/calliope/_version.py`
 - [ ] Update the `CHANGELOG.md` with final version number of the form `vX.Y.Z` and the release date.
 - [ ] Commit your changes and create a release pull request with the title `Release vX.Y.Z` to have all the tests run and to verify that the `pypi` package builds successfully.
+
+    !!! note
+
+        The pull request _must_ have the title `Release vX.Y.Z` to trigger the test `pypi` package build and the TestPyPI upload.
+
 - [ ] Once the PR is approved and merged, tag the commit in main with the version `vX.Y.Z`.
 - [ ] Create a release through the GitHub web interface, using the same tag, titling it `Release vX.Y.Z` and include all the changelog elements that are `User-facing`.
-
-!!! note
-    The pull request _must_ have the title `Release vX.Y.Z` to trigger the test `pypi` package build and the test-pypi upload.
 
 ### Post-release
 

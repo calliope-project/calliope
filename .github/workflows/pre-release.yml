@@ -1,5 +1,9 @@
 name: Publish to PyPI (test)
 
+permissions:
+  contents: read
+  id-token: write
+
 on:
   pull_request:
     branches:

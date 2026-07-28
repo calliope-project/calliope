@@ -6,6 +6,8 @@ on:
 
 jobs: # separate build and publish to restrict id-token write permissions to fewer steps
   pypi-build:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:
