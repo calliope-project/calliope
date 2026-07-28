@@ -26,7 +26,7 @@ jobs:
       - name: Publish on success
         run: uv publish --index testpypi --trusted-publishing always
 
-      - uses: actions/upload-artifact@v7
-        with:
-          name: dist
-          path: dist/
+      - name: Test successful publication
+        run: >-
+          uv run --with calliope --refresh-package calliope --index testpypi --no-project
+          -- calliope --help
