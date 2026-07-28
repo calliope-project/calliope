@@ -6,10 +6,10 @@ on:
 
 jobs:
   pip-publish:
+    environment: release
     permissions:
       id-token: write
     runs-on: ubuntu-latest
-    environment: pypi
     steps:
       - name: Download built package from pre-release workflow artifacts
         uses: dawidd6/action-download-artifact@v21
