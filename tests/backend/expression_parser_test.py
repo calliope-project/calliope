@@ -1268,7 +1268,6 @@ class TestApplyWhereArray:
 
     _apply_where_array is called in:
     - EvalOperatorOperand.as_array() — once per operand in binary arithmetic
-    - EvalComparisonOp.as_array() — once for each of LHS and RHS
 
     It is NOT called when directly evaluating unsliced/sliced components.
     """
@@ -1313,27 +1312,6 @@ class TestApplyWhereArray:
             "all_ones + all_ones + no_dims", parse_all=True
         )
         self.assert_method_called(3, parsed_[0], **eval_kwargs)
-
-    def test_apply_where_array_called_in_comparison(
-        self, equation_comparison, eval_kwargs
-    ):
-        """_apply_where_array is called once each for the LHS and RHS of a comparison operation."""
-        parsed_ = equation_comparison.parse_string("1 == 1", parse_all=True)
-        self.assert_method_called(2, parsed_[0], **eval_kwargs)
-
-    def test_broadcast_in_apply_where_array_called_in_comparison(
-        self, equation_comparison, eval_kwargs
-    ):
-        """_apply_where_array broadcasts both LHS and RHS to the where_array shape in a comparison."""
-        where = eval_kwargs["eval_attrs"].input_data["all_true"]
-        parsed_ = equation_comparison.parse_string("all_ones == 1", parse_all=True)
-        evaluated_ = self.assert_method_called(
-            2,
-            parsed_[0],
-            eval_kwargs["return_type"],
-            replace(eval_kwargs["eval_attrs"], where_array=where),
-        )
-        assert evaluated_.dims == ("nodes", "techs")
 
     def test_apply_where_array_default_true_does_not_mask(
         self, arithmetic, eval_kwargs

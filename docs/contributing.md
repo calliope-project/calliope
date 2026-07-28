@@ -35,28 +35,26 @@ To create a development environment for calliope, use [pixi](https://pixi.sh/lat
 1. Install pixi following the [official instructions](https://pixi.sh/latest/installation/).
 1. Download (a.k.a., clone) the calliope repository: `git clone git@github.com:calliope-project/calliope.git`
 1. Change into the `calliope` directory: `cd calliope`
-1. Run a task in a `pixi` environment
+1. Install the development environment: `pixi install --environment dev`
 
 All together:
 
 ``` shell
 git clone git@github.com:calliope-project/calliope.git
 cd calliope
-pixi run ...
+pixi install --environment dev
 ```
 
 If you plan to make changes to the code then please make regular use of the following tools to verify the codebase while you work:
 
 - `pre-commit`: run `pixi run -e dev pre-commit` in your command line to load and run inbuilt checks.
 The checks include:
-  1. check no large files have been staged,
-  1. lint python files for major errors,
+  1. check no large files have been staged.
+  1. lint python files for major errors.
   1. format python files to conform with the [PEP8 standard](https://peps.python.org/pep-0008/).
 - `pytest` - run `pixi run test` to run the full test suite.
   Run `pixi run test-cov` to also check test coverage.
 
-!!! note
-    If you already have an environment called `calliope` on your system (e.g., for a stable installation of the package), you will need to choose a different environment name, e.g. `calliope-dev`.
 
 ## Implementing a change
 
