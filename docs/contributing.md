@@ -26,7 +26,7 @@ __Have a question or need help?__
 
 To find beginner-friendly existing bugs and feature requests you may like to start out with, take a look at our [good first issues](https://github.com/calliope-project/calliope/contribute).
 
-Look at our [milestones](https://github.com/calliope-project/calliope/milestones) and [projects](https://github.com/calliope-project/calliope/projects) on GitHub for an idea on where development is headed.
+Look at our [milestones](https://github.com/calliope-project/calliope/milestones) on GitHub for an idea on where development is headed.
 
 ### Setting up a development environment
 
