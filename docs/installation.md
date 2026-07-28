@@ -6,7 +6,7 @@ Calliope is tested on Linux, macOS, and Windows.
 
 Running Calliope requires four things:
 
-1. The Python programming language, version {{ min_python_version }} to {{ max_python_version }}.
+1. The Python programming language, at least version {{ min_python_version }}.
 2. A number of Python add-on modules including [Pyomo](https://www.pyomo.org/), [Pandas](https://pandas.pydata.org/) and [Xarray](https://docs.xarray.dev/).
 3. An optimisation solver: Calliope has been tested with CBC, GLPK, and Gurobi.
    Any other solver that is compatible with Pyomo should also work.
@@ -20,7 +20,7 @@ We recommend two installation paths depending on your use-case:
 1. **`uv` or `pip`**: use pip or [`uv`](https://docs.astral.sh/uv/) for fast Python package installation.
    You will need to ensure you have all non-Python libraries installed and available if taking this approach.
 
-If you are interested in developing Calliope, see our [dedicate page](./contributing.md) for specific installation instructions.
+If you are interested in developing Calliope, see our [dedicated page](./contributing.md) for specific installation instructions.
 
 ### `conda` or `pixi` (recommended)
 
@@ -71,7 +71,7 @@ If you only need to install Calliope from PyPI, use:
 ## Choosing a solver
 
 You cannot solve a Calliope model until you have installed a solver.
-The easiest solver to install is [CBC](#cbc), which is included if you follow the [recommended installation instructions](#as-a-user-with-conda-or-pixi-recommended) above.
+The easiest solver to install is [CBC](#cbc), which is included if you follow the [recommended installation instructions](#conda-or-pixi-recommended) above.
 [CBC](#cbc) (open-source) or [Gurobi](#gurobi) (commercial) are recommended for large problems, and have been confirmed to work with Calliope.
 The following subsections provide additional detail on how to install a solver.
 This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.readthedocs.io/en/latest/reference/topical/appsi/appsi.solvers.html) can be used.
