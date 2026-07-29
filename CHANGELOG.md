@@ -52,6 +52,8 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 
 |fixed| Remove `stderr` redirect at pyomo backend model solve stage to avoid random infinite recursion errors in CI tests (#833).
 
+|changed| development dependency management to a mixture of `uv` and `pixi` (#881).
+
 ## 0.7.0.dev7 (2025-09-05)
 
 ### User-facing changes
