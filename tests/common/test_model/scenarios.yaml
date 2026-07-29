@@ -60,6 +60,10 @@ overrides:
         name: Less efficient supply tech
         carrier_out: electricity
         base_tech: supply
+        cost_source_use:
+          data: 0.1
+          index: monetary
+          dims: costs
         flow_cap_max: 10
         source_use_max: .inf
         flow_out_eff: 0.8
@@ -450,16 +454,33 @@ overrides:
           dims: costs
 
   var_costs:
-    templates:
-      test_controller:
-        cost_flow_in:
+    techs:
+      test_supply_gas:
+        cost_source_use: &variable_cost_source_use
           data: 0.1
           index: monetary
           dims: costs
-        cost_source_use:
+      test_supply_elec:
+        cost_source_use: *variable_cost_source_use
+      test_supply_coal:
+        cost_source_use: *variable_cost_source_use
+      test_supply_plus:
+        cost_source_use: *variable_cost_source_use
+      test_storage:
+        cost_flow_in: &variable_cost_flow_in
           data: 0.1
           index: monetary
           dims: costs
+      test_conversion:
+        cost_flow_in: *variable_cost_flow_in
+      test_conversion_plus:
+        cost_flow_in: *variable_cost_flow_in
+      test_chp:
+        cost_flow_in: *variable_cost_flow_in
+      test_link_a_b_elec:
+        cost_flow_in: *variable_cost_flow_in
+      test_link_a_b_heat:
+        cost_flow_in: *variable_cost_flow_in
 
   demand_elec_max:
     data_tables:

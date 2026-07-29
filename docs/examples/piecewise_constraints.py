@@ -7,10 +7,6 @@
 #       format_name: percent
 #       format_version: '1.3'
 #       jupytext_version: 1.16.1
-#   kernelspec:
-#     display_name: calliope_docs_build [conda env:calliope-docs-new]
-#     language: python
-#     name: conda-env-calliope-docs-new-calliope_docs_build
 # ---
 
 # %% [markdown]

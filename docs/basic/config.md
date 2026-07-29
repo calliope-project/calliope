@@ -3,16 +3,16 @@
 
 The configuration is grouped into three top-level items:
 
-* The `init` configuration items are used when you initialise your model (`calliope.Model(...)`).
+* The `init` configuration items are used when you initialise your model (`calliope.read_yaml(...)`).
 * The `build` configuration items are used when you build your optimisation problem (`calliope.Model.build(...)`).
 * The `solve` configuration items are used when you solve your optimisation problem (`calliope.Model.solve(...)`).
 
 At each of these stages you can override what you have put in your YAML file (or if not in your YAML file, [the default that Calliope uses][model-configuration-schema]).
-You do this by providing additional keyword arguments on calling `calliope.Model` or its methods. E.g.,:
+You do this by providing additional keyword arguments on calling `calliope.read_yaml` or the model's methods. E.g.,:
 
 ```python
-# Overriding `config.init` items in `calliope.Model`
-model = calliope.Model("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
+# Overriding `config.init` items in `calliope.read_yaml`
+model = calliope.read_yaml("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
 # Overriding `config.build` items in `calliope.Model.build`
 model.build(ensure_feasibility=True)
 # Overriding `config.solve` items in `calliope.Model.solve`
@@ -40,7 +40,7 @@ For those with a license for the Gurobi solver, we have also developed a direct 
 This may reduce peak memory and time consumption compared to using the Pyomo interface with Gurobi as the solver.
 To leverage the Gurobi backend interface, you will need to:
 
-1. Install the Gurobi python library into your Calliope environment: `mamba install gurobi::gurobi`.
+1. Ensure the Gurobi Python library is installed in your Calliope environment (e.g., `pixi add gurobi::gurobi` or `conda install gurobi::gurobi`).
 1. Select the Gurobi backend in your YAML configuration (`!#yaml config.build.backend: gurobi`) or at build time if running in a Python script or interactively (`!#python model.build(backend="gurobi")`).
 
 ### `config.build.ensure_feasibility`
@@ -95,5 +95,5 @@ config:
 !!! note
     While explicitly setting the non-default `solver_io: python` is faster for Gurobi, the opposite is currently true for CPLEX, which runs faster with the default `solver_io`.
 
-We tend to test using `cbc` but it is not available to install into your Calliope mamba environment on Windows.
-Therefore, we recommend you install GLPK when you are first starting out with Calliope (`mamba install glpk`).
+We tend to test using `cbc` but it is not available in all Windows setups.
+Therefore, we recommend you use GLPK when you are first starting out with Calliope (`pixi add glpk` or `conda install glpk`).

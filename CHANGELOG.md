@@ -34,6 +34,14 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 
 |fixed| Example notebook outputs no longer clutter search results in docs and search result example notebook pages are grouped under the top-level page header (#675).
 
+|fixed| Documentation now clarifies more explicitly that Calliope is unit-agnostic and that capacity and its costs are relative to carrier flow (#775).
+
+|fixed| Documentation explains better how dimensions and broadcasting work (#667).
+
+|fixed| Documentation improvements: Clarify dimension subsetting documentation, always reference `calliope.read_yaml(path)` rather than `calliope.Model(path)` (#829)
+
+|changed| Community and help links now point to Zulip (https://calliope-modelblocks.zulipchat.com/) instead of GitHub Discussions.
+
 ### Internal changes
 
 |fixed| example user-defined math tests that were missing global expressions in the resulting LP files.
@@ -43,6 +51,8 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 |changed| Math conditionals removed where math component defaults will achieve the same result.
 
 |fixed| Remove `stderr` redirect at pyomo backend model solve stage to avoid random infinite recursion errors in CI tests (#833).
+
+|changed| development dependency management to a mixture of `uv` and `pixi` (#881).
 
 ## 0.7.0.dev7 (2025-09-05)
 

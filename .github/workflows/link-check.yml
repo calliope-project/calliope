@@ -1,5 +1,8 @@
 name: Markdown link check
 
+permissions:
+  contents: read
+
 on:
   schedule:  # runs every monday at 9 am
     - cron: "0 9 * * 1"
@@ -13,7 +16,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: markdown-link-check
         uses: gaurav-nelson/github-action-markdown-link-check@1.0.15
         with:

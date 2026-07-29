@@ -27,6 +27,7 @@
     * [Migrating between versions](migrating.md): what changed between v0.6 and v0.7 and how to update your models.
     * [Contributing](contributing.md): how to contribute to Calliope's development.
     * [Version history](version_history.md): the full changelog.
+    * Chat with the community on [Zulip](https://calliope-modelblocks.zulipchat.com/).
     * Also see [www.callio.pe](https://www.callio.pe/) for more general information on the Calliope project.
 
 </div>

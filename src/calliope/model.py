@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -157,7 +157,7 @@ class Model(ModelStructure):
         inputs: xr.Dataset,
         attrs: CalliopeAttrs,
         results: xr.Dataset | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Returns a instantiated Calliope Model.
 
@@ -167,7 +167,7 @@ class Model(ModelStructure):
             results (xr.Dataset | None, optional):
                 Results dataset from another Calliope Model with compatible math formulation.
                 Defaults to None.
-            **kwargs:
+            **kwargs (Any):
                 initialisation keyword arguments
         """
         self.inputs: xr.Dataset
@@ -554,7 +554,9 @@ class Model(ModelStructure):
             iteration_results.coords["timesteps"] = new_ts
 
         results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
-        results = xr.concat(results_list, dim="timesteps", combine_attrs="drop")
+        results = xr.concat(
+            results_list, dim="timesteps", data_vars="all", combine_attrs="drop"
+        )
         results.attrs["termination_condition"] = ",".join(
             set(
                 result.attrs["termination_condition"]

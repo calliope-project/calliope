@@ -2,8 +2,9 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for data table definition."""
 
+from typing import Self
+
 from pydantic import Field, model_validator
-from typing_extensions import Self
 
 from calliope.schemas.general import (
     AttrStr,

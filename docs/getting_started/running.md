@@ -25,6 +25,11 @@ $ calliope run model.yaml --save_csv=results_directory
 
 For more details, including how to apply a scenario or override, see the [documentation on running in the command line](../basic/running-cli.md).
 
+!!! tip
+    Once you have saved your results (e.g. to `results.nc`), head to
+    [Analysing a model](analysing.md) — the quickest way to explore them is with
+    [Calligraph](https://calligraph.readthedocs.io/), our interactive visualisation tool.
+
 ## Improving solution times
 
 Large models will take time to solve.

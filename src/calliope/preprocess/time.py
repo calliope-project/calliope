@@ -32,7 +32,9 @@ def add_inferred_time_params(model_data: xr.Dataset):
         exceptions.warn(
             "Only one timestep defined. Inferring timestep resolution to be 1 hour"
         )
-        timestep_resolution = timestep_resolution.fillna(pd.Timedelta("1 hour"))
+        timestep_resolution = timestep_resolution.fillna(
+            pd.Timedelta("1 hour").to_timedelta64()
+        )
     else:
         timestep_resolution = timestep_resolution.ffill("timesteps")
 
@@ -234,26 +236,6 @@ def check_time_subset(ts_index: pd.Index, time_subset: list[str]):
         raise exceptions.ModelError(
             f"subset time range {time_subset} is outside the input data time range "
             f"[{df_start_time}, {df_end_time}]"
-        )
-
-
-def _check_missing_data(ds: xr.Dataset, dim_name: str):
-    """Check if there are any parameters with timeseries data that doesn't cover the whole time period.
-
-    We assume this is _not_ intended (e.g. loading in one dataset with a shorter time length than expected).
-
-    Args:
-        ds (xr.Dataset): Dataset with timeseries dimension `dim_name` present.
-        dim_name (str): Name of the timeseries dimension.
-    """
-    datetime_ds = ds[[k for k, v in ds.data_vars.items() if dim_name in v.dims]]
-    is_missing = (
-        datetime_ds.notnull().any(dim_name) & ~datetime_ds.notnull().all(dim_name)
-    ).to_dataframe()
-    missing_data = is_missing[is_missing].stack()
-    if not missing_data.empty:
-        exceptions.warn(
-            f"Possibly missing data on the {dim_name} dimension for:\n{missing_data}"
         )
 
 

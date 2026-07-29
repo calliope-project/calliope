@@ -1,6 +1,5 @@
 import importlib.resources
 import os
-import subprocess
 from pathlib import Path
 
 import pytest  # noqa: F401
@@ -178,18 +177,19 @@ class TestCLI:
             assert os.path.isfile(os.path.join(tempdir, "test.sh"))
             assert os.path.isfile(os.path.join(tempdir, "test.sh.array.sh"))
 
-    def test_debug(self):
-        """Trackeback should only be printed in debug mode."""
-        # FIXME: revert back to CliRunner when error handling is made consistent with terminal output
-        # See https://github.com/pallets/click/issues/2682
-        shell_cmd = "calliope run foo.yaml"
-        result = subprocess.run(shell_cmd, shell=True, capture_output=True)
-        assert result.returncode == 1
+    def test_fail_no_debug_no_stderr(self):
+        """Traceback should not be printed if debug mode not active."""
+        runner = CliRunner()
+        result = runner.invoke(cli.run, ["nonexistent_model.yaml"])
+        assert result.exit_code == 1
         assert not result.stderr
 
-        result = subprocess.run(shell_cmd + " --debug", shell=True, capture_output=True)
-        assert result.returncode == 1
-        assert "Traceback (most recent call last)" in result.stderr.decode()
+    def test_fail_debug_stderr(self):
+        """Traceback should be printed in debug mode."""
+        runner = CliRunner()
+        result = runner.invoke(cli.run, ["nonexistent_model.yaml", "--debug"])
+        assert result.exit_code == 1
+        assert "Traceback (most recent call last)" in result.stderr
 
     def test_generate_scenarios(self):
         runner = CliRunner()

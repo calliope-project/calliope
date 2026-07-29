@@ -45,21 +45,25 @@ class TestIO:
         return model
 
     @pytest.fixture(scope="class")
-    def model_file(self, tmpdir_factory, model):
+    @classmethod
+    def model_file(cls, tmpdir_factory, model):
         out_path = tmpdir_factory.mktemp("data").join("model.nc")
         model.to_netcdf(out_path)
         return out_path
 
     @pytest.fixture(scope="class")
-    def model_from_file(self, model_file):
+    @classmethod
+    def model_from_file(cls, model_file):
         return calliope.read_netcdf(model_file)
 
     @pytest.fixture(scope="class")
-    def model_from_file_no_processing(self, model_file):
+    @classmethod
+    def model_from_file_no_processing(cls, model_file):
         return xr.open_dataset(model_file, group="inputs")
 
     @pytest.fixture(scope="class")
-    def model_csv_dir(self, tmpdir_factory, model):
+    @classmethod
+    def model_csv_dir(cls, tmpdir_factory, model):
         parent_path = tmpdir_factory.mktemp("data")
         out_path = parent_path / "csvs"
         model.to_csv(out_path)

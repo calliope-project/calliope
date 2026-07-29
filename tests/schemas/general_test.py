@@ -11,7 +11,8 @@ LOGGER = "calliope.schemas.general"
 
 class TestUniqueList:
     @pytest.fixture(scope="class")
-    def pydantic_model(self):
+    @classmethod
+    def pydantic_model(cls):
         return pydantic.create_model("TestModel", unique_list=(general.UniqueList, ...))
 
     @pytest.mark.parametrize(
@@ -56,7 +57,8 @@ class TestUniqueList:
 
 class TestNonEmptyList:
     @pytest.fixture(scope="class")
-    def pydantic_model(self):
+    @classmethod
+    def pydantic_model(cls):
         return pydantic.create_model(
             "TestModel", non_empty_list=(general.NonEmptyList, ...)
         )
@@ -69,7 +71,8 @@ class TestNonEmptyList:
 
 class TestNonEmptyUniqueList:
     @pytest.fixture(scope="class")
-    def pydantic_model(self):
+    @classmethod
+    def pydantic_model(cls):
         return pydantic.create_model(
             "TestModel", non_empty_unique_list=(general.NonEmptyUniqueList, ...)
         )
@@ -84,7 +87,8 @@ class TestNonEmptyUniqueList:
 
 class TestAttrStr:
     @pytest.fixture(scope="class")
-    def pydantic_model(self):
+    @classmethod
+    def pydantic_model(cls):
         return pydantic.create_model("TestModel", attrstr=(general.AttrStr, ...))
 
     @pytest.mark.parametrize(
@@ -97,7 +101,8 @@ class TestAttrStr:
 
 class TestNumveriVal:
     @pytest.fixture(scope="class")
-    def pydantic_model(self):
+    @classmethod
+    def pydantic_model(cls):
         return pydantic.create_model("TestModel", numeric_val=(general.NumericVal, ...))
 
     @pytest.mark.parametrize("invalid_input", [[1, 2], "foobar", None])
@@ -108,14 +113,16 @@ class TestNumveriVal:
 
 class TestCalliopeDictModel:
     @pytest.fixture(scope="class")
-    def dict_str_model(self):
+    @classmethod
+    def dict_str_model(cls):
         dict_model = pydantic.create_model(
             "TestModel", __base__=general.CalliopeDictModel, root=(dict[str, str], {})
         )
         return dict_model({"key1": "value1", "key2": "value2"})
 
     @pytest.fixture(scope="class")
-    def base_model(self):
+    @classmethod
+    def base_model(cls):
         return pydantic.create_model(
             "TestBaseModel",
             __base__=general.CalliopeBaseModel,
@@ -124,7 +131,8 @@ class TestCalliopeDictModel:
         )
 
     @pytest.fixture(scope="class")
-    def dict_base_model(self, base_model):
+    @classmethod
+    def dict_base_model(cls, base_model):
         dict_model = pydantic.create_model(
             "TestModel",
             __base__=general.CalliopeDictModel,
@@ -133,7 +141,8 @@ class TestCalliopeDictModel:
         return dict_model({"key1": {"bar": 2}, "key2": {"foo": "value2", "bar": 3}})
 
     @pytest.fixture(scope="class")
-    def dict_list_model(self, base_model):
+    @classmethod
+    def dict_list_model(cls, base_model):
         list_model = pydantic.create_model(
             "TestListModel",
             __base__=general.CalliopeListModel,
@@ -275,14 +284,16 @@ class TestCalliopeDictModel:
 
 class TestCalliopeListModel:
     @pytest.fixture(scope="class")
-    def list_str_model(self):
+    @classmethod
+    def list_str_model(cls):
         list_model = pydantic.create_model(
             "TestModel", __base__=general.CalliopeListModel, root=(list[str], [])
         )
         return list_model(["value1", "value2"])
 
     @pytest.fixture(scope="class")
-    def list_base_model(self):
+    @classmethod
+    def list_base_model(cls):
         base_model = pydantic.create_model(
             "TestBaseModel",
             __base__=general.CalliopeBaseModel,
@@ -372,7 +383,8 @@ class TestCalliopeBaseModel:
         )
 
     @pytest.fixture(scope="class")
-    def config_model_nested_with_dict_and_list_models(self, config_model_flat):
+    @classmethod
+    def config_model_nested_with_dict_and_list_models(cls, config_model_flat):
         """Fixture for a nested model with CalliopeDictModel and CalliopeListModel."""
         list_model = pydantic.create_model(
             "TestListModel",

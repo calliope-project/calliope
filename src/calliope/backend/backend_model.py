@@ -14,7 +14,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from functools import partial
 from pathlib import Path
-from typing import Any, Generic, Literal, SupportsFloat, TypeVar, overload
+from typing import Any, Literal, SupportsFloat, TypeVar, overload
 
 import numpy as np
 import xarray as xr
@@ -789,9 +789,12 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         if kwargs:
             func = partial(func, **kwargs)
         vectorised_func = np.frompyfunc(func, len(args), n_out)
-        da = vectorised_func(
-            *(arg.broadcast_like(where) for arg in args), where=where.values
+
+        broadcast_where, *broadcast_args = xr.broadcast(where, *args)
+        outputs = tuple(
+            np.empty(broadcast_where.shape, dtype=object) for _ in range(n_out)
         )
+        da = vectorised_func(*broadcast_args, where=broadcast_where.values, out=outputs)
         if isinstance(da, xr.DataArray):
             da = da.fillna(np.nan)
         else:
@@ -883,7 +886,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         return self._dataset.filter_by_attrs(obj_type="postprocessed")
 
 
-class BackendModel(BackendModelGenerator, Generic[T]):
+class BackendModel[T](BackendModelGenerator):
     """Calliope's backend model functionality."""
 
     def __init__(

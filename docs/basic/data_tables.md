@@ -532,7 +532,7 @@ import pandas as pd
 df1 = pd.DataFrame(...)
 df2 = pd.DataFrame(...)
 
-model = calliope.Model(
+model = calliope.read_yaml(
     "path/to/model.yaml",
     data_table_dfs={"data_source_1": df1, "data_source_2": df2}
 )
