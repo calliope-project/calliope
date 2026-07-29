@@ -38,7 +38,8 @@ def generate_data_table_dict(data_dir):
 
 class TestDataTableUtils:
     @pytest.fixture(scope="class")
-    def table_obj(self, generate_data_table_dict):
+    @classmethod
+    def table_obj(cls, generate_data_table_dict):
         df = pd.Series({"bar": 0, "baz": 1})
         table_dict = generate_data_table_dict(
             "foo.csv", df, rows="test_row", columns=None
@@ -98,28 +99,32 @@ class TestDataTableUtils:
 
 class TestDataTableInitOneLevel:
     @pytest.fixture(scope="class")
-    def multi_row_no_col_data(self, generate_data_table_dict):
+    @classmethod
+    def multi_row_no_col_data(cls, generate_data_table_dict):
         df = pd.Series({"bar": 0, "baz": 1})
         return df, generate_data_table_dict(
             "multi_row_no_col_file.csv", df, rows="test_row", columns=None
         )
 
     @pytest.fixture(scope="class")
-    def multi_row_one_col_data(self, generate_data_table_dict):
+    @classmethod
+    def multi_row_one_col_data(cls, generate_data_table_dict):
         df = pd.DataFrame({"foo": {"bar": 0, "baz": 1}})
         return df, generate_data_table_dict(
             "multi_row_one_col_file.csv", df, rows="test_row", columns="test_col"
         )
 
     @pytest.fixture(scope="class")
-    def one_row_multi_col_data(self, generate_data_table_dict):
+    @classmethod
+    def one_row_multi_col_data(cls, generate_data_table_dict):
         df = pd.DataFrame({"foo": {"bar": 0}, "foobar": {"bar": 1}})
         return df, generate_data_table_dict(
             "one_row_multi_col_file.csv", df, rows="test_row", columns="test_col"
         )
 
     @pytest.fixture(scope="class")
-    def multi_row_multi_col_data(self, generate_data_table_dict):
+    @classmethod
+    def multi_row_multi_col_data(cls, generate_data_table_dict):
         df = pd.DataFrame(
             {"foo": {"bar": 0, "baz": 10}, "foobar": {"bar": 0, "baz": 20}}
         )
@@ -185,7 +190,8 @@ class TestDataTableInitOneLevel:
 
 class TestDataTableInitMultiLevel:
     @pytest.fixture(scope="class")
-    def multi_row_no_col_data(self, generate_data_table_dict):
+    @classmethod
+    def multi_row_no_col_data(cls, generate_data_table_dict):
         df = pd.Series({("bar1", "bar2"): 0, ("baz1", "baz2"): 1})
         return df, generate_data_table_dict(
             "multi_row_no_col_file.csv",
@@ -195,7 +201,8 @@ class TestDataTableInitMultiLevel:
         )
 
     @pytest.fixture(scope="class")
-    def multi_row_one_col_data(self, generate_data_table_dict):
+    @classmethod
+    def multi_row_one_col_data(cls, generate_data_table_dict):
         df = pd.DataFrame({"foo": {("bar1", "bar2"): 0, ("baz1", "baz2"): 1}})
         return df, generate_data_table_dict(
             "multi_row_one_col_file.csv",
@@ -205,7 +212,8 @@ class TestDataTableInitMultiLevel:
         )
 
     @pytest.fixture(scope="class")
-    def one_row_multi_col_data(self, generate_data_table_dict):
+    @classmethod
+    def one_row_multi_col_data(cls, generate_data_table_dict):
         df = pd.DataFrame(
             {("foo1", "foo2"): {"bar": 0}, ("foobar1", "foobar2"): {"bar": 1}}
         )
@@ -217,7 +225,8 @@ class TestDataTableInitMultiLevel:
         )
 
     @pytest.fixture(scope="class")
-    def multi_row_multi_col_data(self, generate_data_table_dict):
+    @classmethod
+    def multi_row_multi_col_data(cls, generate_data_table_dict):
         df = pd.DataFrame(
             {
                 ("foo1", "foo2"): {("bar1", "bar2"): 0, ("baz1", "baz2"): 10},
@@ -267,7 +276,8 @@ class TestDataTableInitMultiLevel:
 
 class TestDataTableSelectDropAdd:
     @pytest.fixture(scope="class")
-    def table_obj(self):
+    @classmethod
+    def table_obj(cls):
         def _table_obj(**table_dict_kwargs):
             df = pd.DataFrame(
                 {
@@ -351,7 +361,8 @@ class TestDataTableSelectDropAdd:
 
 class TestDataTableRenameDims:
     @pytest.fixture(scope="class")
-    def multi_row_one_col_data(self, data_dir, dummy_int):
+    @classmethod
+    def multi_row_one_col_data(cls, data_dir, dummy_int):
         """Fixture to create the xarray dataset from the data table, including dimension name mapping."""
 
         def _multi_row_one_col_data(
@@ -412,7 +423,8 @@ class TestDataTableRenameDims:
 
 class TestDataTableMalformed:
     @pytest.fixture(scope="class")
-    def table_obj(self):
+    @classmethod
+    def table_obj(cls):
         def _table_obj(**table_dict_kwargs):
             df = pd.DataFrame(
                 {
@@ -471,7 +483,8 @@ class TestDataTableMalformed:
 
 class TestDataTableLookupDictFromParam:
     @pytest.fixture(scope="class")
-    def table_obj(self):
+    @classmethod
+    def table_obj(cls):
         df = pd.DataFrame(
             {
                 "FOO": {("foo1", "bar1"): 1, ("foo1", "bar2"): 1},
@@ -508,7 +521,8 @@ class TestDataTableLookupDictFromParam:
 
 class TestDataTableTechDict:
     @pytest.fixture(scope="class")
-    def table_obj(self):
+    @classmethod
+    def table_obj(cls):
         def _table_obj(df_dict, rows="techs"):
             df = pd.DataFrame(df_dict)
             table_dict = (
@@ -575,7 +589,8 @@ class TestDataTableTechDict:
 
 class TestDataTableNodeDict:
     @pytest.fixture(scope="class")
-    def table_obj(self):
+    @classmethod
+    def table_obj(cls):
         def _table_obj(df_dict, rows=["nodes", "techs"]):
             df = pd.DataFrame(df_dict)
             table_dict = data_table_schema.CalliopeDataTable.model_validate(
@@ -626,7 +641,7 @@ class TestDataTableNodeDict:
         tech_dict = CalliopeTechs(bar1={}, bar2={})
         node_tech_ds = table_obj(node_tech_df_dict)
         node_ds = table_obj(node_df_dict, rows="nodes")
-        node_tech_ds.dataset = node_tech_ds.dataset.merge(node_ds.dataset)
+        node_tech_ds.dataset = node_tech_ds.dataset.merge(node_ds.dataset, join="outer")
 
         node_dict = node_tech_ds.node_def(tech_dict)
         assert node_dict == CalliopeNodes(

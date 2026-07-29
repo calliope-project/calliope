@@ -30,39 +30,31 @@ Look at our [milestones](https://github.com/calliope-project/calliope/milestones
 
 ### Setting up a development environment
 
-To create a development environment for calliope, with all libraries required for development and quality assurance installed, it is easiest to install calliope using the [mamba](https://mamba.readthedocs.io/en/latest/index.html) package manager, as follows:
+To create a development environment for calliope, use [pixi](https://pixi.sh/latest/):
 
-1. Install mamba with the [Mambaforge](https://github.com/conda-forge/miniforge#mambaforge) executable for your operating system.
-1. Open the command line (or the "miniforge prompt" in Windows).
+1. Install pixi following the [official instructions](https://pixi.sh/latest/installation/).
 1. Download (a.k.a., clone) the calliope repository: `git clone git@github.com:calliope-project/calliope.git`
 1. Change into the `calliope` directory: `cd calliope`
-1. Create the calliope mamba environment: `mamba create -n calliope -c conda-forge --file requirements/base.txt --file requirements/dev.txt coin-or-cbc gurobi::gurobi`
-1. Activate the calliope mamba environment: `mamba activate calliope`
-1. Install the calliope package into the environment, in editable mode and ignoring dependencies (we have dealt with those when creating the mamba environment): `pip install --no-deps -e .`
-1. Install the interactive python shell (necessary when testing our documentation locally): `ipython kernel install --user --name=calliope_docs_build`
+1. Install the development environment: `pixi install --environment dev`
 
 All together:
 
 ``` shell
 git clone git@github.com:calliope-project/calliope.git
 cd calliope
-mamba create -n calliope -c conda-forge --file requirements/base.txt --file requirements/dev.txt coin-or-cbc gurobi::gurobi
-mamba activate calliope
-pip install --no-deps -e .
-ipython kernel install --user --name=calliope_docs_build
+pixi install --environment dev
 ```
-
-If installing directly with pip, you can install these libraries using the `dev` option, i.e., `pip install -e '.[dev]'`
 
 If you plan to make changes to the code then please make regular use of the following tools to verify the codebase while you work:
 
-- `pre-commit`: run `pre-commit install` in your command line to load inbuilt checks that will run every time you commit your changes.
-The checks are: 1. check no large files have been staged, 2. lint python files for major errors, 3. format python files to conform with the [PEP8 standard](https://peps.python.org/pep-0008/).
-You can also run these checks yourself at any time to ensure staged changes are clean by calling `pre-commit`.
-- `pytest` - run the unit test suite and check test coverage.
+- `pre-commit`: run `pixi run -e dev pre-commit` in your command line to load and run inbuilt checks.
+The checks include:
+  1. check no large files have been staged.
+  1. lint python files for major errors.
+  1. format python files to conform with the [PEP8 standard](https://peps.python.org/pep-0008/).
+- `pytest` - run `pixi run test` to run the full test suite.
+  Run `pixi run test-cov` to also check test coverage.
 
-!!! note
-    If you already have an environment called `calliope` on your system (e.g., for a stable installation of the package), you will need to choose a different environment name, e.g. `calliope-dev`.
 
 ## Implementing a change
 
@@ -113,20 +105,17 @@ If tests are failing, you can debug them by using the pytest arguments ``-x`` (s
 The following options allow you to strip down the test suite to the bare essentials:
 
 1. The test suite includes unit tests and integration tests.
-The integration tests can be slow, so if you want to avoid them during development, you should run `pytest -m "not time_intensive"` to ignore those tests flagged as `time_intensive`.
-1. You can avoid tracking code coverage (which can be slow), by adding the `--no-cov` argument: `pytest --no-cov`.
+   The integration tests can be slow, so if you want to avoid them during development, you should run:
 
-All together:
+   ```shell
+   pixi run test -m "not time_intensive"
+   ```
 
-``` shell
-pytest -m "not time_intensive" --no-cov
-```
+2. If you are developing your own tests, you can focus on those with the `::` syntax:
 
-If you are developing your own tests, you can focus on those with the `::` syntax:
-
-``` shell
-pytest tests/test_my_tests.py::TestMyTestClass::test_my_test_function
-```
+   ``` shell
+   pixi run test tests/test_my_tests.py::TestMyTestClass::test_my_test_function
+   ```
 
 ### Committing changes
 
@@ -202,7 +191,7 @@ We have chosen to use [`ruff`](https://docs.astral.sh/ruff/) for code formatting
 When run from the root directory of this repository, `pyproject.toml` should ensure that formatting and linting fixes are in line with our custom preferences (e.g., 88 character maximum line length).
 The philosophy behind using the `ruff` linter is that it's based on [`black`](https://black.readthedocs.io/en/stable/), an uncompromising formatter that ensures uniform style throughout the project.
 Since `black` is designed to minimise diffs, and make patches more human readable, this also makes code reviews more efficient.
-To make this a smooth experience, you should run `pre-commit install` after setting up your development environment, so that `ruff` makes all the necessary formatting fixes to your code each time you commit, and so that it also highlights any style issues in your code.
+To make this a smooth experience, you should run `pixi run pre-commit install` after setting up your development environment, so that `ruff` makes all the necessary formatting fixes to your code each time you commit, and so that it also highlights any style issues in your code.
 If you prefer, you can also set up your IDE to run `ruff` formatting whenever you save your files, and to have `ruff` highlight erroneous code directly as you type.
 Take a look at its documentation for more information on configuring this.
 
@@ -216,12 +205,14 @@ When adding docstrings, we request you use the [Google docstring style](https://
 - [ ] Create a release branch
 - [ ] Bump the version number in `src/calliope/_version.py`
 - [ ] Update the `CHANGELOG.md` with final version number of the form `vX.Y.Z` and the release date.
-- [ ] Commit your changes and create a release pull request with the title `Release vX.Y.Z` to have all the tests run and to verify that the pip package builds successfully.
+- [ ] Commit your changes and create a release pull request with the title `Release vX.Y.Z` to have all the tests run and to verify that the `pypi` package builds successfully.
+
+    !!! note
+
+        The pull request _must_ have the title `Release vX.Y.Z` to trigger the test `pypi` package build and the TestPyPI upload.
+
 - [ ] Once the PR is approved and merged, tag the commit in main with the version `vX.Y.Z`.
 - [ ] Create a release through the GitHub web interface, using the same tag, titling it `Release vX.Y.Z` and include all the changelog elements that are `User-facing`.
-
-!!! note
-    The pull request _must_ have the title `Release vX.Y.Z` to trigger the pip package build and the test-pypi upload.
 
 ### Post-release
 
@@ -231,4 +222,4 @@ When adding docstrings, we request you use the [Google docstring style](https://
 
 ## Licensing
 
-Note that by contributing to Calliope, e.g. through opening a pull request or submitting a patch, you represent that your contributions are your own original work and that you have the right to license them, and you agree that your contributions are licensed under the Apache 2.0 license.
+Note that by contributing to Calliope, e.g., through opening a pull request or submitting a patch, you represent that your contributions are your own original work and that you have the right to license them, and you agree that your contributions are licensed under the Apache 2.0 license.

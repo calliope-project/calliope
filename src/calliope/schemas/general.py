@@ -4,13 +4,12 @@
 
 import logging
 from collections.abc import Hashable
-from typing import Annotated, TypeVar
+from typing import Annotated, Self, TypeVar
 
 import jsonref
 from annotated_types import Len
 from pydantic import AfterValidator, BaseModel, Field, RootModel
 from pydantic_core import PydanticCustomError
-from typing_extensions import Self
 
 from calliope.attrdict import AttrDict
 

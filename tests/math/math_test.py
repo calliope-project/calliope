@@ -103,22 +103,26 @@ class InternalMathFiles(ABC):
     EXTRA_MATH: list
 
     @pytest.fixture(scope="class")
-    def lp_temp_path(self, tmp_path_factory):
+    @classmethod
+    def lp_temp_path(cls, tmp_path_factory):
         """Use a single temp. location to make manual checks easier."""
-        return tmp_path_factory.mktemp(f"lp_files_{self.FILENAME}")
+        return tmp_path_factory.mktemp(f"lp_files_{cls.FILENAME}")
 
     @pytest.fixture(scope="class")
-    def full_math(self):
-        return create_full_math(["base"] + self.EXTRA_MATH)
+    @classmethod
+    def full_math(cls):
+        return create_full_math(["base"] + cls.EXTRA_MATH)
 
     @pytest.fixture(scope="class")
-    def barebones_math_file(self, full_math, tmp_path_factory) -> str:
+    @classmethod
+    def barebones_math_file(cls, full_math, tmp_path_factory) -> str:
         filepath = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
         create_pruned_math_file(full_math, filepath)
         return str(filepath)
 
     @pytest.fixture(scope="class")
-    def barebones_config(self, barebones_math_file):
+    @classmethod
+    def barebones_config(cls, barebones_math_file):
         return {
             "math_paths": {"base": barebones_math_file},
             "pre_validate_math_strings": False,
@@ -143,9 +147,10 @@ class InternalMathFiles(ABC):
                 all_math.del_key(key)
         assert not any(all_math.values())
 
-    @abstractmethod
     @pytest.fixture(scope="class", params=[])
-    def config(self, request):
+    @classmethod
+    @abstractmethod
+    def config(cls, request):
         pass
 
     def test_math(self, full_math, lp_temp_path, barebones_config, config):
@@ -199,8 +204,9 @@ class TestBaseMath(InternalMathFiles):
     EXTRA_MATH = []
 
     @pytest.fixture(scope="class", params=TEST_CONFIGS[FILENAME].keys())
-    def config(self, request):
-        return TEST_CONFIGS[self.FILENAME][request.param]
+    @classmethod
+    def config(cls, request):
+        return TEST_CONFIGS[cls.FILENAME][request.param]
 
     def test_min_cost_optimisation_feasible(
         self, full_math, lp_temp_path, barebones_config
@@ -251,8 +257,9 @@ class TestMILPMath(InternalMathFiles):
     EXTRA_MATH = [FILENAME]
 
     @pytest.fixture(scope="class", params=TEST_CONFIGS[FILENAME].keys())
-    def config(self, request):
-        return TEST_CONFIGS[self.FILENAME][request.param]
+    @classmethod
+    def config(cls, request):
+        return TEST_CONFIGS[cls.FILENAME][request.param]
 
 
 class TestInterClusterStorageMath(InternalMathFiles):
@@ -261,8 +268,9 @@ class TestInterClusterStorageMath(InternalMathFiles):
     EXTRA_MATH = [FILENAME]
 
     @pytest.fixture(scope="class", params=TEST_CONFIGS[FILENAME].keys())
-    def config(self, request):
-        return TEST_CONFIGS[self.FILENAME][request.param]
+    @classmethod
+    def config(cls, request):
+        return TEST_CONFIGS[cls.FILENAME][request.param]
 
 
 class CustomMathExamples(ABC):
@@ -280,32 +288,38 @@ class CustomMathExamples(ABC):
         """Source of the specific test class custom math"""
 
     @pytest.fixture(scope="class")
-    def abs_filepath(self):
-        return (self.CUSTOM_MATH_DIR / self.YAML_FILEPATH).absolute().as_posix()
+    @classmethod
+    def abs_filepath(cls):
+        return (cls.CUSTOM_MATH_DIR / cls.YAML_FILEPATH).absolute().as_posix()
 
     @pytest.fixture(scope="class")
-    def custom_math(self):
-        return io.read_rich_yaml(self.CUSTOM_MATH_DIR / self.YAML_FILEPATH)
+    @classmethod
+    def custom_math(cls):
+        return io.read_rich_yaml(cls.CUSTOM_MATH_DIR / cls.YAML_FILEPATH)
 
     @pytest.fixture(scope="class")
-    def full_math(self, custom_math):
-        return create_full_math(["base"] + self.EXTRA_MATH, custom_math)
+    @classmethod
+    def full_math(cls, custom_math):
+        return create_full_math(["base"] + cls.EXTRA_MATH, custom_math)
 
     @pytest.fixture(scope="class")
-    def barebones_math_file(self, tmp_path_factory, full_math) -> str:
+    @classmethod
+    def barebones_math_file(cls, tmp_path_factory, full_math) -> str:
         filepath = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
         create_pruned_math_file(full_math, filepath)
         return str(filepath)
 
     @pytest.fixture(scope="class")
-    def lp_temp_path(self, tmp_path_factory):
+    @classmethod
+    def lp_temp_path(cls, tmp_path_factory):
         """Use a single temp. location to make manual checks easier."""
         return tmp_path_factory.mktemp(
-            f"lp_files_{self.YAML_FILEPATH.removesuffix('.yaml')}"
+            f"lp_files_{cls.YAML_FILEPATH.removesuffix('.yaml')}"
         )
 
     @pytest.fixture(scope="class")
-    def all_custom_components(self, custom_math) -> dict[str, list[str]]:
+    @classmethod
+    def all_custom_components(cls, custom_math) -> dict[str, list[str]]:
         """Per-component lists in a custom math file."""
         custom_math_lists = {
             component: list(custom_math[component]) for component in custom_math

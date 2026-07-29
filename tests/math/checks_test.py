@@ -70,8 +70,9 @@ class Checks(ABC):
     """Test class for base.yaml math checks using parametrized test data."""
 
     @pytest.fixture(scope="class", params=[])
+    @classmethod
     @abstractmethod
-    def check(self, request):
+    def check(cls, request):
         return request.param
 
     def test_check_raises_error_or_warning(self, check):
@@ -100,7 +101,8 @@ class TestBaseMathChecks(Checks):
     """Test class for base.yaml math checks using parametrized test data."""
 
     @pytest.fixture(scope="class", params=BASE_PARAMS)
-    def check(self, request):
+    @classmethod
+    def check(cls, request):
         return request.param
 
 
@@ -108,7 +110,8 @@ class TestMILPMathChecks(Checks):
     """Test class for milp.yaml math checks using parametrized test data."""
 
     @pytest.fixture(scope="class", params=MILP_PARAMS)
-    def check(self, request):
+    @classmethod
+    def check(cls, request):
         return request.param
 
 
@@ -116,5 +119,6 @@ class TestOperateMathChecks(Checks):
     """Test class for operate.yaml math checks using parametrized test data."""
 
     @pytest.fixture(scope="class", params=OPERATE_PARAMS)
-    def check(self, request):
+    @classmethod
+    def check(cls, request):
         return request.param

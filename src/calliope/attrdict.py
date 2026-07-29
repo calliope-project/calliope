@@ -4,8 +4,7 @@
 
 import copy
 import logging
-
-from typing_extensions import Self
+from typing import Self
 
 logger = logging.getLogger(__name__)
 

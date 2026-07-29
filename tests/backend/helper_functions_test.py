@@ -100,7 +100,8 @@ def where_map_dim(where, parsing_kwargs):
 
 class TestAsArray:
     @pytest.fixture(scope="class")
-    def parsing_kwargs(self, dummy_model_data, dummy_model_math):
+    @classmethod
+    def parsing_kwargs(cls, dummy_model_data, dummy_model_math):
         attrs = eval_attrs.EvalAttrs(
             input_data=dummy_model_data, equation_name="foo", math=dummy_model_math
         )
@@ -529,7 +530,8 @@ class TestAsArray:
 
 class TestAsMathString:
     @pytest.fixture(scope="class")
-    def parsing_kwargs(self, dummy_model_data, dummy_model_math):
+    @classmethod
+    def parsing_kwargs(cls, dummy_model_data, dummy_model_math):
         attrs = eval_attrs.EvalAttrs(
             input_data=dummy_model_data, equation_name="foo", math=dummy_model_math
         )

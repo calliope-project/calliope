@@ -202,8 +202,9 @@ class TestChecks:
 
 
 class TestOperateMode:
+    @staticmethod
     @contextmanager
-    def caplog_session(self, request):
+    def caplog_session(request):
         """caplog for class/session-scoped fixtures.
 
         See https://github.com/pytest-dev/pytest/discussions/11177
@@ -214,7 +215,8 @@ class TestOperateMode:
             yield pytest.LogCaptureFixture(request.node, _ispytest=True)
 
     @pytest.fixture(scope="class")
-    def base_model(self):
+    @classmethod
+    def base_model(cls):
         """Solve in base mode for the same overrides, to check against operate mode model."""
         model = build_model(
             {}, "simple_supply,operate,var_costs,investment_costs", mode="base"
@@ -226,7 +228,8 @@ class TestOperateMode:
     @pytest.fixture(
         scope="class", params=[("6h", "12h"), ("12h", "12h"), ("16h", "20h")]
     )
-    def operate_model_and_log(self, base_model, request):
+    @classmethod
+    def operate_model_and_log(cls, base_model, request):
         """Solve in base mode, then use results to set operate mode inputs, then solve in operate mode.
 
         Three different operate/horizon windows chosen:
@@ -242,7 +245,7 @@ class TestOperateMode:
         )
         model.build(operate={"window": request.param[0], "horizon": request.param[1]})
 
-        with self.caplog_session(request) as caplog:
+        with cls.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve(force=True)
             log = caplog.text
@@ -316,8 +319,9 @@ class TestSporesMode:
         "spores,var_costs,two_hours,simple_supply_spores_ready,investment_costs"
     )
 
+    @staticmethod
     @contextmanager
-    def caplog_session(self, request):
+    def caplog_session(request):
         """caplog for class/session-scoped fixtures.
 
         See https://github.com/pytest-dev/pytest/discussions/11177
@@ -328,11 +332,12 @@ class TestSporesMode:
             yield pytest.LogCaptureFixture(request.node, _ispytest=True)
 
     @pytest.fixture(scope="class")
-    def spores_model_and_log(self, request):
+    @classmethod
+    def spores_model_and_log(cls, request):
         """Iterate 2 times in SPORES mode."""
-        model = build_model({}, self.SPORES_OVERRIDES)
+        model = build_model({}, cls.SPORES_OVERRIDES)
         model.build()
-        with self.caplog_session(request) as caplog:
+        with cls.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve()
             log = caplog.text
@@ -343,12 +348,13 @@ class TestSporesMode:
         scope="class",
         params=["integer", "relative_deployment", "random", "evolving_average"],
     )
-    def spores_model_and_log_algorithms(self, request):
+    @classmethod
+    def spores_model_and_log_algorithms(cls, request):
         """Iterate 2 times in SPORES mode using different scoring algorithms."""
-        model = build_model({}, self.SPORES_OVERRIDES)
+        model = build_model({}, cls.SPORES_OVERRIDES)
         model.build()
 
-        with self.caplog_session(request) as caplog:
+        with cls.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve(spores={"scoring_algorithm": request.param})
             log = caplog.text
@@ -356,9 +362,10 @@ class TestSporesMode:
         return model, log
 
     @pytest.fixture(scope="class")
-    def spores_model_continue_from_plan_and_log(self, request):
+    @classmethod
+    def spores_model_continue_from_plan_and_log(cls, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
-        model = build_model({}, self.SPORES_OVERRIDES, mode="base")
+        model = build_model({}, cls.SPORES_OVERRIDES, mode="base")
         model.build()
         model.solve()
 
@@ -369,7 +376,7 @@ class TestSporesMode:
             mode="spores",
         )
         model2.build()
-        with self.caplog_session(request) as caplog:
+        with cls.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model2.solve(force=True, spores={"use_latest_results": True})
             log = caplog.text
@@ -377,13 +384,14 @@ class TestSporesMode:
         return model2, log
 
     @pytest.fixture(scope="class")
-    def spores_model_continue_from_spores_and_log(self, request):
+    @classmethod
+    def spores_model_continue_from_spores_and_log(cls, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
 
-        model = build_model({}, self.SPORES_OVERRIDES)
+        model = build_model({}, cls.SPORES_OVERRIDES)
         model.build()
         model.solve()
-        with self.caplog_session(request) as caplog:
+        with cls.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve(
                     force=True, spores={"use_latest_results": True, "number": 4}
@@ -393,17 +401,19 @@ class TestSporesMode:
         return model, log
 
     @pytest.fixture(scope="class")
-    def spores_save_per_spore_path(self, tmp_path_factory):
+    @classmethod
+    def spores_save_per_spore_path(cls, tmp_path_factory):
         return tmp_path_factory.mktemp("outputs")
 
     @pytest.fixture(scope="class")
-    def spores_model_save_per_spore_and_log(self, spores_save_per_spore_path, request):
+    @classmethod
+    def spores_model_save_per_spore_and_log(cls, spores_save_per_spore_path, request):
         """Iterate 2 times in SPORES mode and save to file each time."""
 
-        model = build_model({}, self.SPORES_OVERRIDES)
+        model = build_model({}, cls.SPORES_OVERRIDES)
         model.build()
 
-        with self.caplog_session(request) as caplog:
+        with cls.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve(spores={"save_per_spore_path": spores_save_per_spore_path})
             log = caplog.text
@@ -414,18 +424,20 @@ class TestSporesMode:
         scope="class",
         params=["integer", "relative_deployment", "random", "evolving_average"],
     )
-    def spores_model_with_tracker(self, request):
+    @classmethod
+    def spores_model_with_tracker(cls, request):
         """Iterate 2 times in SPORES mode with a SPORES score tracking parameter."""
-        model = build_model({}, f"{self.SPORES_OVERRIDES},spores_tech_tracking")
+        model = build_model({}, f"{cls.SPORES_OVERRIDES},spores_tech_tracking")
         model.build()
         model.solve(spores={"scoring_algorithm": request.param})
 
         return model
 
     @pytest.fixture(scope="class")
-    def rerun_spores_log(self, request, spores_model_and_log):
+    @classmethod
+    def rerun_spores_log(cls, request, spores_model_and_log):
         """Solve in spores mode a second time, to trigger new log messages."""
-        with self.caplog_session(request) as caplog:
+        with cls.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 spores_model_and_log[0].solve(force=True)
             return caplog.text

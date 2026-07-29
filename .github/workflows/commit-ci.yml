@@ -1,5 +1,8 @@
 name: Branch Push CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -23,34 +26,23 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - uses: mamba-org/setup-micromamba@v1
+    - uses: prefix-dev/setup-pixi@v0.10.0
       with:
-        micromamba-version: '1.5.10-0'
-        environment-name: ${{ github.event.repository.name }}-ubuntu-latest-312-${{ hashFiles('requirements/dev.txt') }}
-        environment-file: requirements/base.txt
-        create-args: >-
-          -f requirements/dev.txt
-          python=3.11
-          coin-or-cbc
-          gurobi::gurobi
-        post-cleanup: all
-        cache-environment: true
-
-    - name: Install package
-      run: pip install --no-dependencies -e .
-
-    - name: Install jupyter kernel
-      run: python -m ipykernel install --user --name calliope
+        pixi-version: v0.73.0
+        cache: true
+        cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+        environments: py314
+        manifest-path: pyproject.toml
 
     - name: run tests without coverage and without time intensive tests
       if: github.ref != 'refs/heads/main'
-      run: pytest --no-cov -m 'not time_intensive' -m 'not needs_gurobi_license'
+      run: pixi run -e py314 test-ci
 
     - name: run tests with coverage
       if: github.ref == 'refs/heads/main'
-      run: pytest --cov
+      run: pixi run -e py314 test-cov
 
     - name: upload coverage report to Codecov
       if: github.ref == 'refs/heads/main'

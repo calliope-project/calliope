@@ -1,5 +1,8 @@
 name: Pull Request CI
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     branches:
@@ -25,55 +28,47 @@ concurrency:
   # Use github.ref on other branches, so it's unique per branch
   group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
 jobs:
   test:
     if: github.event.pull_request.draft == false
     strategy:
       matrix:
         os: [ubuntu-latest]
-        py3version: ["10", "11", "12"]
+        py3version:
+          - "12"
+          - "13"
+          - &py_latest "14"
         include:
           - os: windows-latest
-            py3version: "12"
+            py3version: *py_latest
           - os: macos-latest
-            py3version: "12"
+            py3version: *py_latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    env:
+      PY_LATEST: *py_latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - uses: mamba-org/setup-micromamba@v1
+    - uses: prefix-dev/setup-pixi@v0.10.0
       with:
-        micromamba-version: '1.5.10-0'
-        environment-name: ${{ github.event.repository.name }}-${{ matrix.os }}-3${{ matrix.py3version }}-${{ hashFiles('requirements/dev.txt') }}
-        environment-file: requirements/base.txt
-        create-args: >-
-          -f requirements/dev.txt
-          curl
-          python=3.${{ matrix.py3version }}
-          coin-or-cbc
-          gurobi::gurobi
-        post-cleanup: all
-        cache-environment: true
-
-    - name: Install package
-      run: pip install --no-dependencies -e .
-
-    - name: Install jupyter kernel
-      run: python -m ipykernel install --user --name calliope
+        pixi-version: v0.73.0
+        cache: true
+        cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+        environments: ${{ format('py3{0}', matrix.py3version) }}
+        manifest-path: pyproject.toml
 
     - name: run tests with coverage
-      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '12'
-      run: pytest --cov
+      if: matrix.os == 'ubuntu-latest' && matrix.py3version == env.PY_LATEST
+      run: pixi run -e ${{ format('py3{0}', matrix.py3version) }} test-cov
 
     - name: run tests without coverage
-      if: matrix.os != 'ubuntu-latest' || matrix.py3version != '12'
-      run: pytest --no-cov
+      if: matrix.os != 'ubuntu-latest' || matrix.py3version != env.PY_LATEST
+      run: pixi run -e ${{ format('py3{0}', matrix.py3version) }} test
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
-      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '12'
+      if: matrix.os == 'ubuntu-latest' && matrix.py3version == env.PY_LATEST
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true
