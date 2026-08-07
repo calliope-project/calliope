@@ -1,4 +1,5 @@
 import logging
+import re
 
 import numpy as np
 import pandas as pd
@@ -127,7 +128,7 @@ def model_data_cleaner_with_def_matrix(model_data_cleaner):
 
 
 @pytest.fixture
-def my_caplog(caplog):
+def debug_caplog(caplog):
     caplog.set_level(logging.DEBUG, logger="calliope.preprocess")
     return caplog
 
@@ -147,6 +148,7 @@ class TestModelDataBuilder:
             "heat",
         }
         assert set(model_data_builder_w_params.dataset.data_vars.keys()) == {
+            "active",
             "distance",
             "name",
             "carrier_out",
@@ -158,6 +160,9 @@ class TestModelDataBuilder:
             "sink_use_equals",
             "link_from",
             "link_to",
+            "one_way",
+            "latitude",
+            "longitude",
         }
 
     def test_get_relevant_node_refs_ts_data(self, model_data_builder: ModelDataBuilder):
@@ -249,6 +254,10 @@ class TestModelDataBuilder:
                 "bar": pd.Series({("test_idx", "foobaz"): True})
                 .rename_axis(index=[dim_name, "foobar"])
                 .to_xarray(),
+                "active": pd.Series({"test_idx": True}).rename_axis(index=dim_name),
+                "base_tech": pd.Series({"test_idx": float("nan")}).rename_axis(
+                    index=dim_name
+                ),
             }
         )
         assert param_ds.broadcast_equals(expected_ds)
@@ -326,16 +335,6 @@ class TestModelDataBuilder:
             f"foo | Length mismatch between data ({param_data}) and index ([['foo'], ['bar']]) in input definition",
         )
 
-    def test_inherit_techs_inactive(
-        self, my_caplog, model_data_builder: ModelDataBuilder
-    ):
-        def_dict = {"test_supply_gas": {"active": False}}
-        new_def = model_data_builder._inherit_techs(
-            base_def=CalliopeTechs.model_validate(def_dict)
-        )
-        assert "(techs, test_supply_gas) | Deactivated." in my_caplog.text
-        assert not new_def.root.keys()
-
     def test_inherit_techs_from_full_model(self, model_data_builder: ModelDataBuilder):
         """Without a `base_def` to start off inheritance chaining, the full model tech definition will be used to find keys."""
         new_def_dict = model_data_builder._inherit_techs()
@@ -387,48 +386,8 @@ class TestModelDataBuilder:
             {"foo": {"my_param": 2, "base_tech": "supply"}}
         )
 
-    def test_deactivate_single_dim(
-        self, my_caplog, model_data_builder_w_params: ModelDataBuilder
-    ):
-        assert "a" in model_data_builder_w_params.dataset.nodes
-        model_data_builder_w_params._deactivate_item(nodes="a")
-        assert "a" not in model_data_builder_w_params.dataset.nodes
-        assert "(nodes, a) | Deactivated." in my_caplog.text
-
-    def test_deactivate_two_dims(
-        self, my_caplog, model_data_builder_w_params: ModelDataBuilder
-    ):
-        """We drop a tech at a single node, so it isn't removed entirely from the dataset since it is present at the other node."""
-        to_drop = {"nodes": "a", "techs": "test_supply_elec"}
-        model_data_builder_w_params._deactivate_item(**to_drop)
-        assert "a" in model_data_builder_w_params.dataset.nodes
-        assert "test_supply_elec" in model_data_builder_w_params.dataset.techs
-        assert (
-            model_data_builder_w_params.dataset[["carrier_in", "carrier_out"]].sel(
-                **to_drop
-            )
-            == 0
-        ).all()
-        assert "(nodes, a), (techs, test_supply_elec) | Deactivated." in my_caplog.text
-
-    @pytest.mark.parametrize(
-        "to_drop",
-        [
-            {"nodes": "d"},
-            {"techs": "new_tech"},
-            {"nodes": "d", "techs": "test_supply_elec"},
-            {"nodes": "a", "techs": "new_tech"},
-        ],
-    )
-    def test_deactivate_no_action(
-        self, model_data_builder_w_params: ModelDataBuilder, to_drop: dict
-    ):
-        orig_dataset = model_data_builder_w_params.dataset.copy(deep=True)
-        model_data_builder_w_params._deactivate_item(**to_drop)
-        assert model_data_builder_w_params.dataset.equals(orig_dataset)
-
     def test_links_to_node_format_all_active(
-        self, my_caplog, model_data_builder: ModelDataBuilder
+        self, debug_caplog, model_data_builder: ModelDataBuilder
     ):
         node_def = CalliopeNodes.model_validate(
             {
@@ -437,43 +396,16 @@ class TestModelDataBuilder:
             }
         )
         link_def = model_data_builder._links_to_node_format(node_def)
-        assert "Deactivated" not in my_caplog.text
+
         assert set(link_def.root.keys()) == {"a", "b"}
         assert all(
             set(node.techs.root.keys()) == {"test_link_a_b_heat", "test_link_a_b_elec"}
             for node in link_def.root.values()
         )
 
-    def test_links_to_node_format_none_active(
-        self, my_caplog, model_data_builder: ModelDataBuilder
-    ):
-        node_def = CalliopeNodes.model_validate(
-            {"c": {"techs": {"foo": {"base_tech": "supply"}}}}
-        )
-        link_def = model_data_builder._links_to_node_format(node_def)
-        assert (
-            "(links, test_link_a_b_elec) | Deactivated due to missing" in my_caplog.text
-        )
-        assert not link_def.root.keys()
-
-    def test_links_to_node_format_one_active(
-        self, my_caplog, model_data_builder: ModelDataBuilder
-    ):
-        node_def = CalliopeNodes.model_validate(
-            {
-                "a": {"techs": {"foo": {"base_tech": "supply"}}},
-                "c": {"techs": {"bar": {"base_tech": "demand"}}},
-            }
-        )
-        link_def = model_data_builder._links_to_node_format(node_def)
-        assert (
-            "(links, test_link_a_b_elec) | Deactivated due to missing" in my_caplog.text
-        )
-        assert not link_def.root.keys()
-
     @pytest.mark.parametrize("coord_name", ["foosteps", "barsteps"])
     def test_add_to_dataset_timeseries(
-        self, my_caplog, model_data_builder: ModelDataBuilder, coord_name
+        self, debug_caplog, model_data_builder: ModelDataBuilder, coord_name
     ):
         model_data_builder.math = model_data_builder.math.update(
             {"dimensions": {coord_name: {"dtype": "datetime", "iterator": "i"}}}
@@ -484,7 +416,7 @@ class TestModelDataBuilder:
 
         assert (
             f"foo | dimensions | Updating values of `{coord_name}` to datetime type"
-            in my_caplog.text
+            in debug_caplog.text
         )
         assert (
             model_data_builder.dataset.coords[coord_name].dtype.kind == DATETIME_DTYPE
@@ -492,12 +424,15 @@ class TestModelDataBuilder:
         assert "ts_data" in model_data_builder.dataset
 
     def test_add_to_dataset_no_timeseries(
-        self, my_caplog, model_data_builder: ModelDataBuilder, simple_da: xr.DataArray
+        self,
+        debug_caplog,
+        model_data_builder: ModelDataBuilder,
+        simple_da: xr.DataArray,
     ):
         new_param = simple_da.copy().to_dataset(name="non_ts_data")
         model_data_builder._add_to_dataset(new_param, "foo")
 
-        assert "datetime type" not in my_caplog.text
+        assert "datetime type" not in debug_caplog.text
         # make sure nothing has changed in the array
         assert "non_ts_data" in model_data_builder.dataset
         assert model_data_builder.dataset["non_ts_data"].equals(simple_da)
@@ -506,7 +441,7 @@ class TestModelDataBuilder:
         "data", [[1.0, 2.0], ["1.0", "2.0"], [1, "2.0"], ["1", 2.0]]
     )
     def test_update_float_dims(
-        self, my_caplog, model_data_builder: ModelDataBuilder, data
+        self, debug_caplog, model_data_builder: ModelDataBuilder, data
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"my_data": [True, False]}, index=new_idx).to_xarray()
@@ -517,13 +452,13 @@ class TestModelDataBuilder:
 
         assert (
             "foo | dimensions | Updating values of `bar` to float type"
-            in my_caplog.text
+            in debug_caplog.text
         )
         assert updated_ds["bar"].dtype.kind == "f"
 
     @pytest.mark.parametrize("data", [[1, 2], ["1", "2"], ["1", 2], [1, "2"]])
     def test_update_integer_dims(
-        self, my_caplog, model_data_builder: ModelDataBuilder, data
+        self, debug_caplog, model_data_builder: ModelDataBuilder, data
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"my_data": [True, False]}, index=new_idx).to_xarray()
@@ -534,7 +469,7 @@ class TestModelDataBuilder:
 
         assert (
             "foo | dimensions | Updating values of `bar` to integer type"
-            in my_caplog.text
+            in debug_caplog.text
         )
         assert updated_ds["bar"].dtype.kind == "i"
 
@@ -542,7 +477,7 @@ class TestModelDataBuilder:
         ("data", "dtype"), [(["1", 2], "integer"), ([1.0, "2.0"], "float")]
     )
     def test_update_numeric_dims_in_model_data(
-        self, my_caplog, model_data_builder: ModelDataBuilder, data, dtype
+        self, debug_caplog, model_data_builder: ModelDataBuilder, data, dtype
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"num_data": [True, False]}, index=new_idx).to_xarray()
@@ -553,7 +488,7 @@ class TestModelDataBuilder:
 
         assert (
             f"foo | dimensions | Updating values of `bar` to {dtype} type"
-            in my_caplog.text
+            in debug_caplog.text
         )
         assert model_data_builder.dataset.coords["bar"].dtype.kind == dtype[0]
 
@@ -561,7 +496,7 @@ class TestModelDataBuilder:
         "data", [["foo", 2], [1.0, "foo"], ["foo", "bar"], ["Y1", "Y2"]]
     )
     def test_update_numeric_dims_no_update(
-        self, my_caplog, model_data_builder: ModelDataBuilder, data
+        self, debug_caplog, model_data_builder: ModelDataBuilder, data
     ):
         new_idx = pd.Index(data, name="bar")
         new_param = pd.DataFrame({"ts_data": [True, False]}, index=new_idx).to_xarray()
@@ -572,7 +507,7 @@ class TestModelDataBuilder:
 
         assert (
             "foo | dimensions | Updating values of `bar` to string type"
-            not in my_caplog.text
+            not in debug_caplog.text
         )
         assert updated_ds["bar"].dtype.kind == "O"
 
@@ -582,7 +517,7 @@ class TestModelDataBuilder:
     )
     def test_log_param_updates_new_coord(
         self,
-        my_caplog,
+        debug_caplog,
         model_data_builder: ModelDataBuilder,
         simple_da: xr.DataArray,
         coords,
@@ -597,7 +532,7 @@ class TestModelDataBuilder:
         for coord in new_coords:
             assert (
                 f"(Model inputs, foo) | Adding a new dimension to the model: {coord}"
-                in my_caplog.text
+                in debug_caplog.text
             )
 
     @pytest.mark.parametrize(
@@ -609,7 +544,7 @@ class TestModelDataBuilder:
     )
     def test_log_param_extends_coord(
         self,
-        my_caplog,
+        debug_caplog,
         model_data_builder: ModelDataBuilder,
         simple_da: xr.DataArray,
         index,
@@ -627,17 +562,20 @@ class TestModelDataBuilder:
             val = f"'{val}'" if isinstance(val, str) else val
             assert (
                 f"(Model inputs, foo) | Adding a new value to the `{coord_name}` model coordinate: [{val}]"
-                in my_caplog.text
+                in debug_caplog.text
             )
 
     def test_log_param_no_logging_message(
-        self, my_caplog, model_data_builder: ModelDataBuilder, simple_da: xr.DataArray
+        self,
+        debug_caplog,
+        model_data_builder: ModelDataBuilder,
+        simple_da: xr.DataArray,
     ):
         model_data_builder.dataset["orig"] = simple_da
         new_param = simple_da.copy()
         model_data_builder._log_input_data_updates("foo", new_param)
 
-        assert "(Model inputs, foo) | Adding" not in my_caplog.text
+        assert "(Model inputs, foo) | Adding" not in debug_caplog.text
 
     def test_raise_error_on_transmission_tech_in_node(
         self, model_data_builder: ModelDataBuilder
@@ -755,14 +693,14 @@ class TestTopLevelParams:
             "This input data will only take effect if you have already defined the following combinations of techs at nodes in your model definition: [('a', 'test_supply_elec') ('b', 'test_demand_elec')]",
         )
 
-    def test_top_level_param_unknown_dim_only(self, my_caplog, run_and_test):
+    def test_top_level_param_unknown_dim_only(self, debug_caplog, run_and_test):
         run_and_test({"data": 10, "index": ["foo"], "dims": "bar"}, {"foo": 10}, "bar")
         assert (
             "(Model inputs, my_val) | Adding a new dimension to the model: bar"
-            in my_caplog.text
+            in debug_caplog.text
         )
 
-    def test_top_level_param_multi_unknown_dim(self, my_caplog, run_and_test):
+    def test_top_level_param_multi_unknown_dim(self, debug_caplog, run_and_test):
         run_and_test(
             {"data": 10, "index": [["foo", "foobar"]], "dims": ["bar", "baz"]},
             {("foo", "foobar"): 10},
@@ -770,14 +708,14 @@ class TestTopLevelParams:
         )
         assert (
             "(Model inputs, my_val) | Adding a new dimension to the model: bar"
-            in my_caplog.text
+            in debug_caplog.text
         )
         assert (
             "(Model inputs, my_val) | Adding a new dimension to the model: baz"
-            in my_caplog.text
+            in debug_caplog.text
         )
 
-    def test_top_level_param_unknown_dim_mixed(self, my_caplog, run_and_test):
+    def test_top_level_param_unknown_dim_mixed(self, debug_caplog, run_and_test):
         run_and_test(
             {
                 "data": 10,
@@ -789,10 +727,10 @@ class TestTopLevelParams:
         )
         assert (
             "(Model inputs, my_val) | Adding a new dimension to the model: baz"
-            in my_caplog.text
+            in debug_caplog.text
         )
 
-    def test_top_level_param_timeseries(self, my_caplog, run_and_test):
+    def test_top_level_param_timeseries(self, debug_caplog, run_and_test):
         run_and_test(
             {"data": 10, "index": ["2005-01-01"], "dims": ["timesteps"]},
             {pd.to_datetime("2005-01-01"): 10},
@@ -800,14 +738,14 @@ class TestTopLevelParams:
         )
         assert (
             "(Model inputs, my_val) | dimensions | Updating values of `timesteps` to datetime type"
-            in my_caplog.text
+            in debug_caplog.text
         )
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Operational mode requires the same timestep resolution:calliope.exceptions.ModelWarning"
     )
     def test_top_level_param_extend_dim_vals(
-        self, my_caplog, run_and_test, model_data_builder_w_params
+        self, debug_caplog, run_and_test, model_data_builder_w_params
     ):
         # We do this test with timesteps as all other dimension elements are filtered out if there is no matching True element in `active`
         run_and_test(
@@ -815,7 +753,7 @@ class TestTopLevelParams:
         )
         assert (
             "(Model inputs, my_val) | Adding a new value to the `nodes` model coordinate: ['d']"
-            in my_caplog.text
+            in debug_caplog.text
         )
 
 
@@ -825,57 +763,140 @@ class TestActiveFalse:
 
     """
 
-    def test_tech_active_false(self, my_caplog):
+    def test_tech_active_false_keep_deactivated(self):
         overrides = {"techs.test_storage.active": False}
 
-        model = build_model(overrides, "simple_storage,two_hours,investment_costs")
+        model = build_model(
+            overrides,
+            "simple_storage,two_hours,investment_costs",
+            keep_deactivated=True,
+        )
+
+        # Ensure deactivated tech is still there
+        assert "test_storage" in model.inputs.coords["techs"].values
+
+    def test_tech_active_false_drop_deactivated(self, debug_caplog):
+        overrides = {"techs.test_storage.active": False}
+
+        model = build_model(
+            overrides,
+            "simple_storage,two_hours,investment_costs",
+            keep_deactivated=False,
+        )
 
         # Ensure what should be gone is gone
         assert "test_storage" not in model.inputs.coords["techs"].values
 
         # Ensure warnings were raised
-        assert "(techs, test_storage) | Deactivated" in my_caplog.text
+        assert (
+            "Deleting techs values as they are not defined anywhere in the model: {'test_storage'}"
+            in debug_caplog.text
+        )
 
-    def test_node_active_false(self, my_caplog):
+    def test_node_active_false_keep_deactivated(self):
         overrides = {"nodes.b.active": False}
 
-        model = build_model(overrides, "simple_storage,two_hours,investment_costs")
+        model = build_model(
+            overrides,
+            "simple_storage,two_hours,investment_costs",
+            keep_deactivated=True,
+        )
+
+        # Ensure deactivated node is still there
+        assert "b" in model.inputs.coords["nodes"].values
+
+    def test_node_active_false_drop_deactivated(self, debug_caplog):
+        overrides = {"nodes.b.active": False}
+
+        model = build_model(
+            overrides,
+            "simple_storage,two_hours,investment_costs",
+            keep_deactivated=False,
+        )
 
         # Ensure what should be gone is gone
         assert "b" not in model.inputs.coords["nodes"].values
-
         # Ensure warnings were raised
         assert (
-            "(links, test_link_a_b_elec) | Deactivated due to missing/deactivated `link_from` or `link_to` node."
-            in my_caplog.text
+            "Deleting nodes values as they are not defined anywhere in the model: {'b'}"
+            in debug_caplog.text
         )
-        assert "(nodes, b) | Deactivated." in my_caplog.text
 
-    def test_node_tech_active_false(self, my_caplog):
-        overrides = {"nodes.b.techs.test_storage.active": False}
-        model = build_model(overrides, "simple_storage,two_hours,investment_costs")
+    def test_node_tech_active_false_keep_deactivated(self, dummy_int):
+        overrides = {
+            "nodes.b.techs.test_storage": {
+                "active": False,
+                "foo": dummy_int,
+                "cost_flow_cap.data": dummy_int,
+            }
+        }
+        model = build_model(
+            overrides,
+            "simple_storage,two_hours,investment_costs",
+            keep_deactivated=True,
+        )
 
         # Ensure what should be gone is gone
-        assert not (
-            model.inputs.active.sel(techs="test_storage", nodes="b").any(["carriers"])
+        assert model.inputs.foo.sel(techs="test_storage", nodes="b") == dummy_int
+        assert (
+            model.inputs.cost_flow_cap.sel(techs="test_storage", nodes="b") == dummy_int
         )
-        assert "(nodes, b), (techs, test_storage) | Deactivated" in my_caplog.text
 
-    def test_link_active_false(self, my_caplog):
+    def test_node_tech_active_false_drop_deactivated(self, debug_caplog, dummy_int):
+        overrides = {
+            "nodes.b.techs.test_storage": {
+                "active": False,
+                "foo": dummy_int,
+                "cost_flow_cap.data": dummy_int,
+            }
+        }
+        model = build_model(
+            overrides,
+            "simple_storage,two_hours,investment_costs",
+            keep_deactivated=False,
+        )
+
+        # Ensure what should be gone is gone
+        assert "foo" not in model.inputs
+        assert model.inputs.cost_flow_cap.sel(techs="test_storage", nodes="b").isnull()
+        assert re.search(r"Deleting empty input data: \[.*'foo'.*\]", debug_caplog.text)
+
+    def test_link_active_false_keep_deactivated(self):
         overrides = {"templates.test_transmission.active": False}
-        model = build_model(overrides, "simple_storage,two_hours,investment_costs")
+        model = build_model(
+            overrides,
+            "simple_storage,two_hours,investment_costs",
+            keep_deactivated=True,
+        )
+
+        # Ensure what should be gone is gone
+        assert (model.inputs.base_tech == "transmission").any()
+
+    def test_link_active_false_drop_deactivated(self, debug_caplog):
+        overrides = {"templates.test_transmission.active": False}
+        model = build_model(
+            overrides,
+            "simple_storage,two_hours,investment_costs",
+            keep_deactivated=False,
+        )
 
         # Ensure what should be gone is gone
         assert not (model.inputs.base_tech == "transmission").any()
-        assert "(techs, test_link_a_b_elec) | Deactivated." in my_caplog.text
+
+        # Ensure warnings were raised
+        assert (
+            "Deleting techs values as they are not defined anywhere in the model: {'test_link_a_b_heat', 'test_link_a_b_elec'}"
+            in debug_caplog.text
+        )
 
 
 class TestModelDataCleaner:
     def test_clean_data_from_undefined_members(
-        self, my_caplog, model_data_cleaner: ModelDataCleaner
+        self, debug_caplog, model_data_cleaner: ModelDataCleaner
     ):
         model_data_cleaner.dataset = xr.Dataset(
             {
+                "active": True,
                 "carrier_in": (
                     pd.Series(
                         {
@@ -920,15 +941,15 @@ class TestModelDataCleaner:
 
         assert (
             "Deleting techs values as they are not defined anywhere in the model: {'bar'}"
-            in my_caplog.text
+            in debug_caplog.text
         )
         assert (
             "Deleting nodes values as they are not defined anywhere in the model: {'B'}"
-            in my_caplog.text
+            in debug_caplog.text
         )
         assert (
             "Deleting empty input data: ['will_delete', 'will_delete_2']"
-            in my_caplog.text
+            in debug_caplog.text
         )
 
         assert "will_delete" not in model_data_cleaner.dataset
@@ -943,7 +964,7 @@ class TestModelDataCleaner:
     )
     def test_add_link_distances_missing_distance(
         self,
-        my_caplog,
+        debug_caplog,
         model_data_cleaner: ModelDataCleaner,
         existing_distance,
         expected_distance,
@@ -966,14 +987,14 @@ class TestModelDataCleaner:
         )
 
         model_data_cleaner.add_link_distances()
-        assert "Any missing link distances automatically computed" in my_caplog.text
+        assert "Any missing link distances automatically computed" in debug_caplog.text
         assert model_data_cleaner.dataset["distance"].sel(
             techs="test_link_a_b_elec"
         ).item() == pytest.approx(expected_distance)
 
     @pytest.mark.parametrize(("unit", "expected"), [("m", 343834), ("km", 343.834)])
     def test_add_link_distances_no_da(
-        self, my_caplog, model_data_cleaner: ModelDataCleaner, unit, expected
+        self, debug_caplog, model_data_cleaner: ModelDataCleaner, unit, expected
     ):
         new_config = model_data_cleaner.config.update({"distance_unit": unit})
         model_data_cleaner.config = new_config
@@ -991,32 +1012,32 @@ class TestModelDataCleaner:
         del model_data_cleaner.dataset["distance"]
 
         model_data_cleaner.add_link_distances()
-        assert "Link distance matrix automatically computed" in my_caplog.text
+        assert "Link distance matrix automatically computed" in debug_caplog.text
         assert (
             model_data_cleaner.dataset["distance"].dropna("techs")
             == pytest.approx(expected)
         ).all()
 
     def test_add_link_distances_no_latlon(
-        self, my_caplog, model_data_cleaner: ModelDataCleaner
+        self, debug_caplog, model_data_cleaner: ModelDataCleaner
     ):
         model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.add_link_distances()
-        assert "Link distances will not be computed automatically" in my_caplog.text
+        assert "Link distances will not be computed automatically" in debug_caplog.text
 
     def test_add_colors_no_init_da(
-        self, my_caplog, model_data_cleaner: ModelDataCleaner
+        self, debug_caplog, model_data_cleaner: ModelDataCleaner
     ):
         model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.add_colors()
-        assert "Building technology color" in my_caplog.text
+        assert "Building technology color" in debug_caplog.text
         np.testing.assert_array_equal(
             model_data_cleaner.dataset["color"].values,
             ["#19122b", "#17344c", "#185b48", "#3c7632"],
         )
 
     def test_add_colors_full_init_da(
-        self, my_caplog, model_data_cleaner: ModelDataCleaner
+        self, debug_caplog, model_data_cleaner: ModelDataCleaner
     ):
         model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.dataset["color"] = xr.DataArray(
@@ -1024,11 +1045,11 @@ class TestModelDataCleaner:
         )
         color_da_copy = model_data_cleaner.dataset["color"].copy()
         model_data_cleaner.add_colors()
-        assert "technology color" not in my_caplog.text
+        assert "technology color" not in debug_caplog.text
         assert model_data_cleaner.dataset["color"].equals(color_da_copy)
 
     def test_add_colors_partial_init_da(
-        self, my_caplog, model_data_cleaner: ModelDataCleaner
+        self, debug_caplog, model_data_cleaner: ModelDataCleaner
     ):
         model_data_cleaner.clean_data_from_undefined_members()
         model_data_cleaner.dataset["color"] = pd.Series(
@@ -1037,7 +1058,7 @@ class TestModelDataCleaner:
         ).to_xarray()
 
         model_data_cleaner.add_colors()
-        assert "Filling missing technology color" in my_caplog.text
+        assert "Filling missing technology color" in debug_caplog.text
         np.testing.assert_array_equal(
             model_data_cleaner.dataset["color"].values,
             ["#123", "#17344c", "#321", "#456"],
@@ -1156,7 +1177,7 @@ class TestSubset:
         assert (model_data_cleaner_with_int_dim.dataset.int_dim == [1, 3]).all()
 
     def test_subset_undefined_dim(
-        self, model_data_cleaner_with_def_matrix: ModelDataCleaner, my_caplog
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner, debug_caplog
     ):
         """Subsetting an undefined dimensions does nothing but logs a debug message."""
         model_data_cleaner_with_def_matrix.config = (
@@ -1167,7 +1188,8 @@ class TestSubset:
         model_data_cleaner_with_def_matrix._subset_dims()
         assert "undefined" not in model_data_cleaner_with_def_matrix.dataset.dims
         assert (
-            "Skipping subsetting for undefined dimension: undefined" in my_caplog.text
+            "Skipping subsetting for undefined dimension: undefined"
+            in debug_caplog.text
         )
 
 
@@ -1335,7 +1357,7 @@ class TestResample:
             model_data_cleaner_with_def_matrix._resample_dims()
 
     def test_resample_undefined_dim(
-        self, model_data_cleaner_with_def_matrix: ModelDataCleaner, my_caplog
+        self, model_data_cleaner_with_def_matrix: ModelDataCleaner, debug_caplog
     ):
         """Resampling an undefined dimensions does nothing but logs a debug message."""
         model_data_cleaner_with_def_matrix.config = (
@@ -1346,7 +1368,8 @@ class TestResample:
         model_data_cleaner_with_def_matrix._resample_dims()
         assert "undefined" not in model_data_cleaner_with_def_matrix.dataset.dims
         assert (
-            "Skipping resampling for undefined dimension: undefined" in my_caplog.text
+            "Skipping resampling for undefined dimension: undefined"
+            in debug_caplog.text
         )
 
     def test_resample_undefined_var(

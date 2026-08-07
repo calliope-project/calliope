@@ -108,16 +108,16 @@ class TestAsArray:
         return {"return_type": "array", "attrs": attrs}
 
     @pytest.fixture
-    def is_defined_any(self, dummy_model_data):
+    def is_defined_any(self, where_defined):
         def _is_defined(drop_dims, dims):
-            return dummy_model_data.active.any(drop_dims).sel(**dims).any(dims.keys())
+            return where_defined._defined.any(drop_dims).sel(**dims).any(dims.keys())
 
         return _is_defined
 
     @pytest.fixture
-    def is_defined_all(self, dummy_model_data):
+    def is_defined_all(self, where_defined):
         def _is_defined(drop_dims, dims):
-            return dummy_model_data.active.any(drop_dims).sel(**dims).all(dims.keys())
+            return where_defined._defined.any(drop_dims).sel(**dims).all(dims.keys())
 
         return _is_defined
 

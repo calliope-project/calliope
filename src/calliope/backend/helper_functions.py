@@ -244,6 +244,14 @@ class Defined(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
+    def __init__(  # noqa: D107, override
+        self, return_type: Literal["array", "math_string"], attrs: "EvalAttrs"
+    ):
+        super().__init__(return_type, attrs)
+        self._defined = self._attrs.input_data.active & (
+            self._attrs.input_data.carrier_in | self._attrs.input_data.carrier_out
+        )
+
     def as_math_string(  # noqa: D102, override
         self, *, within: xr.DataArray, how: Literal["all", "any"], **dims
     ) -> str:
@@ -312,8 +320,9 @@ class Defined(ParsingHelperFunction):
             dim: self._to_str_list(vals) if dim == "techs" else self._to_str_list(vals)
             for dim, vals in dims.items()
         }
-        active = self._attrs.input_data.active
-        dim_within_da = active.any(self._dims_to_remove(dim_names, str(within.name)))
+        dim_within_da = self._defined.any(
+            self._dims_to_remove(dim_names, str(within.name))
+        )
         within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
 
         return within_da
@@ -328,20 +337,19 @@ class Defined(ParsingHelperFunction):
             within (str): dimension whose members are being checked.
 
         Raises:
-            ValueError: Can only define dimensions that exist in model.active.
+            ValueError: Can only define core dimensions.
 
         Returns:
             set: Undefined dimensions to remove from the definition matrix.
         """
-        active = self._attrs.input_data.active
-        missing_dims = set([*dim_names, within]).difference(active.dims)
+        missing_dims = set([*dim_names, within]).difference(self._defined.dims)
         if missing_dims:
             raise ValueError(
                 f"Unexpected model dimension referenced in `{self.NAME}` helper function. "
-                "Only dimensions given by `model.inputs.active` can be used. "
+                f"Only core model dimensions can be defined: {self._defined.dims}. "
                 f"Received: {missing_dims}"
             )
-        return set(active.dims).difference([*dim_names, within])
+        return set(self._defined.dims).difference([*dim_names, within])
 
     def _latex_substring(
         self, how: Literal["all", "any"], dim: str, vals: str | list[str], within: str

@@ -192,10 +192,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
         """
         active_node_def = CalliopeNodes()
         for node, node_def in self.model_definition.nodes.root.items():
-            if node_def.active:
-                active_node_def = active_node_def.update({node: node_def})
-            else:
-                self._deactivate_item(nodes=node)
+            active_node_def = active_node_def.update({node: node_def})
         links_at_nodes = self._links_to_node_format(active_node_def)
 
         node_tech_data = []
@@ -241,7 +238,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
         node_ds = self._definition_to_ds(active_node_def, {"techs"})
         node_tech_ds["active"] = node_tech_ds["active"] * node_ds["active"]
         ds = xr.merge(
-            [node_tech_ds, node_ds],
+            [node_tech_ds, node_ds.drop_vars(["active"])],
             join="outer",
             compat="no_conflicts",
             combine_attrs="no_conflicts",
@@ -297,15 +294,12 @@ class ModelDataBuilder(ModelDTypeUpdater):
         refs = set()
 
         for tech_name, tech_data in techs_def.root.items():
-            if not tech_data.active:
-                continue
-            else:
-                if tech_data.base_tech is not None:
-                    raise exceptions.ModelError(
-                        f"(nodes, {node}), (techs, {tech_name}) | Defining a technology `base_tech` at a node is not supported; "
-                        "limit yourself to defining this lookup within `techs` or `templates`"
-                    )
-                refs.update(tech_data.model_fields_set - {"active", "base_tech"})
+            if tech_data.base_tech is not None:
+                raise exceptions.ModelError(
+                    f"(nodes, {node}), (techs, {tech_name}) | Defining a technology `base_tech` at a node is not supported; "
+                    "limit yourself to defining this lookup within `techs` or `templates`"
+                )
+            refs.update(tech_data.model_fields_set - {"base_tech"})
 
         return list(refs)
 
@@ -627,7 +621,7 @@ class ModelDataCleaner(ModelDTypeUpdater):
         - Any dimension items that are NaN in all arrays.
         - Any arrays that are NaN in all index positions.
         """
-        ds = self.dataset.copy()
+        ds = self._update_dtypes(self.dataset.copy())
         def_matrix = (ds.carrier_in | ds.carrier_out) & ds.active
         # NaNing values where they are irrelevant requires active to be boolean
         for var_name, var_data in ds.data_vars.items():
@@ -678,9 +672,9 @@ class ModelDataCleaner(ModelDTypeUpdater):
             for tech in self.dataset.techs:
                 if self.dataset.base_tech.sel(techs=tech).item() != "transmission":
                     continue
-                tech_def = self.dataset.active.sel(techs=tech)
-                node1, node2 = tech_def.where(tech_def).dropna("nodes").nodes.values
-                distances[tech.item()] = self._get_distance(node1, node2)
+                node_from = self.dataset.link_from.sel(techs=tech).item()
+                node_to = self.dataset.link_to.sel(techs=tech).item()
+                distances[tech.item()] = self._get_distance(node_from, node_to)
             distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
             if self.config.distance_unit == "km":
                 distance_array = distance_array / 1000

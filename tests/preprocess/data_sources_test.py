@@ -476,7 +476,10 @@ class TestDataTableMalformed:
     def test_check_for_protected_params(self, table_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             table_obj(add_dims={"inputs": "template"})
-        assert check_error_or_warning(excinfo, "`template` is a protected array")
+        assert check_error_or_warning(
+            excinfo,
+            "Template calls (`template`) can only be used in the YAML model definition.",
+        )
 
 
 class TestDataTableLookupDictFromParam:

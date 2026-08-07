@@ -2,6 +2,12 @@
 
 ### User-facing changes
 
+|changed| Rename `definition_matrix` input array to `active`, indexed over only `nodes` and `techs` (no longer also `carriers`), to align with YAML `active` definition.
+
+|new| `init` config key `keep_deactivated` which allows deactivated components to remain in the input array rather than be cleaned out.
+Enables components to be re-activated after model instantiation but before running the optimisation problem.
+Defaults to False for backwards compatibility.
+
 |removed| `link_flow_cap` decision variable, for constraining the `flow_cap` either end of a transmission link to the same value.
 Instead, rather than via this auxiliary variable, the constraint is applied directly to each `flow_cap` entry.
 
