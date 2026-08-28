@@ -36,11 +36,19 @@ nodes:
     techs: {tech1, tech2}
 ```
 
-`defined(carriers=electricity, within=techs)` would yield a list of `[True, True]` as both technologies define electricity.
-
 `defined(techs=[tech1, tech2], within=nodes)` would yield a list of `[True, True]` as both nodes define _at least one_ of `tech1` or `tech2`.
 
 `defined(techs=[tech1, tech2], within=nodes, how=all)` would yield a list of `[False, True]` as only `node2` defines _both_ `tech1` and `tech2`.
+
+By default, `defined` searches the model `active` array, which is indexed over `nodes` and `techs` only.
+To check membership of any other dimension, extend it with the `using` argument, giving the boolean input array(s) that define that dimension.
+Multiple arrays are combined with a boolean OR, so must share their dimensions.
+
+`defined(carriers=electricity, within=techs, using=[carrier_in, carrier_out])` would yield a list of `[True, True]` as both technologies define electricity.
+
+!!! note
+    `using` keeps the helper function agnostic to your math.
+    If you rename or replace the lookups that define a dimension in your own math, update the `using` argument to match; `defined` itself needs no change.
 
 ## sum
 

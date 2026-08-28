@@ -250,8 +250,12 @@ class TestNewBackend:
         assert check_error_or_warning(
             error,
             "(constraints, constraint-with-nan) | constraint array includes item(s) that resolves to a simple boolean. "
-            "There must be a math component defined on at least one side of the equation: [('test_demand_elec', 'electricity')]",
+            "There must be a math component defined on at least one side of the equation:",
         )
+        # `foreach` only restricts to active node/tech combinations, so every
+        # tech/carrier combination without a `flow_out` variable is flagged.
+        assert check_error_or_warning(error, "('test_demand_elec', 'electricity')")
+        assert check_error_or_warning(error, "('test_supply_elec', 'heat')")
 
     def test_solve_warmstart_not_possible(self, simple_supply):
         with pytest.warns(exceptions.ModelWarning) as excinfo:

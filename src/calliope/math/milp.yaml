@@ -170,7 +170,7 @@ variables:
     default: 0
     unit: power
     foreach: [nodes, techs, carriers, timesteps]
-    where: integer_dispatch==True AND flow_cap_max AND NOT flow_cap_per_unit
+    where: "flow_cap AND integer_dispatch==True AND flow_cap_max AND NOT flow_cap_per_unit"
     bounds:
       min: 0
       max: .inf
@@ -263,7 +263,7 @@ constraints:
     description: >-
       Fix the flow capacity of any technology using integer units to define its capacity.
     foreach: [nodes, techs, carriers]
-    where: "purchased_units AND flow_cap_per_unit"
+    where: "flow_cap AND purchased_units AND flow_cap_per_unit"
     equations:
       - expression: flow_cap == purchased_units * flow_cap_per_unit
 
@@ -272,7 +272,7 @@ constraints:
       Set the upper bound on a technology's flow capacity,
       for any technology with integer capacity purchasing.
     foreach: [nodes, techs, carriers]
-    where: "purchased_units"
+    where: "flow_cap AND purchased_units"
     equations:
       - where: flow_cap_max
         expression: flow_cap <= flow_cap_max * purchased_units
@@ -357,7 +357,7 @@ constraints:
       for any technology with a non-zero lower bound,
       with or without integer capacity purchasing.
     foreach: [nodes, techs, carriers]
-    where: "flow_cap_min"
+    where: "flow_cap AND flow_cap_min"
     equations:
       - where: NOT purchased_units
         expression: flow_cap >= flow_cap_min
@@ -413,7 +413,7 @@ constraints:
   flow_out_min:
     description: >-
       Set the lower bound of a continuous technology's outflow.
-    where: "flow_out_min_relative AND NOT operating_units"
+    where: "flow_cap AND flow_out_min_relative AND NOT operating_units"
 
   flow_in_max:
     description: >-
@@ -424,7 +424,7 @@ constraints:
     description: >-
       Set a lower bound on flow capacity of a technology across all nodes in which the technology exists.
     foreach: [techs, carriers]
-    where: "flow_cap_min_systemwide"
+    where: "any(flow_cap, over=nodes) AND flow_cap_min_systemwide"
     equations:
       - where: any(purchased_units, over=nodes)
         expression: sum(flow_cap, over=nodes) >= flow_cap_min_systemwide * sum(purchased_units, over=nodes)

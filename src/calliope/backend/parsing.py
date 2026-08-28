@@ -715,30 +715,33 @@ class ParsedBackendComponent(ParsedBackendEquation):
         """Generate a multi-dimensional array where a constraint will be built.
 
         The multi-dimensional boolean array is based on the sets over which the
-        constraint is to be built (`foreach`) and the model `active`, `carrier_in`, and `carrier_out` arrays.
+        constraint is to be built (`foreach`) and the model `active` array.
 
         The `active` array is a boolean array defining the structure of the model.
-        Values are True for valid combinations of technologies at specific nodes.
-        We extend it to include the carriers they produce and consume (i.e. `carrier_in` and `carrier_out`) to ensure that constraints are only built where relevant.
-        The final array is indexed over ["nodes", "techs", "carriers"].
+        Values are True for valid combinations of technologies at specific nodes,
+        i.e. it is indexed over ["nodes", "techs"].
+
+        Any further restriction of the array (e.g., to the carriers a technology
+        produces/consumes) is the responsibility of the component's `where` string;
+        this method is agnostic to the math being applied.
 
         Args:
             input_data (xr.Dataset): Calliope model dataset.
 
         Returns:
-            xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers"]
+            xr.DataArray: boolean array indexed over ["nodes", "techs"]
                 + any additional dimensions provided by `foreach`.
         """
-        # Start with (carriers, nodes, techs) and go from there
-        defined = input_data.active & (input_data.carrier_in | input_data.carrier_out)
-        # Add other dimensions (costs, timesteps, etc.)
-        add_dims = set(self.sets).difference(defined.dims)
+        # Start with (nodes, techs) and go from there
+        active = input_data.active
+        # Add other dimensions (carriers, costs, timesteps, etc.)
+        add_dims = set(self.sets).difference(active.dims)
         if add_dims.difference(input_data.dims):
             self.log_not_added(
                 f"indexed over unidentified set names: `{add_dims.difference(input_data.dims)}`."
             )
             return xr.DataArray(False)
-        active_and_foreach = [defined, *[input_data[i].notnull() for i in add_dims]]
+        active_and_foreach = [active, *[input_data[i].notnull() for i in add_dims]]
         return functools.reduce(operator.and_, active_and_foreach)
 
     def generate_top_level_where_array(

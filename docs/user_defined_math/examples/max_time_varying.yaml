@@ -25,7 +25,7 @@ constraints:
       instance, the impact of outdoor temperature on the maximum output of a
       technology relative to its rated max output.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "flow_cap_max_relative_per_ts"
+    where: "flow_cap AND flow_cap_max_relative_per_ts"
     equations:
       - expression: >
           flow_out <=

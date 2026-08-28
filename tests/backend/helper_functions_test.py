@@ -108,16 +108,22 @@ class TestAsArray:
         return {"return_type": "array", "attrs": attrs}
 
     @pytest.fixture
+    def carrier_lookups(self, dummy_model_data):
+        return [dummy_model_data.carrier_in, dummy_model_data.carrier_out]
+
+    @pytest.fixture
     def is_defined_any(self, where_defined):
-        def _is_defined(drop_dims, dims):
-            return where_defined._defined.any(drop_dims).sel(**dims).any(dims.keys())
+        def _is_defined(drop_dims, dims, using=None):
+            defined = where_defined._definition_array(using)
+            return defined.any(drop_dims).sel(**dims).any(dims.keys())
 
         return _is_defined
 
     @pytest.fixture
     def is_defined_all(self, where_defined):
-        def _is_defined(drop_dims, dims):
-            return where_defined._defined.any(drop_dims).sel(**dims).all(dims.keys())
+        def _is_defined(drop_dims, dims, using=None):
+            defined = where_defined._definition_array(using)
+            return defined.any(drop_dims).sel(**dims).all(dims.keys())
 
         return _is_defined
 
@@ -175,38 +181,44 @@ class TestAsArray:
         dims = {"techs": "foobar"}
         dims_check = {"techs": ["foobar"]}
         defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
-        assert defined.equals(is_defined_any(["carriers"], dims_check))
+        assert defined.equals(is_defined_any([], dims_check))
         assert defined.dtype.kind == "b"
 
     def test_defined_any_two_dim_one_val(
-        self, dummy_model_data, is_defined_any, where_defined
+        self, dummy_model_data, is_defined_any, where_defined, carrier_lookups
     ):
         dims = {"techs": "foobar", "carriers": "foo"}
         dims_check = {"techs": ["foobar"], "carriers": ["foo"]}
-        defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
-        assert defined.equals(is_defined_any([], dims_check))
+        defined = where_defined(
+            within=dummy_model_data["nodes"], how="any", using=carrier_lookups, **dims
+        )
+        assert defined.equals(is_defined_any([], dims_check, carrier_lookups))
 
     def test_defined_any_one_dim_multi_val(
         self, dummy_model_data, is_defined_any, where_defined
     ):
         dims = {"techs": ["foobar", "foobaz"]}
         defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
-        assert defined.equals(is_defined_any(["carriers"], dims))
+        assert defined.equals(is_defined_any([], dims))
         assert defined.dtype.kind == "b"
 
     def test_defined_any_one_dim_multi_val_techs_within(
-        self, dummy_model_data, is_defined_any, where_defined
+        self, dummy_model_data, is_defined_any, where_defined, carrier_lookups
     ):
         dims = {"carriers": ["foo", "bar"]}
-        defined = where_defined(within=dummy_model_data["techs"], how="any", **dims)
-        assert defined.equals(is_defined_any(["nodes"], dims))
+        defined = where_defined(
+            within=dummy_model_data["techs"], how="any", using=carrier_lookups, **dims
+        )
+        assert defined.equals(is_defined_any(["nodes"], dims, carrier_lookups))
 
     def test_defined_any_two_dim_multi_val(
-        self, dummy_model_data, is_defined_any, where_defined
+        self, dummy_model_data, is_defined_any, where_defined, carrier_lookups
     ):
         dims = {"techs": ["foobar", "foobaz"], "carriers": ["foo", "bar"]}
-        defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
-        assert defined.equals(is_defined_any([], dims))
+        defined = where_defined(
+            within=dummy_model_data["nodes"], how="any", using=carrier_lookups, **dims
+        )
+        assert defined.equals(is_defined_any([], dims, carrier_lookups))
         assert defined.dtype.kind == "b"
 
     def test_defined_all_one_dim_one_val(
@@ -214,15 +226,55 @@ class TestAsArray:
     ):
         dims = {"techs": ["foobar"]}
         defined = where_defined(within=dummy_model_data["nodes"], how="all", **dims)
-        assert defined.equals(is_defined_all(["carriers"], dims))
+        assert defined.equals(is_defined_all([], dims))
         assert defined.dtype.kind == "b"
 
     def test_defined_all_two_dim_one_val(
-        self, dummy_model_data, is_defined_all, where_defined
+        self, dummy_model_data, is_defined_all, where_defined, carrier_lookups
     ):
         dims = {"techs": ["foobar"], "carriers": ["foo"]}
-        defined = where_defined(within=dummy_model_data["nodes"], how="all", **dims)
-        assert defined.equals(is_defined_all([], dims))
+        defined = where_defined(
+            within=dummy_model_data["nodes"], how="all", using=carrier_lookups, **dims
+        )
+        assert defined.equals(is_defined_all([], dims, carrier_lookups))
+
+    def test_defined_single_using_array(
+        self, dummy_model_data, is_defined_any, where_defined
+    ):
+        """A single array can be given to `using`, without wrapping it in a list."""
+        dims = {"carriers": ["foo"]}
+        carrier_in = dummy_model_data.carrier_in
+        defined = where_defined(
+            within=dummy_model_data["techs"], how="any", using=carrier_in, **dims
+        )
+        assert defined.equals(is_defined_any(["nodes"], dims, [carrier_in]))
+
+    def test_defined_undefined_dim_without_using(self, dummy_model_data, where_defined):
+        """Referencing a dim that `active` does not have requires extending it via `using`."""
+        with pytest.raises(ValueError, match="Unexpected model dimension referenced"):
+            where_defined(within=dummy_model_data["techs"], how="any", carriers=["foo"])
+
+    def test_defined_using_non_boolean(self, dummy_model_data, where_defined):
+        with pytest.raises(exceptions.BackendError, match="must be boolean"):
+            where_defined(
+                within=dummy_model_data["techs"],
+                how="any",
+                using=dummy_model_data.all_inf,
+                carriers=["foo"],
+            )
+
+    def test_defined_using_mismatched_dims(
+        self, dummy_model_data, where_defined, carrier_lookups
+    ):
+        with pytest.raises(
+            exceptions.BackendError, match="must share their dimensions"
+        ):
+            where_defined(
+                within=dummy_model_data["techs"],
+                how="any",
+                using=[carrier_lookups[0], dummy_model_data.active],
+                carriers=["foo"],
+            )
 
     @pytest.mark.parametrize("over", ["techs", ["techs"]])
     def test_sum_one_dim(self, expression_sum, dummy_model_data, over):

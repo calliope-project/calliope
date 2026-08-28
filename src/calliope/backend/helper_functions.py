@@ -7,6 +7,7 @@
 """
 
 import functools
+import operator
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
@@ -244,16 +245,52 @@ class Defined(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def __init__(  # noqa: D107, override
-        self, return_type: Literal["array", "math_string"], attrs: "EvalAttrs"
-    ):
-        super().__init__(return_type, attrs)
-        self._defined = self._attrs.input_data.active & (
-            self._attrs.input_data.carrier_in | self._attrs.input_data.carrier_out
-        )
+    def _definition_array(
+        self, using: xr.DataArray | list[xr.DataArray] | None
+    ) -> xr.DataArray:
+        """Build the array against which membership is checked.
+
+        The model `active` array (indexed over [nodes, techs]) is the baseline.
+        It can be extended along further dimensions by OR-ing together one or more
+        boolean model inputs given in `using`.
+
+        Args:
+            using (xr.DataArray | list[xr.DataArray] | None):
+                Boolean model input array(s) to extend `active` with.
+                All must share the same dimensions.
+
+        Raises:
+            BackendError: `using` arrays must be boolean and share their dimensions.
+
+        Returns:
+            xr.DataArray: `active`, optionally extended along the dims of `using`.
+        """
+        active = self._attrs.input_data.active
+        if using is None:
+            return active
+
+        using_list = using if isinstance(using, list) else [using]
+        non_bool = [str(da.name) for da in using_list if da.dtype.kind != "b"]
+        if non_bool:
+            raise BackendError(
+                f"Arrays given in the `using` argument of the `{self.NAME}` helper function must be boolean. "
+                f"Received non-boolean array(s): {non_bool}"
+            )
+        dims = {str(da.name): set(da.dims) for da in using_list}
+        if len(set(map(frozenset, dims.values()))) > 1:  # type: ignore[arg-type]
+            raise BackendError(
+                f"Arrays given in the `using` argument of the `{self.NAME}` helper function must share their dimensions. "
+                f"Received: { {k: sorted(v) for k, v in dims.items()} }"
+            )
+        return active & functools.reduce(operator.or_, using_list)
 
     def as_math_string(  # noqa: D102, override
-        self, *, within: xr.DataArray, how: Literal["all", "any"], **dims
+        self,
+        *,
+        within: xr.DataArray,
+        how: Literal["all", "any"],
+        using: str | list[str] | None = None,
+        **dims,
     ) -> str:
         substrings = []
         for name, vals in dims.items():
@@ -264,7 +301,12 @@ class Defined(ParsingHelperFunction):
             return rf"\bigwedge({', '.join(substrings)})"
 
     def as_array(
-        self, *, within: xr.DataArray, how: Literal["all", "any"], **dims: str
+        self,
+        *,
+        within: xr.DataArray,
+        how: Literal["all", "any"],
+        using: xr.DataArray | list[xr.DataArray] | None = None,
+        **dims: str,
     ) -> xr.DataArray:
         """Find whether members of a model dimension are defined inside another.
 
@@ -274,9 +316,15 @@ class Defined(ParsingHelperFunction):
         Args:
             within (str): the model dimension to check.
             how (Literal[all, any]): Whether to return True for `any` match of nested members or for `all` nested members.
+            using (xr.DataArray | list[xr.DataArray] | None):
+                Boolean model input array(s) with which to extend the model `active` array along further dimensions.
+                Multiple arrays are combined with a boolean OR, so must share their dimensions.
+                Required to check membership of any dimension other than `nodes`/`techs`,
+                e.g. `using=[carrier_in, carrier_out]` to check `carriers` membership.
+                Defaults to None (only `active` is used).
             **dims (str):
                 **key**: dimension whose members will be searched for as being defined under the primary dimension (`within`).
-                Must be one of the core model dimensions: [nodes, techs, carriers]
+                Must be a dimension of `active` or of the arrays given in `using`.
                 **value**: subset of the dimension members to find.
                 Transmission techs can be called using the base tech name (e.g., `ac_transmission`) and all link techs will be collected (e.g., [`ac_transmission:region1`, `ac_transmission:region2`]).
 
@@ -313,43 +361,53 @@ class Defined(ParsingHelperFunction):
                       array([ False, False])
                       Coordinates:
                       * nodes    (nodes) <U5 'node1' 'node2'
+
+            Check for a carrier being defined by techs, extending `active` with the
+            lookups that define the `carriers` dimension:
+            ```
+                >>> defined(carriers=electricity, within=techs, how=any, using=[carrier_in, carrier_out])
             ```
         """
+        defined = self._definition_array(using)
         dim_names = list(dims.keys())
         dims_with_list_vals = {
             dim: self._to_str_list(vals) if dim == "techs" else self._to_str_list(vals)
             for dim, vals in dims.items()
         }
-        dim_within_da = self._defined.any(
-            self._dims_to_remove(dim_names, str(within.name))
+        dim_within_da = defined.any(
+            self._dims_to_remove(defined, dim_names, str(within.name))
         )
         within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
 
         return within_da
 
-    def _dims_to_remove(self, dim_names: list[str], within: str) -> set:
-        """From the definition matrix, get the dimensions that have not been defined.
+    def _dims_to_remove(
+        self, defined: xr.DataArray, dim_names: list[str], within: str
+    ) -> set:
+        """From the definition array, get the dimensions that have not been defined.
 
         This includes dimensions not defined as keys of `dims` or as the value of `within`.
 
         Args:
+            defined (xr.DataArray): the definition array being searched.
             dim_names (list[str]): Keys of `dims`.
             within (str): dimension whose members are being checked.
 
         Raises:
-            ValueError: Can only define core dimensions.
+            ValueError: Can only reference dimensions of the definition array.
 
         Returns:
-            set: Undefined dimensions to remove from the definition matrix.
+            set: Undefined dimensions to remove from the definition array.
         """
-        missing_dims = set([*dim_names, within]).difference(self._defined.dims)
+        missing_dims = set([*dim_names, within]).difference(defined.dims)
         if missing_dims:
             raise ValueError(
                 f"Unexpected model dimension referenced in `{self.NAME}` helper function. "
-                f"Only core model dimensions can be defined: {self._defined.dims}. "
+                f"Only dimensions of the definition array can be used: {defined.dims}. "
+                "Extend the definition array with the `using` argument to reference more dimensions. "
                 f"Received: {missing_dims}"
             )
-        return set(self._defined.dims).difference([*dim_names, within])
+        return set(defined.dims).difference([*dim_names, within])
 
     def _latex_substring(
         self, how: Literal["all", "any"], dim: str, vals: str | list[str], within: str

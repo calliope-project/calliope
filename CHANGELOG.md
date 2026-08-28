@@ -4,7 +4,15 @@
 
 |changed| Rename `definition_matrix` input array to `active`, indexed over only `nodes` and `techs` (no longer also `carriers`), to align with YAML `active` definition.
 
-|new| `init` config key `keep_deactivated` which allows deactivated components to remain in the input array rather than be cleaned out.
+|changed| `foreach` now restricts components to `active` node/tech combinations only; it no longer implicitly restricts the `carriers` dimension.
+Carrier membership must be stated explicitly in a component's `where` string (e.g., `carrier_out`, or a reference to a decision variable that is itself gated on carriers).
+All built-in math has been updated accordingly; user-defined math with `carriers` in `foreach` and no carrier reference in its `where` string will now be built over every model carrier.
+This keeps the backend agnostic to the names used in the math.
+
+|changed| `defined` math helper function takes a new optional `using` argument, giving the boolean input array(s) with which to extend the `active` array.
+It is required to check membership of any dimension other than `nodes`/`techs`, e.g. `defined(carriers=electricity, within=techs, using=[carrier_in, carrier_out])`.
+
+|new| `init` config key `retain_inactive` which allows deactivated components to remain in the input array rather than be cleaned out.
 Enables components to be re-activated after model instantiation but before running the optimisation problem.
 Defaults to False for backwards compatibility.
 

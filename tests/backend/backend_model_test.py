@@ -244,10 +244,17 @@ class TestGetters:
         assert variable.attrs == {
             "obj_type": "variables",
             "references": {
+                "area_use_per_flow_capacity",
+                "cost_investment_flow_cap",
+                "cost_operation_fixed",
+                "flow_capacity_per_storage_capacity_max",
+                "flow_capacity_per_storage_capacity_min",
+                "flow_capacity_systemwide_max",
+                "flow_capacity_systemwide_min",
                 "flow_in_max",
                 "flow_out_max",
-                "cost_operation_fixed",
-                "cost_investment_flow_cap",
+                "flow_out_min",
+                "source_capacity_equals_flow_capacity",
                 "symmetric_transmission",
             },
             "coords_in_name": False,
@@ -1026,7 +1033,7 @@ class TestPiecewiseConstraints:
     def working_math(cls):
         return {
             "foreach": ["nodes", "techs", "carriers"],
-            "where": "[test_supply_elec] in techs AND piecewise_x AND piecewise_y",
+            "where": "flow_cap AND [test_supply_elec] in techs AND piecewise_x AND piecewise_y",
             "x_values": "piecewise_x",
             "x_expression": "flow_cap",
             "y_values": "piecewise_y",

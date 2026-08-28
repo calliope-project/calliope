@@ -565,7 +565,7 @@ constraints:
     description: >-
       Set the lower bound of storage flow capacity relative to its storage capacity.
     foreach: [nodes, techs, carriers]
-    where: "storage_cap AND flow_cap_per_storage_cap_min"
+    where: "flow_cap AND storage_cap AND flow_cap_per_storage_cap_min"
     equations:
       - expression: flow_cap >= storage_cap * flow_cap_per_storage_cap_min
 
@@ -573,7 +573,7 @@ constraints:
     description: >-
       Set the upper bound of storage flow capacity relative to its storage capacity.
     foreach: [nodes, techs, carriers]
-    where: "storage_cap AND flow_cap_per_storage_cap_max"
+    where: "flow_cap AND storage_cap AND flow_cap_per_storage_cap_max"
     equations:
       - expression: flow_cap <= storage_cap * flow_cap_per_storage_cap_max
 
@@ -581,7 +581,7 @@ constraints:
     description: >-
       Set a `supply` technology's flow capacity to equal its source capacity.
     foreach: [nodes, techs, carriers]
-    where: source_cap AND source_cap_equals_flow_cap==True
+    where: "flow_cap AND source_cap AND source_cap_equals_flow_cap==True"
     equations:
       - expression: source_cap == flow_cap
 
@@ -597,7 +597,7 @@ constraints:
     description: >-
       Set a fixed relationship between a technology's flow capacity and its area use.
     foreach: [nodes, techs, carriers]
-    where: "area_use AND area_use_per_flow_cap"
+    where: "flow_cap AND area_use AND area_use_per_flow_cap"
     equations:
       - expression: area_use == flow_cap * area_use_per_flow_cap
 
@@ -613,7 +613,7 @@ constraints:
     description: >-
       Set an upper bound on flow capacity of a technology across all nodes in which the technology exists.
     foreach: [techs, carriers]
-    where: "flow_cap_max_systemwide"
+    where: "any(flow_cap, over=nodes) AND flow_cap_max_systemwide"
     equations:
       - expression: sum(flow_cap, over=nodes) <= flow_cap_max_systemwide
 
@@ -621,7 +621,7 @@ constraints:
     description: >-
       Set a lower bound on flow capacity of a technology across all nodes in which the technology exists.
     foreach: [techs, carriers]
-    where: "flow_cap_min_systemwide"
+    where: "any(flow_cap, over=nodes) AND flow_cap_min_systemwide"
     equations:
       - expression: sum(flow_cap, over=nodes) >= flow_cap_min_systemwide
 
@@ -647,7 +647,7 @@ constraints:
     description: >-
       Set the lower bound of a technology's outflow.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "flow_out_min_relative"
+    where: "flow_cap AND flow_out_min_relative"
     equations:
       - expression: flow_out >= flow_cap * timestep_resolution * flow_out_min_relative
 
@@ -688,6 +688,7 @@ constraints:
       Set the global carrier balance of the optimisation problem by fixing the total production of
       a given carrier to equal the total consumption of that carrier at every node in every timestep.
     foreach: [nodes, carriers, timesteps]
+    where: "any(carrier_in, over=techs) OR any(carrier_out, over=techs)"
     equations:
       - expression: >-
           sum(flow_out, over=techs) -
@@ -700,7 +701,7 @@ constraints:
       Set the upper bound on, or a fixed total of,
       that a demand technology must dump to its sink in each timestep.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "base_tech==demand"
+    where: "carrier_in AND base_tech==demand"
     equations:
       - where: "sink_use_equals"
         expression: "flow_in_inc_eff == sink_use_equals * $sink_scaler"
@@ -720,7 +721,7 @@ constraints:
       Set the lower bound on the quantity of flow a
       `demand` technology must dump to its sink in each timestep.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "sink_use_min AND NOT sink_use_equals AND base_tech==demand"
+    where: "carrier_in AND sink_use_min AND NOT sink_use_equals AND base_tech==demand"
     equations:
       - expression: "flow_in_inc_eff >= sink_use_min * $sink_scaler"
     sub_expressions:
@@ -730,7 +731,7 @@ constraints:
     description: >-
       Fix the outflow of a `supply` technology to its consumption of the available source.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "base_tech==supply AND NOT include_storage==True"
+    where: "carrier_out AND base_tech==supply AND NOT include_storage==True"
     equations:
       - expression: flow_out_inc_eff == source_use * source_eff
 
@@ -739,7 +740,7 @@ constraints:
       Fix the outflow of a `supply` technology to its consumption of the available source,
       with a storage buffer to temporally offset the outflow from source consumption.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "storage AND base_tech==supply"
+    where: "carrier_out AND storage AND base_tech==supply"
     equations:
       - expression: storage == $storage_previous_step + source_use * source_eff - flow_out_inc_eff
     sub_expressions:
@@ -835,7 +836,7 @@ constraints:
     description: >-
       Fix the flow capacity of two `transmission` technologies representing the same link in the system.
     foreach: [techs, carriers]
-    where: "base_tech==transmission"
+    where: "any(carrier_out, over=nodes) AND base_tech==transmission"
     equations:
       - expression: >-
           sum(where(flow_cap, map_dim(nodes, link_from)), over=nodes) ==
@@ -855,7 +856,7 @@ constraints:
       Set the upper bound on a technology's ability to ramp outflow up
       beyond a certain percentage compared to the previous timestep.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "flow_ramping AND NOT timesteps==get_val_at_index(timesteps=0)"
+    where: "(carrier_in OR carrier_out) AND flow_ramping AND NOT timesteps==get_val_at_index(timesteps=0)"
     equations:
       - expression: $flow - roll($flow, timesteps=1) <= flow_ramping * flow_cap
     sub_expressions:
@@ -872,7 +873,7 @@ constraints:
       Set the upper bound on a technology's ability to ramp outflow down
       beyond a certain percentage compared to the previous timestep.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "flow_ramping AND NOT timesteps==get_val_at_index(timesteps=0)"
+    where: "(carrier_in OR carrier_out) AND flow_ramping AND NOT timesteps==get_val_at_index(timesteps=0)"
     equations:
       - expression: -1 * flow_ramping * flow_cap <= $flow - roll($flow, timesteps=1)
     sub_expressions:
@@ -886,6 +887,7 @@ variables:
     default: 0
     unit: power
     foreach: [nodes, techs, carriers]
+    where: "(carrier_in OR carrier_out)"
     bounds:
       min: flow_cap_min
       max: flow_cap_max
@@ -1008,7 +1010,7 @@ variables:
     default: 0
     unit: energy
     foreach: [nodes, carriers, timesteps]
-    where: "config.ensure_feasibility==True"
+    where: "config.ensure_feasibility==True AND (any(carrier_in, over=techs) OR any(carrier_out, over=techs))"
     bounds:
       min: 0
       max: .inf
@@ -1027,7 +1029,7 @@ variables:
     default: 0
     unit: energy
     foreach: [nodes, carriers, timesteps]
-    where: "config.ensure_feasibility==True"
+    where: "config.ensure_feasibility==True AND (any(carrier_in, over=techs) OR any(carrier_out, over=techs))"
     bounds:
       min: -.inf
       max: 0
@@ -1314,7 +1316,7 @@ postprocessed:
     unit: energy
     foreach: [nodes, carriers, timesteps]
     default: 0
-    where: config.ensure_feasibility == True
+    where: "unmet_demand AND unused_supply AND config.ensure_feasibility == True"
     equations:
       - expression: unmet_demand + unused_supply
 

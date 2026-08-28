@@ -110,7 +110,7 @@ variables:
 These are not required, but are useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
 Without a `foreach`, it becomes an un-indexed variable.
-Without a `where` string, all valid members (according to the `active`) based on `foreach` will be included in this decision variable.
+Without a `where` string, all `active` members in `foreach` will be included in this decision variable.
 1. It can define a domain to turn it into a binary or integer variable (in either of those cases, domain becomes `integer`).
 1. It requires a minimum and maximum bound, which can be:
     1. a numeric value:
@@ -148,7 +148,7 @@ Global expressions are by no means necessary to include, but can make more compl
 These are not required, but are useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
 Without a `foreach`, it becomes an un-indexed expression.
-Without a `where` string, all valid members (according to the `active`) based on `foreach` will be included in this expression.
+Without a `where` string, all `active` members in `foreach` will be included in this expression.
 1. It has [equations](syntax.md#equations) (and, optionally, [sub-expressions](syntax.md#sub-expressions) and [slices](syntax.md#slices)) with corresponding lists of `where`+`expression` dictionaries.
 The equation expressions do _not_ have comparison operators; those are reserved for [constraints](#constraints)
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
@@ -209,7 +209,7 @@ constraints:
 These are not required, but are useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
 Without a `foreach`, it becomes an un-indexed constraint.
-Without a `where` string, all valid members (according to the `active`) based on `foreach` will be included in this constraint.
+Without a `where` string, all `active` members in `foreach` will be included in this constraint.
 1. It has [equations](syntax.md#equations) (and, optionally, [sub-expressions](syntax.md#sub-expressions) and [slices](syntax.md#slices)) with corresponding lists of `where`+`expression` dictionaries.
 The equation expressions _must_ have comparison operators.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
@@ -242,7 +242,7 @@ piecewise_constraints:
 This is not required, but is useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
 Without a `foreach`, it becomes an un-indexed constraint.
-Without a `where` string, all valid members (according to the `active`) based on `foreach` will be included in this constraint.
+Without a `where` string, all `active` members in `foreach` will be included in this constraint.
 1. It has `x` and `y` [expression strings](syntax.md#expression-strings) (`x_expression`, `y_expression`).
 1. It has `x` and `y` parameter references (`x_values`, `y_values`).
 This should be a string name referencing an input parameter that contains the `breakpoints` dimension.
@@ -302,7 +302,7 @@ postprocessed:
    These are not required, but are useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
    Without a `foreach`, it becomes an un-indexed expression.
-   Without a `where` string, all valid members (according to the `active`) based on `foreach` will be included in this expression.
+   Without a `where` string, all `active` members in `foreach` will be included in this expression.
 1. It has [equations](syntax.md#equations) (and, optionally, [sub-expressions](syntax.md#sub-expressions) and [slices](syntax.md#slices)) with corresponding lists of `where`+`expression` dictionaries.
 1. It can be deactivated so that it does not appear in the results by setting `active: false`.
 1. It can take on a `default` value that will be used in calculations to avoid `NaN` values creeping in.

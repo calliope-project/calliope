@@ -40,6 +40,7 @@ constraints:
     description: >-
       Set `flow_peak_month` as the peak outflow across all timesteps in each month
     foreach: [nodes, techs, carriers, timesteps, months]
+    where: flow_peak_month
     equations:
       - where: monthly_peak_mode AND lookup_month
         expression: flow_out <= flow_peak_month
@@ -53,7 +54,7 @@ variables:
     default: 0
     unit: power
     foreach: [nodes, techs, carriers, months]
-    where: monthly_peak_mode
+    where: carrier_out AND monthly_peak_mode
     bounds:
       min: 0
       max: flow_cap_max

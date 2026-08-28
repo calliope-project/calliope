@@ -45,7 +45,7 @@ constraints:
       Limit the lower bound of annual technology operation as a
       fraction of annual operation at maximum capacity.
     foreach: [nodes, techs, carriers]
-    where: capacity_factor_min
+    where: carrier_out AND capacity_factor_min
     equations:
       - expression: >
           sum(flow_out * timestep_weights, over=timesteps) >=
@@ -59,7 +59,7 @@ constraints:
       Limit the upper bound of annual technology operation as a
       fraction of annual operation at maximum capacity.
     foreach: [nodes, techs, carriers]
-    where: capacity_factor_max
+    where: carrier_out AND capacity_factor_max
     equations:
       - expression: >
           sum(flow_out * timestep_weights, over=timesteps) <=

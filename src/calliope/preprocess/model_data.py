@@ -603,7 +603,7 @@ class ModelDataCleaner(ModelDTypeUpdater):
     def clean(self):
         """Clean built dataset."""
         self.dataset = self._update_dtypes(self.dataset)
-        if not self.config.keep_deactivated:
+        if not self.config.retain_inactive:
             self.clean_data_from_undefined_members()
         self.add_colors()
         self.add_link_distances()
@@ -814,7 +814,7 @@ class ModelDataCleaner(ModelDTypeUpdater):
             .techs
         )
         subset_dataset = subset_dataset.drop_sel(techs=hanging_links)
-        if not self.config.keep_deactivated:
+        if not self.config.retain_inactive:
             self.dataset = self._drop_undefined(subset_dataset, subset_dataset.active)
         else:
             self.dataset = subset_dataset

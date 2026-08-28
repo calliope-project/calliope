@@ -19,7 +19,7 @@ from calliope.schemas import math_schema
 
 from ..common.util import check_error_or_warning
 
-BASE_DIMS = {"carriers", "nodes", "techs"}
+BASE_DIMS = {"nodes", "techs"}
 
 
 def string_to_def(yaml_string, schema: math_schema.CalliopeBaseModel):
@@ -1013,13 +1013,21 @@ class TestParsedBackendEquation:
         assert not where.sel(carriers="bar").any()
 
     def test_create_subset_align_dims_with_sets(
-        self, eval_where_args, where_string_parser, equation_obj, exists_array
+        self,
+        eval_where_args,
+        where_string_parser,
+        equation_obj,
+        component_obj,
+        dummy_model_data,
     ):
         equation_obj.sets = ["nodes", "techs"]
+        # An initial array with dimensions beyond those in `foreach`, to check they are dropped.
+        component_obj.sets = ["nodes", "techs", "carriers"]
+        initial_where = component_obj.combine_active_and_foreach(dummy_model_data)
 
         equation_obj.where = [where_string_parser.parse_string("True", parse_all=True)]
         where = equation_obj.evaluate_where(
-            *eval_where_args, initial_where=exists_array
+            *eval_where_args, initial_where=initial_where
         )
         aligned_where = equation_obj.drop_dims_not_in_foreach(where)
 

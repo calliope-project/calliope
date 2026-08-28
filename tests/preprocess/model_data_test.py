@@ -763,13 +763,11 @@ class TestActiveFalse:
 
     """
 
-    def test_tech_active_false_keep_deactivated(self):
+    def test_tech_active_false_retain_inactive(self):
         overrides = {"techs.test_storage.active": False}
 
         model = build_model(
-            overrides,
-            "simple_storage,two_hours,investment_costs",
-            keep_deactivated=True,
+            overrides, "simple_storage,two_hours,investment_costs", retain_inactive=True
         )
 
         # Ensure deactivated tech is still there
@@ -781,7 +779,7 @@ class TestActiveFalse:
         model = build_model(
             overrides,
             "simple_storage,two_hours,investment_costs",
-            keep_deactivated=False,
+            retain_inactive=False,
         )
 
         # Ensure what should be gone is gone
@@ -793,13 +791,11 @@ class TestActiveFalse:
             in debug_caplog.text
         )
 
-    def test_node_active_false_keep_deactivated(self):
+    def test_node_active_false_retain_inactive(self):
         overrides = {"nodes.b.active": False}
 
         model = build_model(
-            overrides,
-            "simple_storage,two_hours,investment_costs",
-            keep_deactivated=True,
+            overrides, "simple_storage,two_hours,investment_costs", retain_inactive=True
         )
 
         # Ensure deactivated node is still there
@@ -811,7 +807,7 @@ class TestActiveFalse:
         model = build_model(
             overrides,
             "simple_storage,two_hours,investment_costs",
-            keep_deactivated=False,
+            retain_inactive=False,
         )
 
         # Ensure what should be gone is gone
@@ -822,7 +818,7 @@ class TestActiveFalse:
             in debug_caplog.text
         )
 
-    def test_node_tech_active_false_keep_deactivated(self, dummy_int):
+    def test_node_tech_active_false_retain_inactive(self, dummy_int):
         overrides = {
             "nodes.b.techs.test_storage": {
                 "active": False,
@@ -831,9 +827,7 @@ class TestActiveFalse:
             }
         }
         model = build_model(
-            overrides,
-            "simple_storage,two_hours,investment_costs",
-            keep_deactivated=True,
+            overrides, "simple_storage,two_hours,investment_costs", retain_inactive=True
         )
 
         # Ensure what should be gone is gone
@@ -853,7 +847,7 @@ class TestActiveFalse:
         model = build_model(
             overrides,
             "simple_storage,two_hours,investment_costs",
-            keep_deactivated=False,
+            retain_inactive=False,
         )
 
         # Ensure what should be gone is gone
@@ -861,12 +855,10 @@ class TestActiveFalse:
         assert model.inputs.cost_flow_cap.sel(techs="test_storage", nodes="b").isnull()
         assert re.search(r"Deleting empty input data: \[.*'foo'.*\]", debug_caplog.text)
 
-    def test_link_active_false_keep_deactivated(self):
+    def test_link_active_false_retain_inactive(self):
         overrides = {"templates.test_transmission.active": False}
         model = build_model(
-            overrides,
-            "simple_storage,two_hours,investment_costs",
-            keep_deactivated=True,
+            overrides, "simple_storage,two_hours,investment_costs", retain_inactive=True
         )
 
         # Ensure what should be gone is gone
@@ -877,16 +869,17 @@ class TestActiveFalse:
         model = build_model(
             overrides,
             "simple_storage,two_hours,investment_costs",
-            keep_deactivated=False,
+            retain_inactive=False,
         )
 
         # Ensure what should be gone is gone
         assert not (model.inputs.base_tech == "transmission").any()
 
-        # Ensure warnings were raised
-        assert (
-            "Deleting techs values as they are not defined anywhere in the model: {'test_link_a_b_heat', 'test_link_a_b_elec'}"
-            in debug_caplog.text
+        # Ensure warnings were raised (set ordering is not deterministic)
+        assert re.search(
+            r"Deleting techs values as they are not defined anywhere in the model: "
+            r"\{(?=.*'test_link_a_b_heat')(?=.*'test_link_a_b_elec').*\}",
+            debug_caplog.text,
         )
 
 
