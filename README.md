@@ -46,7 +46,7 @@ Calliope can run on Windows, macOS and Linux.
 It can be installed using `pixi` (`pixi add calliope`), `conda` (`conda install calliope`), or `uv` (`uv pip install calliope`).
 For local development, use `pixi` as described in the [documentation](http://calliope.readthedocs.io/en/latest/contributing/).
 
-See the documentation for more [information on installing](https://calliope.readthedocs.io/en/latest/user/installation.html).
+See the documentation for more [information on installing](https://calliope.readthedocs.io/en/latest/installation/).
 
 Several easy to understand example models are [included with Calliope](https://github.com/calliope-project/calliope/tree/main/src/calliope/example_models) and accessible through the `calliope.examples` submodule.
 
