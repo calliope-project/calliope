@@ -887,7 +887,7 @@ variables:
     default: 0
     unit: power
     foreach: [nodes, techs, carriers]
-    where: "(carrier_in OR carrier_out)"
+    where: carrier_in OR carrier_out
     bounds:
       min: flow_cap_min
       max: flow_cap_max
