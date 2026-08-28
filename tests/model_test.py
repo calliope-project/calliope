@@ -484,6 +484,16 @@ class TestSporesMode:
         spores_model, _ = spores_model_and_log_algorithms
         assert spores_model.runtime.termination_condition == "optimal"
 
+    @pytest.mark.parametrize("backend", ["gurobi", "highs"])
+    def test_spores_mode_success_non_default_backend(self, backend):
+        """SPORES mode (which repeatedly updates inputs and re-solves) should work on all backends."""
+        pytest.importorskip("gurobipy" if backend == "gurobi" else "highspy")
+        model = build_model({}, self.SPORES_OVERRIDES)
+        model.build(backend=backend)
+        model.solve()
+        assert model.runtime.termination_condition == "optimal"
+        assert len(model.results.spores) == 3
+
     def test_spores_fail_without_baseline(self):
         """You can't have SPORES without some initial, baseline results to work with."""
         model = build_model({}, self.SPORES_OVERRIDES)

@@ -953,6 +953,7 @@ class TestUpdateVariable:
         bound_vals = solved_model_func.backend.get_variable_bounds("flow_out")[
             translator[bound]
         ]
+        assert bound_vals.notnull().any()
         assert (bound_vals == dummy_int).where(bound_vals.notnull()).all()
 
     def test_update_variable_bounds_single_val(self, solved_model_func, dummy_int):
@@ -961,6 +962,8 @@ class TestUpdateVariable:
             "flow_out", min=dummy_int, max=dummy_int
         )
         bound_vals = solved_model_func.backend.get_variable_bounds("flow_out")
+        assert bound_vals.lb.notnull().any()
+        assert bound_vals.ub.notnull().any()
         assert (bound_vals == dummy_int).where(bound_vals.notnull()).all().all()
 
     def test_update_variable_single_bound_multi_val(self, caplog, solved_model_func):
@@ -1060,8 +1063,9 @@ class TestPiecewiseConstraints:
     @pytest.fixture(scope="class")
     def working_model(self, backend, working_params, working_math, add_math):
         if backend == "highs":
-            # no piecewise constraints in HiGHS yet
-            pytest.skip()
+            pytest.skip(
+                "Piecewise constraints are not yet supported by the HiGHS backend"
+            )
 
         m = build_model(
             working_params,

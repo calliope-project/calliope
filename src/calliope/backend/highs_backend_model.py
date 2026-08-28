@@ -65,27 +65,30 @@ class HighsBackendModel(backend_model.BackendModel):
         """
         if importlib.util.find_spec("highspy") is None:
             raise ImportError(
-                "Install the `highspy` package to build the optimisation problem with the Highs backend."
+                "Install the `highspy` package to build the optimisation problem with the HiGHS backend."
             )
         super().__init__(inputs, math, build_config, highspy.Highs())
         self._instance: highspy.Highs
+        self._set_instance_options()
         self.shadow_prices = HighsShadowPrices(self)
+
+    def _set_instance_options(self) -> None:
+        """Set non-default HiGHS options that must hold whenever the model is (re)built.
+
+        HiGHS silently drops matrix coefficients with an absolute value below
+        `small_matrix_value` (default 1e-9) and `highspy>=1.15` raises an exception on
+        the resulting warning status, so we lower the tolerance to its allowed minimum.
+        Must be re-applied after any `resetOptions` call.
+        """
+        self._instance.setOptionValue("small_matrix_value", 1e-12)
 
     def add_parameter(  # noqa: D102, override
         self, name: str, values: xr.DataArray, definition: math_schema.Parameter
     ) -> None:
-        self._raise_error_on_preexistence(name, "parameters")
-
-        if values.isnull().all():
-            self.log("parameters", name, "Component not added; no data found in array.")
-            values = xr.DataArray(np.nan, attrs=values.attrs)
-
-        self._add_to_dataset(name, values, "parameters", definition.model_dump())
+        super().add_parameter(name, values, definition)
 
         if name not in self.math["parameters"]:
-            self.math = self.math.update(
-                {f"parameters.{name}": definition.model_dump()}
-            )
+            self.math = self.math.update({f"parameters.{name}": definition})
 
     def _add_variable(  # noqa: D102, override
         self,
@@ -115,15 +118,35 @@ class HighsBackendModel(backend_model.BackendModel):
     def _add_constraint(  # noqa: D102, override
         self, name: str, where: xr.DataArray, expression: xr.DataArray
     ) -> xr.DataArray:
-        to_fill = self._apply_func(self._instance.addConstr, where, 1, expression)
+        try:
+            to_fill = self._apply_func(self._instance.addConstr, where, 1, expression)
+        except Exception as err:
+            # highspy raises a bare `Exception` if HiGHS does not accept a constraint,
+            # e.g. when a coefficient's absolute value is below `small_matrix_value`.
+            raise BackendError(
+                f"Failed to add constraint `{name}` to the HiGHS model: {err}"
+            ) from err
 
         return to_fill
+
+    @staticmethod
+    def _to_highs_objective(
+        val: Any,
+    ) -> highspy.highs.highs_linear_expression | highspy.highs.highs_var:
+        """Coerce constant (numeric) objectives to expressions, as required by highspy."""
+        if not isinstance(
+            val, (highspy.highs.highs_linear_expression, highspy.highs.highs_var)
+        ):
+            val = highspy.highs.highs_linear_expression(float(val))
+        return val
 
     def _add_objective(  # noqa: D102, override
         self, name: str, where: xr.DataArray, expression: xr.DataArray, sense: int
     ) -> xr.DataArray:
         if name == self.objective:
-            self._instance.setObjective(obj=expression.item(), sense=sense)
+            self._instance.setObjective(
+                obj=self._to_highs_objective(expression.item()), sense=sense
+            )
             self.objective = name
             self.log("objectives", name, "Objective activated.")
         return expression
@@ -131,7 +154,9 @@ class HighsBackendModel(backend_model.BackendModel):
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         to_set = self.objectives[name]
         sense = self.OBJECTIVE_SENSE_DICT[self.math.objectives[name].sense]
-        self._instance.setObjective(obj=to_set.item(), sense=sense)
+        self._instance.setObjective(
+            obj=self._to_highs_objective(to_set.item()), sense=sense
+        )
         self.objective = name
         self.log("objectives", name, "Objective activated.", level="info")
 
@@ -161,6 +186,11 @@ class HighsBackendModel(backend_model.BackendModel):
         if constraint is None:
             raise KeyError(f"Unknown constraint: {name}")
         if isinstance(constraint, xr.DataArray) and not as_backend_objs:
+            if eval_body:
+                raise BackendError(
+                    "Cannot return the evaluated body of a HiGHS constraint. "
+                    "Set `eval_body=False` to return a string representation of the constraint instead."
+                )
             return self._apply_func(
                 self._cons_to_str, constraint.notnull(), 1, constraint
             )
@@ -172,10 +202,8 @@ class HighsBackendModel(backend_model.BackendModel):
         variable = self.variables.get(name, None)
         if variable is None:
             raise KeyError(f"Unknown variable: {name}")
-        if as_backend_objs or variable.isnull().all():
-            return variable
-        else:
-            try:
+        if not as_backend_objs and not variable.isnull().all():
+            if self._instance.getSolution().value_valid:
                 if not variable.dims:
                     da = xr.DataArray(self._instance.val(variable.item()))
                 else:
@@ -183,11 +211,14 @@ class HighsBackendModel(backend_model.BackendModel):
                         self._instance.vals(variable.to_series().dropna().to_dict())
                     ).reindex(variable.coords.to_index())
                     da = df.to_xarray()
-                return da.rename(variable.name).assign_attrs(variable.attrs)
-            except AttributeError:
-                return self._apply_func(
+                variable = da.rename(variable.name).assign_attrs(variable.attrs)
+            else:
+                # Without a valid solution, HiGHS returns all-zero variable values,
+                # so we fall back to string representations (as the pyomo backend does).
+                variable = self._apply_func(
                     self._expr_to_str, variable.notnull(), 1, variable
                 )
+        return variable
 
     def get_variable_bounds(self, name: str) -> xr.Dataset:  # noqa: D102, override
         variable = self.get_variable(name, as_backend_objs=True)
@@ -227,15 +258,14 @@ class HighsBackendModel(backend_model.BackendModel):
         self, solve_config: config_schema.Solve, warmstart: bool = False
     ) -> xr.Dataset:
         self._instance.resetOptions()
-        self._instance.clearSolver()
+        self._set_instance_options()
+        if not warmstart:
+            # HiGHS hot-starts automatically from the basis/solution of a previous
+            # solve; clearing the solver state forces a cold start.
+            self._instance.clearSolver()
         if solve_config.solver_options is not None:
             for k, v in solve_config.solver_options.items():
                 self._instance.setOptionValue(k, v)
-
-        if warmstart:
-            model_warn(
-                "The chosen solver, highs, does not support warmstart, which may impact performance."
-            )
 
         if solve_config.save_logs is not None:
             logdir = Path(solve_config.save_logs)
@@ -274,6 +304,7 @@ class HighsBackendModel(backend_model.BackendModel):
                     name=da.name,
                 )
                 da.attrs["coords_in_name"] = True
+        self._has_verbose_strings = True
 
     def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
         if Path(path).suffix != ".lp":
@@ -396,7 +427,8 @@ class HighsBackendModel(backend_model.BackendModel):
 
         self._apply_func(
             self._update_highs_variable,
-            variable_da.notnull() & xr.DataArray(new_bounds).notnull(),
+            variable_da.notnull()
+            & (bound_das["min"].notnull() | bound_das["max"].notnull()),
             1,
             variable_da,
             bound_das["min"],
@@ -423,7 +455,7 @@ class HighsBackendModel(backend_model.BackendModel):
         self, name: str, where: xr.DataArray | None = None
     ) -> None:
         raise BackendError(
-            "Cannot unfix a variable using the Highs backend; "
+            "Cannot unfix a variable using the HiGHS backend; "
             "you will need to rebuild your backend or update variable bounds to match the original bounds."
         )
 
@@ -444,7 +476,7 @@ class HighsBackendModel(backend_model.BackendModel):
         n_breakpoints: int,
     ) -> None:
         raise NotImplementedError(
-            "Piecewise constraints are not yet implemented for the Highs backend."
+            "Piecewise constraints are not yet implemented for the HiGHS backend."
         )
 
     def _update_highs_variable(
@@ -457,9 +489,9 @@ class HighsBackendModel(backend_model.BackendModel):
             lower_bound (float): New variable lower bound.
             upper_bound (float): New variable upper bound.
         """
-        orig_bounds = self._from_highs_variable_bounds(orig)
-        lower_bound = orig_bounds.lb if pd.isna(lower_bound) else lower_bound
-        upper_bound = orig_bounds.ub if pd.isna(upper_bound) else upper_bound
+        orig_lb, orig_ub = self._from_highs_variable_bounds(orig)
+        lower_bound = orig_lb if pd.isna(lower_bound) else lower_bound
+        upper_bound = orig_ub if pd.isna(upper_bound) else upper_bound
         self._instance.changeColBounds(orig.index, lower_bound, upper_bound)
 
     def _fix_highs_variable(self, orig: highspy.highs.highs_var) -> None:
@@ -476,17 +508,19 @@ class HighsBackendModel(backend_model.BackendModel):
         bound = self._from_highs_var(orig)
         self._update_highs_variable(orig, bound, bound)  # type: ignore
 
-    def _from_highs_variable_bounds(self, val: highspy.highs.highs_var) -> pd.Series:
+    def _from_highs_variable_bounds(
+        self, val: highspy.highs.highs_var
+    ) -> tuple[float, float]:
         """Evaluate Highs decision variable object bounds.
 
         Args:
             val (highspy.highs.highs_var): Variable object to be evaluated.
 
         Returns:
-            pd.Series: Array of variable upper and lower bound.
+            tuple[float, float]: Variable lower and upper bound.
         """
         _, _, lb, ub, _ = self._instance.getCol(val.index)
-        return pd.Series(data=[lb, ub], index=["lb", "ub"])
+        return lb, ub
 
     def _from_highs_var(self, val: highspy.highs.highs_var) -> Any:
         """Evaluate Highs variable object.
@@ -596,18 +630,25 @@ class HighsShadowPrices(backend_model.ShadowPrices):
 
     def get(self, name: str) -> xr.DataArray:  # noqa: D102, override
         constraint = self._backend_obj.get_constraint(name, as_backend_objs=True)
+        if not self._backend_obj._instance.getSolution().dual_valid:
+            # E.g. MILP solutions: HiGHS returns all-zero (invalid) duals rather
+            # than raising, so we have to check validity explicitly.
+            return xr.full_like(constraint, np.nan, dtype=float)
         return self._backend_obj._apply_func(
             self._duals_from_highs_constraint, constraint.notnull(), 1, constraint
         )
 
-    def activate(self):  # noqa: D102, override
+    def activate(self):
+        """No-op: HiGHS always computes duals; they cannot be turned on or off."""
         pass
 
-    def deactivate(self):  # noqa: D102, override
+    def deactivate(self):
+        """No-op: HiGHS always computes duals; they cannot be turned on or off."""
         pass
 
     @property
-    def is_active(self) -> bool:  # noqa: D102, override
+    def is_active(self) -> bool:
+        """Always True, since HiGHS duals cannot be turned off."""
         return True
 
     @property
