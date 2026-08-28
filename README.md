@@ -53,7 +53,7 @@ Several easy to understand example models are [included with Calliope](https://g
 The [tutorials in the documentation run through these examples](https://calliope.readthedocs.io/en/latest/examples/).
 A good place to start is to look at these tutorials to get a feel for how Calliope works, and then to read the "Getting Started" pages in the [online documentation](https://calliope.readthedocs.io/en/latest/installation/).
 
-More fully-featured examples that have been used in peer-reviewed scientific publications are available in our [model gallery](https://www.callio.pe/research/#models).
+More fully-featured examples that have been used in research, teaching and practice, are available in our [showcase](https://www.callio.pe/#showcase).
 
 ## Documentation
 
