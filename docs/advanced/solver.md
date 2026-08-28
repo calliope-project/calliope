@@ -16,6 +16,20 @@ config.solve:
 
 ```
 
+## HiGHS
+
+When using the [HiGHS backend](backend_choice.md), refer to the [HiGHS options list](https://ergo-code.github.io/HiGHS/stable/options/definitions/) for available parameters.
+For example:
+
+```yaml
+config:
+  build.backend: highs
+  solve.solver_options:
+    threads: 6            # Number of threads
+    solver: ipm           # Use interior point method rather than simplex
+    run_crossover: "off"  # Stop after barrier, do not perform crossover
+```
+
 ## CPLEX
 
 Refer to the [CPLEX parameter list](https://www.ibm.com/docs/en/icos/22.1.1?topic=cplex-list-parameters).

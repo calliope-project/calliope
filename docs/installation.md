@@ -8,7 +8,7 @@ Running Calliope requires four things:
 
 1. The Python programming language, version {{ min_python_version }} to {{ max_python_version }}.
 2. A number of Python add-on modules including [Pyomo](https://www.pyomo.org/), [Pandas](https://pandas.pydata.org/) and [Xarray](https://docs.xarray.dev/).
-3. An optimisation solver: Calliope has been tested with CBC, GLPK, and Gurobi.
+3. An optimisation solver: Calliope has been tested with HiGHS, CBC, GLPK, and Gurobi, and comes with HiGHS already included.
    Any other solver that is compatible with Pyomo should also work.
 4. The Calliope software itself.
 
@@ -23,7 +23,7 @@ To get `mamba`, the most straightforward approach is to [download and install th
     Another option is to use the commercially developed [Anaconda Python distribution](https://www.anaconda.com/download), which is available for all operating systems and comes with a graphical user interface to install and manage packages.
     If you use the Anaconda distribution, you have to replace `mamba` with `conda` in the installation instructions below.
 
-With the package manager installed, you can create a new environment called `calliope` with Calliope as well as the free and open source CBC solver.
+With the package manager installed, you can create a new environment called `calliope` with Calliope as well as the free and open source HiGHS and CBC solvers.
 Run the following command in a terminal or command-line window:
 
 ```shell
@@ -50,10 +50,15 @@ mamba activate calliope
 ## Choosing a solver
 
 You cannot solve a Calliope model until you have installed a solver.
-The easiest solver to install is [CBC](#cbc), which is included if you follow the [recommended installation instructions](#recommended-installation-method) above.
-[CBC](#cbc) (open-source) or [Gurobi](#gurobi) (commercial) are recommended for large problems, and have been confirmed to work with Calliope.
+Calliope comes included with the HiGHS solver, which is sufficiently capable for many problems.
+Commercial solvers like [Gurobi](#gurobi) may be necessary for large problems. Gurobi is tested and known to work with Calliope.
 The following subsections provide additional detail on how to install a solver.
 This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.readthedocs.io/en/latest/reference/topical/appsi/appsi.solvers.html) can be used.
+
+### HiGHS
+
+[HiGHS](https://highs.dev/) is free and open-source and is installed automatically with Calliope (via the [highspy](https://pypi.org/project/highspy/) package).
+Unlike the other solvers listed here, it cannot be used with Pyomo, only through its own [optimisation problem backend](./advanced/backend_choice.md). Set `#!yaml config.build.backend: highs` to use it.
 
 ### CBC
 
