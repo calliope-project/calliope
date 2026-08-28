@@ -1,25 +1,41 @@
-name: Publish
+name: Publish to PyPI
 
 on:
   release:
     types: [released]
 
-jobs:
-  pip-publish:
+jobs: # separate build and publish to restrict id-token write permissions to fewer steps
+  pypi-build:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
-    environment: production
-    env:
-      PACKAGENAME: "pip-build-${{ inputs.package_name }}-${{ github.ref_name }}"
+
     steps:
+      - uses: actions/checkout@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Build
+        run: uv build
+      # Persist artifacts for the next jobs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dists
+          path: dist/
 
-    - name: Download built package from another workflow
-      uses: dawidd6/action-download-artifact@v6
-      with:
-        name: ${{ env.PACKAGENAME }}
-        workflow: pr-ci.yml
-        path: dist/
+  pypi-publish:
 
-    - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+    needs: [pypi-build]
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - name: Download build artifacts from the build job
+        uses: actions/download-artifact@v8
+        with:
+          name: dists
+          path: dist/
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Publish
+        run: uv publish

@@ -7,10 +7,6 @@
 #       format_name: percent
 #       format_version: '1.3'
 #       jupytext_version: 1.16.0
-#   kernelspec:
-#     display_name: calliope_docs_build
-#     language: python
-#     name: calliope_docs_build
 # ---
 
 # %% [markdown]

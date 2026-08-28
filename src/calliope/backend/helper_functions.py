@@ -422,10 +422,9 @@ class ReduceCarrierDim(ParsingHelperFunction):
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
         sum_helper = Sum(self._return_type, self._attrs)
-
+        carrier_array = self._attrs.input_data[f"carrier_{flow_direction}"]
         return sum_helper(
-            array.where(self._attrs.input_data[f"carrier_{flow_direction}"]),
-            over="carriers",
+            array.broadcast_like(carrier_array).where(carrier_array), over="carriers"
         )
 
 
@@ -690,7 +689,9 @@ class Where(ParsingHelperFunction):
                         - expression: sum(where(flow_cap, node_grouping), over=nodes) <= node_group_max
             ```
         """
-        return array.where(condition.fillna(False).astype(bool))
+        return array.broadcast_like(condition).where(
+            condition.fillna(False).astype(bool)
+        )
 
 
 class MapDim(ParsingHelperFunction):

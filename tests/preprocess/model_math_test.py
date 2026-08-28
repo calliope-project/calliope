@@ -43,14 +43,16 @@ def user_math_path(def_path, user_math):
 
 class TestInitMath:
     @pytest.fixture(scope="class", params=["default", "w_extra"])
-    def extra_math(self, request, user_math_path):
+    @classmethod
+    def extra_math(cls, request, user_math_path):
         extra = {}
         if request.param == "w_extra":
             extra["user_math"] = user_math_path
         return extra
 
     @pytest.fixture(scope="class")
-    def math_data(self, extra_math, def_path):
+    @classmethod
+    def math_data(cls, extra_math, def_path):
         return model_math.initialise_math(extra_math, def_path)
 
     def test_loaded_internal(self, math_data, extra_math):
@@ -78,7 +80,8 @@ class TestInitMath:
 
 class TestBuildMath:
     @pytest.fixture(scope="class")
-    def test_model(self):
+    @classmethod
+    def test_model(cls):
         """Simulate users adding extra math using the urban example model."""
         calliope_dir = Path(calliope.__file__).parent
         additional = calliope_dir / "example_models/urban_scale/additional_math.yaml"
@@ -100,11 +103,13 @@ class TestBuildMath:
         )
 
     @pytest.fixture(scope="class")
-    def config(self, test_model):
+    @classmethod
+    def config(cls, test_model):
         return test_model.config
 
     @pytest.fixture(scope="class")
-    def math_options(self, test_model: calliope.Model):
+    @classmethod
+    def math_options(cls, test_model: calliope.Model):
         return test_model.math.init.model_dump()
 
     @pytest.mark.parametrize(
@@ -143,12 +148,14 @@ class TestBuildMath:
 
 class TestValidateMathDict:
     @pytest.fixture(scope="class")
-    def init_math(self) -> dict:
+    @classmethod
+    def init_math(cls) -> dict:
         model = build_model({}, "simple_supply,investment_costs")
         return model.math.init.model_dump()
 
     @pytest.fixture(scope="class")
-    def math_priority(self) -> list[str]:
+    @classmethod
+    def math_priority(cls) -> list[str]:
         return ["base"]
 
     def test_base_math(self, caplog, init_math, math_priority):

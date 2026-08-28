@@ -204,27 +204,33 @@ class TestOptimality:
 
 class TestGetters:
     @pytest.fixture(scope="class")
-    def variable(self, solved_model_cls):
+    @classmethod
+    def variable(cls, solved_model_cls):
         return solved_model_cls.backend.get_variable("flow_cap")
 
     @pytest.fixture(scope="class")
-    def parameter_undefined(self, solved_model_cls):
+    @classmethod
+    def parameter_undefined(cls, solved_model_cls):
         return solved_model_cls.backend.get_parameter("flow_in_eff")
 
     @pytest.fixture(scope="class")
-    def parameter_defined(self, solved_model_cls):
+    @classmethod
+    def parameter_defined(cls, solved_model_cls):
         return solved_model_cls.backend.get_parameter("flow_cap_max")
 
     @pytest.fixture(scope="class")
-    def constraint(self, solved_model_cls):
+    @classmethod
+    def constraint(cls, solved_model_cls):
         return solved_model_cls.backend.get_constraint("system_balance")
 
     @pytest.fixture(scope="class")
-    def global_expression(self, solved_model_cls):
+    @classmethod
+    def global_expression(cls, solved_model_cls):
         return solved_model_cls.backend.get_global_expression("cost_investment")
 
     @pytest.fixture(scope="class")
-    def lookup(self, solved_model_cls):
+    @classmethod
+    def lookup(cls, solved_model_cls):
         return solved_model_cls.backend.get_lookup("base_tech")
 
     @pytest.mark.parametrize(
@@ -1011,7 +1017,8 @@ class TestMILP:
 
 
 class TestPiecewiseConstraints:
-    def gen_params(self, data, index=[0, 1, 2], dim="breakpoints"):
+    @staticmethod
+    def gen_params(data, index=[0, 1, 2], dim="breakpoints"):
         return {
             "data_definitions": {
                 "piecewise_x": {"data": data, "index": index, "dims": dim},
@@ -1024,7 +1031,8 @@ class TestPiecewiseConstraints:
         }
 
     @pytest.fixture(scope="class")
-    def working_math(self):
+    @classmethod
+    def working_math(cls):
         return {
             "foreach": ["nodes", "techs", "carriers"],
             "where": "[test_supply_elec] in techs AND piecewise_x AND piecewise_y",
@@ -1036,23 +1044,28 @@ class TestPiecewiseConstraints:
         }
 
     @pytest.fixture(scope="class")
-    def working_params(self):
-        return self.gen_params([0, 5, 10])
+    @classmethod
+    def working_params(cls):
+        return cls.gen_params([0, 5, 10])
 
     @pytest.fixture(scope="class")
-    def length_mismatch_params(self):
-        return self.gen_params([0, 10], [0, 1])
+    @classmethod
+    def length_mismatch_params(cls):
+        return cls.gen_params([0, 10], [0, 1])
 
     @pytest.fixture(scope="class")
-    def not_reaching_var_bound_with_breakpoint_params(self):
-        return self.gen_params([0, 5, 8])
+    @classmethod
+    def not_reaching_var_bound_with_breakpoint_params(cls):
+        return cls.gen_params([0, 5, 8])
 
     @pytest.fixture(scope="class")
-    def missing_breakpoint_dims(self):
-        return self.gen_params([0, 5, 10], dim="foobar")
+    @classmethod
+    def missing_breakpoint_dims(cls):
+        return cls.gen_params([0, 5, 10], dim="foobar")
 
     @pytest.fixture(scope="class")
-    def add_math(self):
+    @classmethod
+    def add_math(cls):
         return {
             "parameters": {"piecewise_x": {}, "piecewise_y": {}},
             "dimensions": {
@@ -1061,7 +1074,8 @@ class TestPiecewiseConstraints:
         }
 
     @pytest.fixture(scope="class")
-    def working_model(self, backend, working_params, working_math, add_math):
+    @classmethod
+    def working_model(cls, backend, working_params, working_math, add_math):
         if backend == "highs":
             pytest.skip(
                 "Piecewise constraints are not yet supported by the HiGHS backend"
@@ -1077,7 +1091,8 @@ class TestPiecewiseConstraints:
         return m
 
     @pytest.fixture(scope="class")
-    def piecewise_constraint(self, working_model):
+    @classmethod
+    def piecewise_constraint(cls, working_model):
         return working_model.backend.get_piecewise_constraint("foo")
 
     def test_piecewise_attrs(self, piecewise_constraint):

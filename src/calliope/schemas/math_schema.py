@@ -4,10 +4,9 @@
 
 from collections.abc import Iterable
 from functools import cached_property
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, Self
 
 from pydantic import Field, model_validator
-from typing_extensions import Self
 
 from calliope.schemas.general import (
     AttrStr,

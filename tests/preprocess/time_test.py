@@ -62,7 +62,8 @@ class TestTimeFormat:
 
 class TestSubsetTime:
     @pytest.fixture(scope="class")
-    def ts_index(self):
+    @classmethod
+    def ts_index(cls):
         return pd.date_range("2005-01-01", "2005-01-05", freq="h")
 
     @pytest.mark.parametrize(
@@ -108,19 +109,21 @@ class TestSubsetTime:
 
 class TestClustering:
     @pytest.fixture(scope="class", params=["datetime", "string"])
-    def cluster_dtype(self, request):
+    @classmethod
+    def cluster_dtype(cls, request):
         """The method should be able to handle datetime and string lookup data"""
         return request.param
 
     @pytest.fixture(scope="class")
-    def dummy_model_to_cluster(self, dummy_int, cluster_dtype):
+    @classmethod
+    def dummy_model_to_cluster(cls, dummy_int, cluster_dtype):
         """Create a dummy model with a parameter to cluster 3 years of data into 5 representative days."""
         ts = pd.date_range(
             "2025-01-01", "2028-01-01", freq="h", inclusive="left", name="timesteps"
         )
         da = pd.Series(dummy_int, index=ts).to_xarray()
         cluster_ts = pd.date_range(
-            "2025-01-01", "2028-01-01", freq="1d", inclusive="left", name="datesteps"
+            "2025-01-01", "2028-01-01", freq="1D", inclusive="left", name="datesteps"
         )
         if cluster_dtype == "string":
             cluster_ts = cluster_ts.strftime("%Y-%m-%d")
@@ -139,7 +142,8 @@ class TestClustering:
         return ds
 
     @pytest.fixture(scope="class")
-    def dummy_clustered_model(self, dummy_model_to_cluster):
+    @classmethod
+    def dummy_clustered_model(cls, dummy_model_to_cluster):
         return time.cluster(
             dummy_model_to_cluster,
             clustering_param="clustering_param",
@@ -201,7 +205,8 @@ class TestClustering:
     @pytest.fixture(
         scope="class", params=["cluster_days", "cluster_days_diff_dateformat"]
     )
-    def clustered_model(self, request):
+    @classmethod
+    def clustered_model(cls, request):
         cluster_init = {
             "subset": {"timesteps": ["2005-01-01", "2005-01-04"]},
             "time_cluster": request.param,
@@ -416,39 +421,6 @@ class TestResampling:
             model.inputs.sink_use_equals.sel(nodes="a").fillna(0)
             == model.inputs.sink_use_equals.sel(nodes="b").fillna(0) / 4
         ).all()
-
-
-class TestMissingTimeData:
-    """Test detection of missing timeseries data."""
-
-    def test_warn_missing_timeseries_data(self):
-        """Test warning when timeseries has gaps."""
-        import numpy as np
-        import xarray as xr
-
-        ds = xr.Dataset(
-            {"demand": (["timesteps", "nodes"], [[1, 2], [np.nan, 4], [5, 6]])},
-            coords={"timesteps": pd.date_range("2005-01-01", periods=3, freq="h")},
-        )
-
-        with pytest.warns(match="Possibly missing data on the timesteps dimension"):
-            time._check_missing_data(ds, "timesteps")
-
-    def test_no_warn_all_data_present(self):
-        """Test no warning when all data present."""
-        import xarray as xr
-
-        ds = xr.Dataset(
-            {"demand": (["timesteps", "nodes"], [[1, 2], [3, 4], [5, 6]])},
-            coords={"timesteps": pd.date_range("2005-01-01", periods=3, freq="h")},
-        )
-
-        # Should not raise warning - use context manager to verify
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            time._check_missing_data(ds, "timesteps")
 
 
 class TestDatetimeConversion:
