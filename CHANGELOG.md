@@ -7,8 +7,8 @@
 |changed| |backwards-incompatible| `foreach` now restricts components to `active` node/tech combinations only; it no longer implicitly restricts the `carriers` dimension.
 Carrier membership must be stated explicitly in a component's `where` string (e.g., `carrier_out`, or a reference to a decision variable that is itself gated on carriers).
 
-|changed| `defined` math helper function takes a new optional `using` argument, giving the boolean input array(s) with which to extend the `active` array.
-It is required to check membership of any dimension other than `nodes`/`techs`, e.g. `defined(carriers=electricity, within=techs, using=[carrier_in, carrier_out])`.
+|removed| |backwards-incompatible| `defined` math helper function no longer available.
+Users should now define a boolean lookup array in their inputs to access the same functionality.
 
 |new| `init` config key `retain_inactive` which allows deactivated components to remain in the input array rather than be cleaned out.
 Enables components to be re-activated after model instantiation but before running the optimisation problem.

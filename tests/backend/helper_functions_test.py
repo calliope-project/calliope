@@ -25,11 +25,6 @@ def where_any(where, parsing_kwargs):
 
 
 @pytest.fixture(scope="class")
-def where_defined(where, parsing_kwargs):
-    return where["defined"](**parsing_kwargs)
-
-
-@pytest.fixture(scope="class")
 def expression_sum(expression, parsing_kwargs):
     return expression["sum"](**parsing_kwargs)
 
@@ -107,28 +102,8 @@ class TestAsArray:
         )
         return {"return_type": "array", "attrs": attrs}
 
-    @pytest.fixture
-    def carrier_lookups(self, dummy_model_data):
-        return [dummy_model_data.carrier_in, dummy_model_data.carrier_out]
-
-    @pytest.fixture
-    def is_defined_any(self, where_defined):
-        def _is_defined(drop_dims, dims, using=None):
-            defined = where_defined._definition_array(using)
-            return defined.any(drop_dims).sel(**dims).any(dims.keys())
-
-        return _is_defined
-
-    @pytest.fixture
-    def is_defined_all(self, where_defined):
-        def _is_defined(drop_dims, dims, using=None):
-            defined = where_defined._definition_array(using)
-            return defined.any(drop_dims).sel(**dims).all(dims.keys())
-
-        return _is_defined
-
     @pytest.mark.parametrize(
-        ("string_type", "func_name"), [("where", "defined"), ("expression", "sum")]
+        ("string_type", "func_name"), [("where", "any"), ("expression", "sum")]
     )
     def test_duplicate_name_exception(self, string_type, func_name):
         with pytest.raises(ValueError, match=rf".*{string_type}.*{func_name}.*"):
@@ -174,107 +149,6 @@ class TestAsArray:
     def test_any_exists(self, where_any, dummy_model_data, var, over, expected):
         summed = where_any(dummy_model_data[var], over=over)
         assert summed.equals(dummy_model_data[expected])
-
-    def test_defined_any_one_dim_one_val(
-        self, dummy_model_data, is_defined_any, where_defined
-    ):
-        dims = {"techs": "foobar"}
-        dims_check = {"techs": ["foobar"]}
-        defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
-        assert defined.equals(is_defined_any([], dims_check))
-        assert defined.dtype.kind == "b"
-
-    def test_defined_any_two_dim_one_val(
-        self, dummy_model_data, is_defined_any, where_defined, carrier_lookups
-    ):
-        dims = {"techs": "foobar", "carriers": "foo"}
-        dims_check = {"techs": ["foobar"], "carriers": ["foo"]}
-        defined = where_defined(
-            within=dummy_model_data["nodes"], how="any", using=carrier_lookups, **dims
-        )
-        assert defined.equals(is_defined_any([], dims_check, carrier_lookups))
-
-    def test_defined_any_one_dim_multi_val(
-        self, dummy_model_data, is_defined_any, where_defined
-    ):
-        dims = {"techs": ["foobar", "foobaz"]}
-        defined = where_defined(within=dummy_model_data["nodes"], how="any", **dims)
-        assert defined.equals(is_defined_any([], dims))
-        assert defined.dtype.kind == "b"
-
-    def test_defined_any_one_dim_multi_val_techs_within(
-        self, dummy_model_data, is_defined_any, where_defined, carrier_lookups
-    ):
-        dims = {"carriers": ["foo", "bar"]}
-        defined = where_defined(
-            within=dummy_model_data["techs"], how="any", using=carrier_lookups, **dims
-        )
-        assert defined.equals(is_defined_any(["nodes"], dims, carrier_lookups))
-
-    def test_defined_any_two_dim_multi_val(
-        self, dummy_model_data, is_defined_any, where_defined, carrier_lookups
-    ):
-        dims = {"techs": ["foobar", "foobaz"], "carriers": ["foo", "bar"]}
-        defined = where_defined(
-            within=dummy_model_data["nodes"], how="any", using=carrier_lookups, **dims
-        )
-        assert defined.equals(is_defined_any([], dims, carrier_lookups))
-        assert defined.dtype.kind == "b"
-
-    def test_defined_all_one_dim_one_val(
-        self, dummy_model_data, is_defined_all, where_defined
-    ):
-        dims = {"techs": ["foobar"]}
-        defined = where_defined(within=dummy_model_data["nodes"], how="all", **dims)
-        assert defined.equals(is_defined_all([], dims))
-        assert defined.dtype.kind == "b"
-
-    def test_defined_all_two_dim_one_val(
-        self, dummy_model_data, is_defined_all, where_defined, carrier_lookups
-    ):
-        dims = {"techs": ["foobar"], "carriers": ["foo"]}
-        defined = where_defined(
-            within=dummy_model_data["nodes"], how="all", using=carrier_lookups, **dims
-        )
-        assert defined.equals(is_defined_all([], dims, carrier_lookups))
-
-    def test_defined_single_using_array(
-        self, dummy_model_data, is_defined_any, where_defined
-    ):
-        """A single array can be given to `using`, without wrapping it in a list."""
-        dims = {"carriers": ["foo"]}
-        carrier_in = dummy_model_data.carrier_in
-        defined = where_defined(
-            within=dummy_model_data["techs"], how="any", using=carrier_in, **dims
-        )
-        assert defined.equals(is_defined_any(["nodes"], dims, [carrier_in]))
-
-    def test_defined_undefined_dim_without_using(self, dummy_model_data, where_defined):
-        """Referencing a dim that `active` does not have requires extending it via `using`."""
-        with pytest.raises(ValueError, match="Unexpected model dimension referenced"):
-            where_defined(within=dummy_model_data["techs"], how="any", carriers=["foo"])
-
-    def test_defined_using_non_boolean(self, dummy_model_data, where_defined):
-        with pytest.raises(exceptions.BackendError, match="must be boolean"):
-            where_defined(
-                within=dummy_model_data["techs"],
-                how="any",
-                using=dummy_model_data.all_inf,
-                carriers=["foo"],
-            )
-
-    def test_defined_using_mismatched_dims(
-        self, dummy_model_data, where_defined, carrier_lookups
-    ):
-        with pytest.raises(
-            exceptions.BackendError, match="must share their dimensions"
-        ):
-            where_defined(
-                within=dummy_model_data["techs"],
-                how="any",
-                using=[carrier_lookups[0], dummy_model_data.active],
-                carriers=["foo"],
-            )
 
     @pytest.mark.parametrize("over", ["techs", ["techs"]])
     def test_sum_one_dim(self, expression_sum, dummy_model_data, over):
@@ -586,51 +460,6 @@ class TestAsMathString:
         assert (
             summed_string
             == r"\bigvee\limits_{\substack{\text{tech} \in \text{techs}}} (foo)"
-        )
-
-    def test_defined_any(self, where_defined, dummy_model_data):
-        defined_string = where_defined(
-            within=dummy_model_data["nodes"], how="any", techs="foobar"
-        )
-        assert (
-            defined_string
-            == r"\bigvee\limits_{\substack{\text{tech} \in \text{[foobar]}}}\text{tech defined in node}"
-        )
-
-    def test_defined_any_multi_val(self, dummy_model_data, where_defined):
-        defined_string = where_defined(
-            within=dummy_model_data["nodes"], how="any", techs=["foobar", "foobaz"]
-        )
-        assert (
-            defined_string
-            == r"\bigvee\limits_{\substack{\text{tech} \in \text{[foobar,foobaz]}}}\text{tech defined in node}"
-        )
-
-    def test_defined_any_multi_dim(self, dummy_model_data, where_defined):
-        defined_string = where_defined(
-            within=dummy_model_data["nodes"], how="any", techs="foobar", carriers="foo"
-        )
-        assert (
-            defined_string
-            == r"\bigwedge(\bigvee\limits_{\substack{\text{tech} \in \text{[foobar]}}}\text{tech defined in node}, \bigvee\limits_{\substack{\text{carrier} \in \text{[foo]}}}\text{carrier defined in node})"
-        )
-
-    def test_defined_all(self, where_defined, dummy_model_data):
-        defined_string = where_defined(
-            within=dummy_model_data["nodes"], how="all", techs="foobar"
-        )
-        assert (
-            defined_string
-            == r"\bigwedge\limits_{\substack{\text{tech} \in \text{[foobar]}}}\text{tech defined in node}"
-        )
-
-    def test_defined_all_multi_dim(self, dummy_model_data, where_defined):
-        defined_string = where_defined(
-            within=dummy_model_data["nodes"], how="all", techs="foobar", carriers="foo"
-        )
-        assert (
-            defined_string
-            == r"\bigwedge(\bigwedge\limits_{\substack{\text{tech} \in \text{[foobar]}}}\text{tech defined in node}, \bigwedge\limits_{\substack{\text{carrier} \in \text{[foo]}}}\text{carrier defined in node})"
         )
 
     @pytest.mark.parametrize(

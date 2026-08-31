@@ -12,44 +12,6 @@ Parameters are indexed over multiple dimensions.
 Using `any(..., over=...)` in a `where` string allows you to check if there is at least one non-NaN value in a given dimension (akin to [xarray.DataArray.any][]).
 So, `any(cost, over=[nodes, techs])` will check if there is at least one non-NaN tech+node value in the `costs` dimension (the other dimension that the `cost` decision variable is indexed over).
 
-## defined
-
-Similar to [any](#any), using `defined(..., within=...)` in a `where` string allows you to check for non-NaN values along dimensions.
-In the case of `defined`, you can check if e.g., certain technologies have been defined within the nodes or certain carriers are defined within a group of techs or nodes.
-
-So, for the definition:
-
-```yaml
-techs:
-  tech1:
-    base_tech: conversion
-    carrier_in: electricity
-    carrier_out: heat
-  tech2:
-    base_tech: conversion
-    carrier_in: [coal, biofuel]
-    carrier_out: electricity
-nodes:
-  node1:
-    techs: {tech1}
-  node2:
-    techs: {tech1, tech2}
-```
-
-`defined(techs=[tech1, tech2], within=nodes)` would yield a list of `[True, True]` as both nodes define _at least one_ of `tech1` or `tech2`.
-
-`defined(techs=[tech1, tech2], within=nodes, how=all)` would yield a list of `[False, True]` as only `node2` defines _both_ `tech1` and `tech2`.
-
-By default, `defined` searches the model `active` array, which is indexed over `nodes` and `techs` only.
-To check membership of any other dimension, extend it with the `using` argument, giving the boolean input array(s) that define that dimension.
-Multiple arrays are combined with a boolean OR, so must share their dimensions.
-
-`defined(carriers=electricity, within=techs, using=[carrier_in, carrier_out])` would yield a list of `[True, True]` as both technologies define electricity.
-
-!!! note
-    `using` keeps the helper function agnostic to your math.
-    If you rename or replace the lookups that define a dimension in your own math, update the `using` argument to match; `defined` itself needs no change.
-
 ## sum
 
 Using `sum(..., over=)` in an expression allows you to sum over one or more dimensions of your component array (be it a parameter, decision variable, or global expression).

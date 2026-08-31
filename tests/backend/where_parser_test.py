@@ -524,7 +524,7 @@ class TestSubsettingParser:
             "[bar] in",  # missing set name
             "bar in [nodes]",  # Wrong order of subset and set name
             "[foo==bar] in nodes",  # comparison string in subset
-            "[defined(techs=[tech1, tech2], within=nodes, how=any)] in nodes",  # helper function in subset
+            "[any(techs=[tech1, tech2], within=nodes, how=any)] in nodes",  # helper function in subset
             "(bar) in nodes",  # wrong brackets
         ],
     )

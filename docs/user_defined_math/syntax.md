@@ -59,13 +59,11 @@ Configuration options are any that are defined in `config.build`, where you can 
         - If you want to create a decision variable across only `storage` technologies, you would include `base_tech==storage`.
 
 1. Subsetting a set.
-The sets available to subset are always [`nodes`, `techs`, `carriers`] + any additional sets defined by you in [`foreach`](#foreach-lists).
+The sets available to subset are always [`nodes`, `techs`] + any additional sets defined by you in [`foreach`](#foreach-lists).
 
     ??? example annotate "Examples"
 
-        - If you want to filter `nodes` where any of a set of `techs` are defined: `defined(techs=[tech1, tech2], within=nodes, how=any)` (1).
-
-    1. `defined` is a [helper function](helper_functions.md#defined)!
+        - If you want to filter `nodes` where any of a set of `techs` are defined, you will need to provide a boolean input array to enforce that.
 
 To combine statements you can use the operators `and`/`or`.
 You can also use the `not` operator to negate any of the statements.
