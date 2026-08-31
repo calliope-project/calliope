@@ -72,6 +72,13 @@ class TestNewBackend:
         param = simple_supply_highs.backend.get_parameter("flow_in_eff")
         assert isinstance(param.item(), float)
 
+    def test_add_parameter_updates_math(self, simple_supply_highs_func):
+        """Parameters unknown to the math must be registered in the math on addition."""
+        backend = simple_supply_highs_func.backend
+        assert "foo" not in backend.math["parameters"].root
+        backend.add_parameter("foo", xr.DataArray(1), {})
+        assert "foo" in backend.math["parameters"].root
+
     def test_new_build_get_global_expression(self, simple_supply_highs):
         expr = simple_supply_highs.backend.get_global_expression("cost_investment")
         assert (
@@ -105,6 +112,66 @@ class TestNewBackend:
         assert "flow_out[" in constr_str
         assert "==" in constr_str or "<=" in constr_str or ">=" in constr_str
 
+    @pytest.mark.parametrize(
+        ("expr_func", "expected"),
+        [
+            pytest.param(lambda var: -2.5 * var, "- 2.5*{name}", id="negative-coeff"),
+            pytest.param(
+                lambda var: 2.5 * var + 4, "2.5*{name} + 4", id="positive-constant"
+            ),
+            pytest.param(
+                lambda var: 2 * var - 4, "2*{name} - 4", id="negative-constant"
+            ),
+            pytest.param(
+                lambda var: highspy.highs.highs_linear_expression(4.0),
+                "4",
+                id="constant-only",
+            ),
+            pytest.param(
+                lambda var: highspy.highs.highs_linear_expression(), "0", id="empty"
+            ),
+        ],
+    )
+    def test_linexpr_to_str(self, simple_supply_longnames, expr_func, expected):
+        """Coefficients, constants and empty expressions must all be rendered."""
+        backend = simple_supply_longnames.backend
+        var = backend.get_variable("flow_cap").to_series().dropna().iloc[0]
+        expr_str = backend._linexpr_to_str(expr_func(var))
+        assert expr_str == expected.format(name=var.name)
+
+    def test_expr_to_str_plain_number(self, simple_supply_highs):
+        """Plain numbers in expression arrays must be rendered via `str`."""
+        assert simple_supply_highs.backend._expr_to_str(1.5) == "1.5"
+
+    def test_cons_to_str_inequality_bounds(self, simple_supply_highs_func):
+        """One-sided and ranged constraint bounds must all be rendered."""
+        backend = simple_supply_highs_func.backend
+        instance = backend._instance
+        var = backend.get_variable("flow_cap").to_series().dropna().iloc[0]
+        name = backend._col_name(var.index)
+        upper = instance.addConstr(1.0 * var <= 5)
+        lower = instance.addConstr(1.0 * var >= 1)
+        ranged = instance.addConstr((1.0 * var) == [1, 5])
+        assert backend._cons_to_str(upper) == f"{name} <= 5"
+        assert backend._cons_to_str(lower) == f"{name} >= 1"
+        assert backend._cons_to_str(ranged) == f"1 <= {name} <= 5"
+
+    def test_add_constraint_tiny_coefficient_error(self, simple_supply_highs_func):
+        """highspy's bare exception on rejecting a constraint must become a BackendError."""
+        with pytest.raises(
+            exceptions.BackendError, match="Failed to add constraint `foo`"
+        ):
+            simple_supply_highs_func.backend.add_constraint(
+                "foo",
+                {
+                    "equations": [
+                        {
+                            "expression": "1e-30 * sum(flow_cap, over=[nodes, techs, carriers]) >= 0"
+                        }
+                    ]
+                },
+            )
+
     def test_new_build_get_constraint_as_vals(self, simple_supply_highs):
         """Constraint bodies cannot be evaluated by the HiGHS backend."""
         with pytest.raises(exceptions.BackendError) as excinfo:
@@ -121,6 +188,15 @@ class TestNewBackend:
             "flow_cap", as_backend_objs=False
         )
         assert var.to_series().dropna().apply(lambda x: isinstance(x, str)).all()
+
+    def test_get_variable_as_vals_scalar(self, simple_supply_highs_func):
+        """Dimensionless variables must resolve to a scalar value array after a solve."""
+        backend = simple_supply_highs_func.backend
+        backend.add_variable("scalar_var", {"bounds": {"min": 0, "max": 1}})
+        simple_supply_highs_func.solve(force=True)
+        var = backend.get_variable("scalar_var", as_backend_objs=False)
+        assert var.shape == ()
+        assert 0 <= var.item() <= 1
 
     def test_add_valid_obj(self, simple_supply_highs):
         eq = {"expression": "bigM", "where": "True"}
@@ -238,6 +314,19 @@ class TestNewBackend:
         assert changed.notnull().any()
         assert (changed == dummy_int).where(changed.notnull()).all()
         assert after[other_bound].equals(before[other_bound])
+
+    def test_update_variable_bounds_all_dims(
+        self, caplog, simple_supply_highs_func, dummy_int
+    ):
+        """Bounds carrying all variable dims must be applied without broadcasting."""
+        caplog.set_level(logging.INFO)
+        backend = simple_supply_highs_func.backend
+        var = backend.variables["flow_out"]
+        new_min = xr.full_like(var, dummy_int, dtype=float).where(var.notnull())
+        backend.update_variable_bounds("flow_out", min=new_min)
+        assert "will be broadcast" not in caplog.text
+        bounds = backend.get_variable_bounds("flow_out")
+        assert (bounds.lb == dummy_int).where(bounds.lb.notnull()).all()
 
     def test_fix_variable(self, simple_supply_highs_func):
         backend = simple_supply_highs_func.backend
@@ -453,6 +542,28 @@ class TestDeleteComponent:
         )
         assert "flow_cap[" in expr_str
 
+    @pytest.mark.parametrize(
+        ("key", "component_type"),
+        [("not_in_dataset", "constraints"), ("flow_cap", "constraints")],
+    )
+    def test_delete_missing_or_mismatched_is_noop(
+        self, verbose_model, key, component_type
+    ):
+        """Deleting an unknown key or one of a different component type must do nothing."""
+        backend = verbose_model.backend
+        n_rows = backend._instance.getNumRow()
+        backend.delete_component(key, component_type)
+        assert backend._instance.getNumRow() == n_rows
+        assert "flow_cap" in backend.variables
+
+    def test_shift_stale_indices_without_deletions_is_noop(self, verbose_model):
+        """A direct call with no deleted indices must leave stored indices untouched."""
+        backend = verbose_model.backend
+        var = backend._dataset["flow_cap"].to_series().dropna().iloc[0]
+        index_before = var.index
+        backend._shift_stale_indices([], "variables")
+        assert var.index == index_before
+
     def test_update_input_rebuild_and_resolve(self):
         """Sequential rebuilds must leave a model that solves to the same objective as a once-updated build."""
         m = build_model({}, "simple_supply,two_hours,investment_costs")
@@ -513,6 +624,19 @@ class TestShadowPrices:
         supply_milp.backend.shadow_prices.activate()
         supply_milp.solve()
         shadow_prices = supply_milp.backend.shadow_prices.get("system_balance")
+        assert shadow_prices.isnull().all()
+
+    def test_get_shadow_price_missing_duals_interface(self, simple_supply, monkeypatch):
+        """Shadow prices must fall back to null if highspy cannot provide duals."""
+        simple_supply.solve()
+
+        def _raise_attribute_error(val):
+            raise AttributeError("no duals available")
+
+        monkeypatch.setattr(
+            simple_supply.backend._instance, "constrDuals", _raise_attribute_error
+        )
+        shadow_prices = simple_supply.backend.shadow_prices.get("system_balance")
         assert shadow_prices.isnull().all()
 
     def test_get_shadow_price_unsolved(self, simple_supply):

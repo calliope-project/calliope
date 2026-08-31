@@ -82,9 +82,6 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         self._add_to_dataset(name, values, "parameters", definition.model_dump())
 
-        if name not in self.math["parameters"]:
-            self.math = self.math.update({f"parameters.{name}": definition})
-
     def _add_variable(  # noqa: D102, override
         self,
         name: str,

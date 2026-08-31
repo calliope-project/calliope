@@ -30,6 +30,15 @@ LOGGER = logging.getLogger(__name__)
 class HighsBackendModel(backend_model.BackendModel):
     """highspy-specific backend functionality."""
 
+    # Fallbacks so the class can be inspected without `highspy` installed;
+    # replaced by the real highspy enums when the package is available.
+    OBJECTIVE_SENSE_DICT = {
+        "minimize": 1,
+        "minimise": 1,
+        "maximize": -1,
+        "maximise": -1,
+    }
+    VARIABLE_DOMAIN_DICT = {"real": "continuous", "integer": "integer"}
     if importlib.util.find_spec("highspy") is not None:
         OBJECTIVE_SENSE_DICT = {
             "minimize": highspy.ObjSense.kMinimize,
@@ -41,14 +50,6 @@ class HighsBackendModel(backend_model.BackendModel):
             "real": highspy.HighsVarType.kContinuous,
             "integer": highspy.HighsVarType.kInteger,
         }
-    else:
-        OBJECTIVE_SENSE_DICT = {
-            "minimize": 1,
-            "minimise": 1,
-            "maximize": -1,
-            "maximise": -1,
-        }
-        VARIABLE_DOMAIN_DICT = {"real": "continuous", "integer": "integer"}
 
     def __init__(
         self,
@@ -81,14 +82,6 @@ class HighsBackendModel(backend_model.BackendModel):
         Must be re-applied after any `resetOptions` call.
         """
         self._instance.setOptionValue("small_matrix_value", 1e-12)
-
-    def add_parameter(  # noqa: D102, override
-        self, name: str, values: xr.DataArray, definition: math_schema.Parameter
-    ) -> None:
-        super().add_parameter(name, values, definition)
-
-        if name not in self.math["parameters"]:
-            self.math = self.math.update({f"parameters.{name}": definition})
 
     def _add_variable(  # noqa: D102, override
         self,
@@ -263,9 +256,8 @@ class HighsBackendModel(backend_model.BackendModel):
             # HiGHS hot-starts automatically from the basis/solution of a previous
             # solve; clearing the solver state forces a cold start.
             self._instance.clearSolver()
-        if solve_config.solver_options is not None:
-            for k, v in solve_config.solver_options.items():
-                self._instance.setOptionValue(k, v)
+        for k, v in solve_config.solver_options.items():
+            self._instance.setOptionValue(k, v)
 
         if solve_config.save_logs is not None:
             logdir = Path(solve_config.save_logs)
