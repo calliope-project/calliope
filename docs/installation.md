@@ -84,7 +84,7 @@ Set `#!yaml config.build.backend: highs` to use it.
 
 ### CBC
 
-[CBC](https://github.com/coin-or/Cbc) is our recommended option if you want a free and open-source solver.
+[CBC](https://github.com/coin-or/Cbc) is our recommended option if you want a free and open-source solver, but need features like piecewise linear constraints which our HiGHS backend does not currently support.
 If you do not have it in your working environment (i.e., there is no,thing listed when you call `conda list cbc`/`pixi list cbc`) then it can be installed on all platforms:
 
 === "`pixi`"
