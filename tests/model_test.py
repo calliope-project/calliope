@@ -214,14 +214,23 @@ class TestOperateMode:
         for _ in logging_plugin.pytest_runtest_setup(request.node):
             yield pytest.LogCaptureFixture(request.node, _ispytest=True)
 
+    @pytest.fixture(scope="class", params=["pyomo", "gurobi", "highs"])
+    @classmethod
+    def operate_backend(cls, request) -> str:
+        if request.param == "gurobi":
+            pytest.importorskip("gurobipy")
+        if request.param == "highs":
+            pytest.importorskip("highspy")
+        return request.param
+
     @pytest.fixture(scope="class")
     @classmethod
-    def base_model(cls):
+    def base_model(cls, operate_backend):
         """Solve in base mode for the same overrides, to check against operate mode model."""
         model = build_model(
             {}, "simple_supply,operate,var_costs,investment_costs", mode="base"
         )
-        model.build()
+        model.build(backend=operate_backend)
         model.solve()
         return model
 
@@ -229,7 +238,7 @@ class TestOperateMode:
         scope="class", params=[("6h", "12h"), ("12h", "12h"), ("16h", "20h")]
     )
     @classmethod
-    def operate_model_and_log(cls, base_model, request):
+    def operate_model_and_log(cls, base_model, operate_backend, request):
         """Solve in base mode, then use results to set operate mode inputs, then solve in operate mode.
 
         Three different operate/horizon windows chosen:
@@ -243,7 +252,10 @@ class TestOperateMode:
             attrs=base_model.all_attrs(),
             mode="operate",
         )
-        model.build(operate={"window": request.param[0], "horizon": request.param[1]})
+        model.build(
+            operate={"window": request.param[0], "horizon": request.param[1]},
+            backend=operate_backend,
+        )
 
         with cls.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
@@ -484,6 +496,16 @@ class TestSporesMode:
         """Solving in spores mode should lead to an optimal solution."""
         spores_model, _ = spores_model_and_log_algorithms
         assert spores_model.runtime.termination_condition == "optimal"
+
+    @pytest.mark.parametrize("backend", ["gurobi", "highs"])
+    def test_spores_mode_success_non_default_backend(self, backend):
+        """SPORES mode (which repeatedly updates inputs and re-solves) should work on all backends."""
+        pytest.importorskip("gurobipy" if backend == "gurobi" else "highspy")
+        model = build_model({}, self.SPORES_OVERRIDES)
+        model.build(backend=backend)
+        model.solve()
+        assert model.runtime.termination_condition == "optimal"
+        assert len(model.results.spores) == 3
 
     def test_spores_fail_without_baseline(self):
         """You can't have SPORES without some initial, baseline results to work with."""

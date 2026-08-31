@@ -82,9 +82,6 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         self._add_to_dataset(name, values, "parameters", definition.model_dump())
 
-        if name not in self.math["parameters"]:
-            self.math = self.math.update({f"parameters.{name}": definition})
-
     def _add_variable(  # noqa: D102, override
         self,
         name: str,
@@ -276,6 +273,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                 )
                 da.attrs["coords_in_name"] = True
         self._instance.update()
+        self._has_verbose_strings = True
 
     def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
         self._instance.update()
@@ -439,16 +437,16 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._update_gurobi_variable(orig, orig.x, bound="ub")  # type: ignore
 
     @staticmethod
-    def _from_gurobi_variable_bounds(val: gurobipy.Var) -> pd.Series:
+    def _from_gurobi_variable_bounds(val: gurobipy.Var) -> tuple[float, float]:
         """Evaluate Gurobi decision variable object bounds.
 
         Args:
             val (gurobipy.Var): Variable object to be evaluated.
 
         Returns:
-            pd.Series: Array of variable upper and lower bound.
+            tuple[float, float]: Variable lower and upper bound.
         """
-        return pd.Series(data=[val.lb, val.ub], index=["lb", "ub"])
+        return val.lb, val.ub
 
     @staticmethod
     def _from_gurobi_var(val: gurobipy.Var) -> Any:

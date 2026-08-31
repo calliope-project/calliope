@@ -254,7 +254,10 @@ class EvalOperatorOperand(EvalArrayOrMath):
             case "*":
                 val = val * evaluated_operand
             case "/":
-                val = val / evaluated_operand
+                # Backend expression objects (e.g. highspy's) do not necessarily
+                # implement division. The RHS of `/` is always numeric in linear
+                # math, so we can multiply by its reciprocal instead.
+                val = val * (1 / evaluated_operand)
             case "+":
                 val = val + evaluated_operand
             case "-":

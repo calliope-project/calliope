@@ -31,7 +31,11 @@ directory = "reports/coverage"
 output = "reports/coverage/coverage.xml"
 
 [tool.coverage.report]
-exclude_lines = ["if TYPE_CHECKING:", "if importlib.util.find_spec('gurobipy')"]
+exclude_lines = [
+  "if TYPE_CHECKING:",
+  'if importlib.util.find_spec\("(gurobipy|highspy)"\) is not None',
+  "@overload",
+]
 
 [tool.ruff]
 line-length = 88
@@ -107,6 +111,7 @@ dependencies = [
   "bottleneck >= 1",
   "click >= 8",
   "geographiclib >= 2",
+  "highspy >= 1.15",
   "ipdb >= 0.13",
   "ipykernel >= 6",
   "jinja2 >= 3",

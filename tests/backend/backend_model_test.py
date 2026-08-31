@@ -15,10 +15,12 @@ from ..common.util import build_test_model as build_model
 from ..common.util import check_error_or_warning
 
 
-@pytest.fixture(scope="class", params=["pyomo", "gurobi"])
+@pytest.fixture(scope="class", params=["pyomo", "gurobi", "highs"])
 def backend(request) -> str:
     if request.param == "gurobi":
         pytest.importorskip("gurobipy")
+    if request.param == "highs":
+        pytest.importorskip("highspy")
     return request.param
 
 
@@ -904,14 +906,19 @@ class TestUpdateParameter:
             "built_model_func" + model_suffix
         )
         # TODO: update once we have a `get_objective` method that is backend-agnostic
-        if isinstance(model.backend, calliope.backend.GurobiBackendModel):
-            objective_string = str(
-                model.backend.objectives.min_cost_optimisation.item()
-            )
-        elif isinstance(model.backend, calliope.backend.PyomoBackendModel):
-            objective_string = str(
-                model.backend.objectives.min_cost_optimisation.item().expr
-            )
+        if isinstance(model.backend, calliope.backend.HighsBackendModel):
+            # `str()` on a raw highs_linear_expression does not include variable
+            # names (it emits placeholders like `2.0_v0`), so we have to go
+            # through `get_objective(..., as_backend_objs=False)` which routes
+            # through the backend's programmatic string conversion.
+            objective_string = model.backend.get_objective(
+                "min_cost_optimisation", as_backend_objs=False
+            ).item()
+        else:
+            obj = model.backend.objectives.min_cost_optimisation.item()
+            if isinstance(model.backend, calliope.backend.PyomoBackendModel):
+                obj = obj.expr
+            objective_string = str(obj)
         if model_suffix.endswith("updated_cost_flow_cap"):
             assert "test_demand_elec" in objective_string
         else:
@@ -952,7 +959,7 @@ class TestUpdateVariable:
         bound_vals = solved_model_func.backend.get_variable_bounds("flow_out")[
             translator[bound]
         ]
-
+        assert bound_vals.notnull().any()
         assert (bound_vals == dummy_int).where(bound_vals.notnull()).all()
 
     def test_update_variable_bounds_single_val(self, solved_model_func, dummy_int):
@@ -961,6 +968,8 @@ class TestUpdateVariable:
             "flow_out", min=dummy_int, max=dummy_int
         )
         bound_vals = solved_model_func.backend.get_variable_bounds("flow_out")
+        assert bound_vals.lb.notnull().any()
+        assert bound_vals.ub.notnull().any()
         assert (bound_vals == dummy_int).where(bound_vals.notnull()).all().all()
 
     def test_update_variable_single_bound_multi_val(self, caplog, solved_model_func):
@@ -1067,6 +1076,11 @@ class TestPiecewiseConstraints:
     @pytest.fixture(scope="class")
     @classmethod
     def working_model(cls, backend, working_params, working_math, add_math):
+        if backend == "highs":
+            pytest.skip(
+                "Piecewise constraints are not yet supported by the HiGHS backend"
+            )
+
         m = build_model(
             working_params,
             "simple_supply,two_hours,investment_costs",
