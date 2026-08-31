@@ -5,6 +5,9 @@
         },
         {
             "pattern": "_schema\\.md$"
+        },
+        {
+            "pattern": "^https://www\\.ibm\\.com/docs/"
         }
     ]
 }

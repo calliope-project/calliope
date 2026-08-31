@@ -65,7 +65,7 @@ Key features of Calliope include:
 
 ## Acknowledgements
 
-See the [callio.pe project website](https://www.callio.pe/partners-and-team/) for current and past team members and acknowledgements.
+See the [callio.pe project website](https://www.callio.pe/#community) for current and past team members and acknowledgements.
 
 ## License
 

@@ -7,6 +7,7 @@ import xarray as xr
 from calliope.attrdict import AttrDict
 from calliope.backend.backend_model import BackendModel
 from calliope.backend.gurobi_backend_model import GurobiBackendModel
+from calliope.backend.highs_backend_model import HighsBackendModel
 from calliope.backend.latex_backend_model import (
     ALLOWED_MATH_FILE_FORMATS,
     LatexBackendModel,
@@ -37,5 +38,7 @@ def get_model_backend(
             return PyomoBackendModel(data, math, build_config)
         case "gurobi":
             return GurobiBackendModel(data, math, build_config)
+        case "highs":
+            return HighsBackendModel(data, math, build_config)
         case _:
             raise BackendError(f"Incorrect backend '{build_config.backend}' requested.")

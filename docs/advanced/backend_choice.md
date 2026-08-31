@@ -41,3 +41,8 @@ If you have access to a Gurobi license, this does not require any extra effort o
         ```
 
 You can still [interface with your optimisation problem](backend_interface.md), but some methods will raise an exception when the Gurobi Python API does not allow for something that the Pyomo API does.
+
+If you do not have access to a commercial solver, there is also a direct interface to the open-source [HiGHS](https://highs.dev/) solver via its Python API ([highspy](https://pypi.org/project/highspy/)), which is installed with Calliope by default.
+As with the Gurobi backend, building your optimisation problem this way is faster and less memory-intensive than going via Pyomo.
+To use it, select the HiGHS backend in your YAML configuration (`#!yaml config.build.backend: highs`) or at build time (`#!python model.build(backend="highs")`).
+Note that the HiGHS backend does not yet support piecewise constraints and cannot un-fix fixed variables without a rebuild.

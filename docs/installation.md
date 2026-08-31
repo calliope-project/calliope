@@ -8,7 +8,7 @@ Running Calliope requires four things:
 
 1. The Python programming language, at least version {{ min_python_version }}.
 2. A number of Python add-on modules including [Pyomo](https://www.pyomo.org/), [Pandas](https://pandas.pydata.org/) and [Xarray](https://docs.xarray.dev/).
-3. An optimisation solver: Calliope has been tested with CBC, GLPK, and Gurobi.
+3. An optimisation solver: Calliope has been tested with HiGHS, CBC, GLPK, and Gurobi, and comes with HiGHS already included.
    Any other solver that is compatible with Pyomo should also work.
 4. The Calliope software itself.
 
@@ -71,15 +71,16 @@ If you only need to install Calliope from PyPI, use:
 ## Choosing a solver
 
 You cannot solve a Calliope model until you have installed a solver.
-The easiest solver to install is [CBC](#cbc), which is included if you follow the [recommended installation instructions](#conda-or-pixi-recommended) above.
-[CBC](#cbc) (open-source) or [Gurobi](#gurobi) (commercial) are recommended for large problems, and have been confirmed to work with Calliope.
+Calliope comes included with the HiGHS solver, which is sufficiently capable for many problems.
+Commercial solvers like [Gurobi](#gurobi) may be necessary for large problems. Gurobi is tested and known to work with Calliope.
 The following subsections provide additional detail on how to install a solver.
 This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.readthedocs.io/en/latest/reference/topical/appsi/appsi.solvers.html) can be used.
 
-!!! note
+### HiGHS
 
-    The HiGHS solver _is not supported_ by our Pyomo backend.
-    This is due to the HiGHS interface not being supported by the Pyomo kernel interface, which we use.
+[HiGHS](https://highs.dev/) is free and open-source and is installed automatically with Calliope (via the [highspy](https://pypi.org/project/highspy/) package).
+Unlike the other solvers listed here, it cannot be used with Pyomo, only through its own [optimisation problem backend](./advanced/backend_choice.md) - this is due to the HiGHS interface not being supported by the Pyomo kernel interface, which we use.
+Set `#!yaml config.build.backend: highs` to use it.
 
 ### CBC
 

@@ -1,6 +1,6 @@
 # Contributing
 
-Calliope is an actively maintained and utilised project which is being developed collaboratively by volunteers across various institutions (see [partners and team](https://www.callio.pe/partners-and-team/)). We welcome any contributions!
+Calliope is an actively maintained and utilised project which is being developed collaboratively by volunteers across various institutions (see [past contributors](https://www.callio.pe/#community). We welcome any contributions!
 
 ## How to contribute
 

@@ -14,6 +14,9 @@ Users should now define a boolean lookup array in their inputs to access the sam
 Enables components to be re-activated after model instantiation but before running the optimisation problem.
 Defaults to False for backwards compatibility.
 
+|new| Optimisation problems can be built and solved with the open-source [HiGHS](https://highs.dev/) solver via a new, direct backend interface: `config.build.backend: highs` (#856).
+Piecewise constraints are not yet available in this backend.
+
 |removed| `link_flow_cap` decision variable, for constraining the `flow_cap` either end of a transmission link to the same value.
 Instead, rather than via this auxiliary variable, the constraint is applied directly to each `flow_cap` entry.
 
