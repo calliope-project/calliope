@@ -711,38 +711,38 @@ class ParsedBackendComponent(ParsedBackendEquation):
             for parsed_item_combination in parsed_item_product
         ]
 
-    def combine_definition_matrix_and_foreach(
-        self, input_data: xr.Dataset
-    ) -> xr.DataArray:
+    def combine_active_and_foreach(self, input_data: xr.Dataset) -> xr.DataArray:
         """Generate a multi-dimensional array where a constraint will be built.
 
         The multi-dimensional boolean array is based on the sets over which the
-        constraint is to be built (`foreach`) and the model `exists` array.
+        constraint is to be built (`foreach`) and the model `active` array.
 
-        The `exists` array is a boolean array defining the structure of the model and
-        is True for valid combinations of technologies consuming/producing specific
-        carriers at specific nodes.
+        The `active` array is a boolean array defining the structure of the model.
+        Values are True for valid combinations of technologies at specific nodes,
+        i.e. it is indexed over ["nodes", "techs"].
 
-        It is indexed over ["nodes", "techs", "carriers"].
+        Any further restriction of the array (e.g., to the carriers a technology
+        produces/consumes) is the responsibility of the component's `where` string;
+        this method is agnostic to the math being applied.
 
         Args:
             input_data (xr.Dataset): Calliope model dataset.
 
         Returns:
-            xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers"]
+            xr.DataArray: boolean array indexed over ["nodes", "techs"]
                 + any additional dimensions provided by `foreach`.
         """
-        # Start with (carriers, nodes, techs) and go from there
-        exists = input_data.definition_matrix
-        # Add other dimensions (costs, timesteps, etc.)
-        add_dims = set(self.sets).difference(exists.dims)
+        # Start with (nodes, techs) and go from there
+        active = input_data.active
+        # Add other dimensions (carriers, costs, timesteps, etc.)
+        add_dims = set(self.sets).difference(active.dims)
         if add_dims.difference(input_data.dims):
             self.log_not_added(
                 f"indexed over unidentified set names: `{add_dims.difference(input_data.dims)}`."
             )
             return xr.DataArray(False)
-        exists_and_foreach = [exists, *[input_data[i].notnull() for i in add_dims]]
-        return functools.reduce(operator.and_, exists_and_foreach)
+        active_and_foreach = [active, *[input_data[i].notnull() for i in add_dims]]
+        return functools.reduce(operator.and_, active_and_foreach)
 
     def generate_top_level_where_array(
         self,
@@ -780,7 +780,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         Returns:
             xr.DataArray: Boolean array defining on which index items a parsed component should be built.
         """
-        foreach_where = self.combine_definition_matrix_and_foreach(input_data)
+        foreach_where = self.combine_active_and_foreach(input_data)
 
         if not foreach_where.any():
             self.log_not_added("'foreach' does not apply anywhere.")

@@ -293,12 +293,12 @@ class TestResultArrayParser:
         eval_kwargs,
     ):
         """Can't quite compare in the same way for decision variables / global expressions
-        as with params, because there is a random element to the `definition_matrix` array
+        as with params, because there is a random element to the `active` array
         """
         parsed_ = result_arr.parse_string(data_var_string, parse_all=True)
         evaluated = parsed_[0].eval(**eval_kwargs)
 
-        # There's a chance that some values that *should* be True in evaluated are made False by a NaN value in `definition_matrix`,
+        # There's a chance that some values that *should* be True in evaluated are made False by a NaN value in `active`,
         # #so we check that at least all the remaining True values match
         assert (evaluated & dummy_model_data[expected_similar]).equals(evaluated)
 
@@ -524,7 +524,7 @@ class TestSubsettingParser:
             "[bar] in",  # missing set name
             "bar in [nodes]",  # Wrong order of subset and set name
             "[foo==bar] in nodes",  # comparison string in subset
-            "[defined(techs=[tech1, tech2], within=nodes, how=any)] in nodes",  # helper function in subset
+            "[any(techs=[tech1, tech2], within=nodes, how=any)] in nodes",  # helper function in subset
             "(bar) in nodes",  # wrong brackets
         ],
     )

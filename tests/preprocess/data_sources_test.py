@@ -475,9 +475,10 @@ class TestDataTableMalformed:
 
     def test_check_for_protected_params(self, table_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            table_obj(add_dims={"inputs": "definition_matrix"})
+            table_obj(add_dims={"inputs": "template"})
         assert check_error_or_warning(
-            excinfo, "`definition_matrix` is a protected array"
+            excinfo,
+            "Template calls (`template`) can only be used in the YAML model definition.",
         )
 
 
@@ -578,6 +579,13 @@ class TestDataTableTechDict:
             foo2={"link_from": "bar2"},
             foo3={"link_to": "bar1"},
         )
+
+    def test_tech_dict_active(self, table_obj):
+        df_dict = {"active": {"foo1": True, "foo2": False}}
+        tech_dict, base_dict = table_obj(df_dict).tech_def()
+
+        assert tech_dict == CalliopeTechs(foo1={}, foo2={})
+        assert base_dict == CalliopeTechs(foo1={"active": True}, foo2={"active": False})
 
     def test_tech_dict_empty(self, table_obj):
         df_dict = {"available_area": {"foo1": 1}}

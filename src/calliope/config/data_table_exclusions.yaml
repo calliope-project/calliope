@@ -1,0 +1,5 @@
+# Parameters for which loading from file via `data_tables` is prohibited
+template: >-
+  Template calls (`template`) can only be used in the YAML model definition.
+templates: >-
+  Template definitions (`templates`) can only be used in the YAML model definition.

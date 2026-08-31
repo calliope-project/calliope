@@ -564,7 +564,7 @@ class TestSporesMode:
     def test_spores_scores(self, spores_model_and_log_algorithms):
         """All techs should have a spores score defined."""
         spores_model, _ = spores_model_and_log_algorithms
-        fill_gaps = ~spores_model.inputs.definition_matrix
+        fill_gaps = ~spores_model.inputs.active
         assert (
             spores_model.results.spores_score_cumulative.notnull() | fill_gaps
         ).all()

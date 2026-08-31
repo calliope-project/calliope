@@ -2,6 +2,18 @@
 
 ### User-facing changes
 
+|changed| Rename `definition_matrix` input array to `active`, indexed over only `nodes` and `techs` (no longer also `carriers`), to align with YAML `active` definition.
+
+|changed| |backwards-incompatible| `foreach` now restricts components to `active` node/tech combinations only; it no longer implicitly restricts the `carriers` dimension.
+Carrier membership must be stated explicitly in a component's `where` string (e.g., `carrier_out`, or a reference to a decision variable that is itself gated on carriers).
+
+|removed| |backwards-incompatible| `defined` math helper function no longer available.
+Users should now define a boolean lookup array in their inputs to access the same functionality.
+
+|new| `init` config key `retain_inactive` which allows deactivated components to remain in the input array rather than be cleaned out.
+Enables components to be re-activated after model instantiation but before running the optimisation problem.
+Defaults to False for backwards compatibility.
+
 |new| Optimisation problems can be built and solved with the open-source [HiGHS](https://highs.dev/) solver via a new, direct backend interface: `config.build.backend: highs` (#856).
 Piecewise constraints are not yet available in this backend.
 

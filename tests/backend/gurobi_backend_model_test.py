@@ -389,7 +389,7 @@ class TestPiecewiseConstraints:
     def working_math(cls):
         return {
             "foreach": ["nodes", "techs", "carriers"],
-            "where": "[test_supply_elec] in techs AND piecewise_x AND piecewise_y",
+            "where": "flow_cap AND [test_supply_elec] in techs AND piecewise_x AND piecewise_y",
             "x_values": "piecewise_x",
             "x_expression": "flow_cap",
             "y_values": "piecewise_y",

@@ -524,7 +524,7 @@ def generate_where_string_parser(
     )
     general_evaluatable_string = evaluatable_string_parser(generic_identifier, [])
     id_list = expression_parser.list_parser(
-        number, unique_evaluatable_string, dimensions_parser
+        number, unique_evaluatable_string, dimensions_parser, inputs_parser
     )
     subset = subset_parser(
         dimensions_parser, config_option, number, general_evaluatable_string

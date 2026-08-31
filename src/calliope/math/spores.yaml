@@ -65,6 +65,7 @@ postprocessed:
   spores_score_cumulative:
     description: Track SPORES score to include in the model results
     foreach: [nodes, techs, carriers]
+    where: flow_cap
     equations:
       - expression: spores_score
     unit: unitless

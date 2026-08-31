@@ -62,6 +62,15 @@ class Init(CalliopeBaseModel):
     Defaults to False to mitigate unexpected broadcasting when applying overrides.
     """
 
+    retain_inactive: bool = Field(default=False)
+    """
+    If True, any technologies and/or nodes that have been deactivated (`active: false`) will still be present in the model input data.
+    Otherwise, they will be removed from the model when initialised, including all parameter/lookup data associated with them.
+
+    Retaining inactive technologies/nodes in the model can be useful for users who want to re-initialise the model with overrides that reactivate them.
+    It is set to False by default since it leads to a larger model input dataset when many inactive technologies/nodes are present.
+    """
+
     subset: Subsets = Subsets()
     """
     Subset of dimensions as a two-element list giving the **inclusive** range. For example,

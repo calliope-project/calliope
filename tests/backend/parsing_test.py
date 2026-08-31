@@ -19,7 +19,7 @@ from calliope.schemas import math_schema
 
 from ..common.util import check_error_or_warning
 
-BASE_DIMS = {"carriers", "nodes", "techs"}
+BASE_DIMS = {"nodes", "techs"}
 
 
 def string_to_def(yaml_string, schema: math_schema.CalliopeBaseModel):
@@ -86,7 +86,7 @@ def component_obj(parsing_components):
 @pytest.fixture
 def exists_array(component_obj, dummy_model_data):
     component_obj.sets = ["nodes", "techs"]
-    return component_obj.combine_definition_matrix_and_foreach(dummy_model_data)
+    return component_obj.combine_active_and_foreach(dummy_model_data)
 
 
 @pytest.fixture
@@ -665,7 +665,7 @@ equations[0].expression (line 1, char 5): bar = 1
         self, dummy_model_data, component_obj, foreach
     ):
         component_obj.sets = foreach
-        where = component_obj.combine_definition_matrix_and_foreach(dummy_model_data)
+        where = component_obj.combine_active_and_foreach(dummy_model_data)
 
         assert not BASE_DIMS.difference(where.dims)
         assert not set(foreach).difference(where.dims)
@@ -673,7 +673,7 @@ equations[0].expression (line 1, char 5): bar = 1
     def test_foreach_unidentified_name(self, caplog, dummy_model_data, component_obj):
         component_obj.sets = ["nodes", "techs", "foos"]
         caplog.set_level(logging.DEBUG)
-        component_obj.combine_definition_matrix_and_foreach(dummy_model_data)
+        component_obj.combine_active_and_foreach(dummy_model_data)
         assert "indexed over unidentified set names" in caplog.text
 
     def test_evaluate_where_to_false(self, eval_where_args, component_obj):
@@ -1013,13 +1013,21 @@ class TestParsedBackendEquation:
         assert not where.sel(carriers="bar").any()
 
     def test_create_subset_align_dims_with_sets(
-        self, eval_where_args, where_string_parser, equation_obj, exists_array
+        self,
+        eval_where_args,
+        where_string_parser,
+        equation_obj,
+        component_obj,
+        dummy_model_data,
     ):
         equation_obj.sets = ["nodes", "techs"]
+        # An initial array with dimensions beyond those in `foreach`, to check they are dropped.
+        component_obj.sets = ["nodes", "techs", "carriers"]
+        initial_where = component_obj.combine_active_and_foreach(dummy_model_data)
 
         equation_obj.where = [where_string_parser.parse_string("True", parse_all=True)]
         where = equation_obj.evaluate_where(
-            *eval_where_args, initial_where=exists_array
+            *eval_where_args, initial_where=initial_where
         )
         aligned_where = equation_obj.drop_dims_not_in_foreach(where)
 

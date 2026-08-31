@@ -63,6 +63,6 @@ global_expressions:
     default: 0
     unit: energy
     foreach: [nodes, techs, carriers, timesteps]
-    where: base_tech==transmission
+    where: carrier_out AND base_tech==transmission
     equations:
       - expression: flow_out

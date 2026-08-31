@@ -597,5 +597,5 @@ Some data is specific to the YAML definition or is computed by Calliope internal
 These are:
 
 ```yaml
---8<-- "src/calliope/config/protected_parameters.yaml"
+--8<-- "src/calliope/config/data_table_exclusions.yaml"
 ```

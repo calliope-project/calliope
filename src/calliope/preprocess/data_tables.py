@@ -26,7 +26,13 @@ class DataTable:
     """Class for in memory data handling."""
 
     MESSAGE_TEMPLATE = "(data_tables, {name}) | {message}."
-    PARAMS_TO_INITIALISE_YAML: set[str] = {"base_tech", "link_to", "link_from"}
+    PARAMS_TO_INITIALISE_YAML: set[str] = {
+        "base_tech",
+        "link_to",
+        "link_from",
+        "one_way",
+        "active",
+    }
 
     def __init__(
         self,
@@ -56,7 +62,7 @@ class DataTable:
         self.name = table_name
         """Data table name."""
 
-        self.protected_params = load_config("protected_parameters.yaml")
+        self.protected_params = load_config("data_table_exclusions.yaml")
 
         if ".csv" in Path(self.input.table).suffixes:
             df = self._read_csv()
