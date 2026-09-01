@@ -39,6 +39,7 @@ Instead, you define all your technology parameters at the same level.
           energy_cap: 750
           om_con: 0.02
     ```
+
 === "v0.7"
 
     ```yaml
@@ -61,7 +62,7 @@ Instead, you define all your technology parameters at the same level.
         data: 750
         index: monetary
         dims: costs
-      cost_flow_in:
+      cost_source_use:
         data: 0.02
         index: monetary
         dims: costs
@@ -77,17 +78,17 @@ demand_file.csv:
 ```shell
 ,node1,node2
 2005-01-01 00:00,100,100  # (1)!
-2005-01-01 00:00,200,200
+2005-01-01 01:00,200,200
 ...
 ```
 
-1. We're using positive numbers here which reflects our change to [positive values for demand data](#negative-→-positive-demand-and-carrier-consumption-values).
+1. We're using positive numbers here which reflects our change to [positive values for demand data](#negative-positive-demand-and-carrier-consumption-values).
 
 supply_file.csv:
 ```shell
 ,node1,node2
 2005-01-01 00:00,10,20
-2005-01-01 00:00,1,2
+2005-01-01 01:00,1,2
 ...
 ```
 
@@ -115,7 +116,7 @@ supply_file.csv:
         columns: nodes
         add_dims:
           techs: demand_tech
-          inputs: sink_equals
+          inputs: sink_use_equals
 
       supply_data:
         table: supply_file.csv
@@ -123,7 +124,7 @@ supply_file.csv:
         columns: nodes
         add_dims:
           techs: supply_tech
-          inputs: source_max
+          inputs: source_use_max
     ```
 
 !!! info "See also"
@@ -203,14 +204,14 @@ The `tech_groups` functionality has been removed in favour of a new, more flexib
           parent: conversion
         costs:
           monetary:
-          interest_rate: 0.1
+            interest_rate: 0.1
     techs:
       supply_tech:
         essentials:
           parent: supply_interest_rate
       conversion_tech:
         essentials:
-          parent: supply_conversion_rate
+          parent: conversion_interest_rate
     ```
 
 === "v0.7"
@@ -262,7 +263,7 @@ We have changed the nesting structure for defining technology costs so they are 
           data: 10
           index: monetary
           dims: costs
-        cost_flow_in:
+        cost_source_use:
           data: [0.05, 0.1]
           index: [monetary, emissions]
           dims: costs
@@ -280,12 +281,12 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
       ac_transmission:
         essentials:
           parent: transmission
-        constrains:
+        constraints:
           energy_cap_max: 10
       dc_transmission:
         essentials:
           parent: transmission
-        constrains:
+        constraints:
           energy_cap_max: 5
     links:
       X1,X2:
@@ -322,7 +323,7 @@ Here are the main changes to parameter/decision variable names that are not link
 
 * `energy`/`carrier` → `flow`, e.g. `energy_cap_max` is now `flow_cap_max` and `energy_cap` is now `flow_cap`.
 * `prod`/`con` → `out`/`in`, e.g., `carrier_prod` is now `flow_out`.
-* `om_prod`/`con` → `cost_flow_out`/`in`.
+* `om_prod`/`con` → `cost_flow_out`/`in`, except in `supply` technologies, where `om_con` → `cost_source_use` (see [below](#om_con-in-supply-technologies-cost_source_use)).
 * `resource` → `source_use` (for things entering the model) and `sink_use` (for things leaving the model).
 * `resource_area` → `area_use`.
 * `energy_cap_min_use` → `flow_out_min_relative` (i.e., the value is relative to `flow_cap`).
@@ -336,7 +337,7 @@ Here are the main changes to parameter/decision variable names that are not link
 
 ### Renaming / moving configuration options
 
-Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flatter YAML hierarchy or to group settings alphabetically:
+Along with [changing the YAML hierarchy of model configuration](#model-and-run-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flatter YAML hierarchy or to group settings alphabetically:
 
 * `model.subset_time` → `config.init.subset.timesteps` (subsetting other dimensions is now also possible)
 * `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.resample.timesteps: '6h'` (resampling other dimensions is now also possible)
@@ -360,7 +361,7 @@ Instead of defining the binary trigger `force_resource` to enforce the productio
 
 If you want these resource uses to be upper or lower bounds, use the equivalent `_max`/`_min` parameters.
 
-You can find an example of this change [above](#filedf-→-data_tables-section).
+You can find an example of this change [above](#filedf-data_tables-section).
 
 ### `units` + `purchased` → `purchased_units`
 
@@ -371,6 +372,38 @@ To achieve the same functionality for `purchased`, set `purchased_units_max: 1`.
 
 Investment costs are split out into the component caused by annual operation and maintenance (`cost_operation_fixed`) and an annualised equivalent of the initial capital investment (`cost_investment_annualised`).
 `cost_investment` still exists in the model results and represents the initial capital investment, i.e., without applying the economic depreciation rate.
+
+### `om_con` in `supply` technologies → `cost_source_use`
+
+In v0.6, the variable cost of a `supply` technology's resource consumption was defined with `om_con`, alongside the consumption cost of all other technology base classes.
+In v0.7, `supply` technologies consume a `source`, not a carrier inflow, so their variable consumption cost is defined with `cost_source_use`:
+
+=== "v0.6"
+
+    ```yaml
+    techs:
+      supply_tech:
+        essentials:
+          parent: supply
+        costs:
+          monetary:
+            om_con: 0.02
+    ```
+
+=== "v0.7"
+
+    ```yaml
+    techs:
+      supply_tech:
+        base_tech: supply
+        cost_source_use:
+          data: 0.02
+          index: monetary
+          dims: costs
+    ```
+
+`cost_flow_in` remains the equivalent parameter for all other technology base classes.
+Calliope will warn you if you define `cost_flow_in` for a `supply` technology (or `cost_flow_out` for a `demand` technology), as it will have no effect.
 
 ### Explicitly triggering MILP and storage decision variables/constraints
 
@@ -405,9 +438,9 @@ Now, you need to explicitly set the method using `cap_method` and enable the mix
         extra_math: ["milp"]  # Adjusts the model formulation to be MILP friendly
     techs:
       supply_tech:
-        units_max: 4
+        purchased_units_max: 4
         flow_cap_per_unit: 300
-        flow_in_min_relative: 0.2
+        flow_out_min_relative: 0.2
         cap_method: integer  # triggers the `purchased_units` integer variable
       conversion_tech:
         cost_purchase:
@@ -502,7 +535,7 @@ This is because the additional math applied in operate mode deactivates the deci
         ```
 
 * Operate horizon and window periods are based on Pandas time frequencies, not integer number of timesteps.
-Therefore, `24H` is equivalent to `24` in v0.6 if you are using hourly resolution, but is equivalent to `12` in v0.6 if you are using 2-hourly resolution:
+Therefore, `24h` is equivalent to `24` in v0.6 if you are using hourly resolution, but is equivalent to `12` in v0.6 if you are using 2-hourly resolution:
 
     === "v0.6"
 
@@ -520,10 +553,10 @@ Therefore, `24H` is equivalent to `24` in v0.6 if you are using hourly resolutio
         config:
           init:
             resample:
-              timesteps: 6H
+              timesteps: 6h
           build:
-            operate.window: 12H
-            operate.horizon: 24H
+            operate.window: 12h
+            operate.horizon: 24h
         ```
 
 !!! warning
@@ -587,7 +620,7 @@ With `_equals` constraints, it would trigger a completely different mathematical
 
 !!! note
     The exception to this is `source_use_equals`/`sink_use_equals`.
-    These parameters have been _introduced_, to [replace `force_resource`](#force_resource-→-source_use_equals--sink_use_equals).
+    These parameters have been _introduced_, to [replace `force_resource`](#force_resource-source_use_equals-sink_use_equals).
     They are in the model because these tend to be timeseries parameters, so we want to avoid the memory overhead of repeating the data in `_min` and `_max` parameters.
 
 ### `x`/`y` coordinates
@@ -687,7 +720,7 @@ For instance, here's how you represent a reversible heat pump without additional
         carrier_out: [heat, cooling]
         flow_out_eff:
           data: [3, 2.5]
-          index: [heat, electricity]
+          index: [heat, cooling]
           dims: carriers
     ```
 
@@ -703,13 +736,14 @@ We have re-implemented all these constraints as tested additional math snippets,
 
 ### Configuration options
 
-* With the [change in how timeseries data is defined](#filedf-→-data_tables-section), we have removed the reference to a `timeseries_data_path`.
+* With the [change in how timeseries data is defined](#filedf-data_tables-section), we have removed the reference to a `timeseries_data_path`.
 Instead, data table filepaths should always be relative to the `model.yaml` file or they should be absolute paths.
 * We have removed `run.relax_constraint` alongside [removing group constraints](#group-constraints).
 * We have removed `model.file_allowed`, which many users will not even know existed (it was a largely internal configuration option)!
 Instead, it is possible to index any parameter over the time dimension.
 It is up to you to ensure the math formulation is set up to handle this change, which may require [tweaking existing math](user_defined_math/customise.md#adding-your-own-math-to-a-model).
-* With the [removal of time clustering](#clustering), we have removed `model.random_seed` and `model.time` options.
+* With the [reduced scope of time clustering](#clustering), we have removed the `model.random_seed` and `model.time` options.
+Time resampling is now set with `config.init.resample` and clustering with `config.init.time_cluster`.
 
 ### Plotting
 
@@ -722,7 +756,7 @@ If you want to achieve some of the same plots that were possible with the Callio
 ### Clustering
 
 Time masking and clustering capabilities have been severely reduced.
-Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2H`, `config.init.time_cluster: cluster_param` (where `cluster_param` should should separately be read from via e.g. `data_tables`; see the national-scale example model).
+Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2h`, `config.init.time_cluster: cluster_param` (where `cluster_param` should separately be read in via e.g. `data_tables`; see the national-scale example model).
 Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries.
 
 If you want to mask/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](advanced/time.md#time-clustering) page.
@@ -967,7 +1001,7 @@ nodes:
 
 ### Loading non-timeseries tabular data
 
-With the [change in loading timeseries data](#filedf-→-data_tables-section), we have expanded loading of tabular data to allow any data input.
+With the [change in loading timeseries data](#filedf-data_tables-section), we have expanded loading of tabular data to allow any data input.
 Technically, you can now define all your data in tables (although we would still recommend a mix of YAML and tabular model definition).
 
 !!! info "See also"
@@ -975,7 +1009,7 @@ Technically, you can now define all your data in tables (although we would still
 
 ### Subsetting and resampling other dimensions than `timesteps`
 
-With our [updated configuration syntax](#renaming--moving-configuration-options), you can subset and resample any arbitrary dimension, not only the `timesteps` dimension.
+With our [updated configuration syntax](#renaming-moving-configuration-options), you can subset and resample any arbitrary dimension, not only the `timesteps` dimension.
 
 Subsetting ordered dimensions (e.g. timeseries, integer series) is done by slicing (`[0, 3]` or `[2000-01-01, 2000-01-03]` assumes all values in that range).
 Subsetting unordered dimensions, usually string values selects individual values.
