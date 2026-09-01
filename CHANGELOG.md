@@ -1,4 +1,4 @@
-## 0.7.0.dev8
+## 0.7.0.dev8 (2026-09-01)
 
 ### User-facing changes
 

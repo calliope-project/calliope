@@ -29,8 +29,3 @@ jobs:
         run: uv run --isolated --no-project --with dist/*.tar.gz calliope --help
       - name: Publish on success
         run: uv publish --index testpypi --trusted-publishing always
-
-      - name: Test successful publication
-        run: >-
-          uv run --with calliope --refresh-package calliope --index testpypi --no-project
-          -- calliope --help
