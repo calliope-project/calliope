@@ -11,6 +11,7 @@ REPLACEMENTS = {
     "|REMOVED|": "<span class='bubble red'>REMOVED</span>",
     "|UPDATED|": "<span class='bubble yellow'>UPDATED</span>",
     "|NEW|": "<span class='bubble green'>NEW</span>",
+    "|REDEFINED|": "<span class='bubble blue'>REDEFINED</span>",
 }
 
 

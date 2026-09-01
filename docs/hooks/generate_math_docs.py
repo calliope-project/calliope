@@ -213,39 +213,90 @@ def generate_custom_math_documentation(
     """
     model = calliope.read_yaml(file=MODEL_PATH, scenario=override)
 
+    redefined = _find_redefined(base_documentation, model)
+
     full_del = []
-    expr_del = []
+    removed = {}
     for component_group, component_group_dict in model.math.build.model_dump().items():
-        if component_group in ["checks", "dimensions", "parameters", "lookups"]:
+        if component_group in ["checks", "dimensions"]:
             continue
+        # Parameters and lookups are always shown in full, so are not diffed against the base math.
+        diffed = component_group not in ["parameters", "lookups"]
+        redefined_here = redefined.keys() & component_group_dict.keys()
         for name, component_dict in component_group_dict.items():
-            if name in base_documentation.math[component_group]._active:
+            if name in redefined:
+                if redefined[name][1] == component_group:
+                    _add_to_description(
+                        component_dict,
+                        "|REDEFINED| ({} -> {})".format(*redefined[name]),
+                    )
+            elif not diffed:
+                continue
+            elif name in base_documentation.math[component_group]._active:
                 if not component_dict.get("active", True):
-                    expr_del.append((component_group, name))
-                    component_dict["description"] = "|REMOVED|"
+                    removed[name] = component_group
+                    _add_to_description(component_dict, "|REMOVED|")
                     component_dict["active"] = True
                 elif base_documentation.math.find(name).model_dump() != component_dict:
                     _add_to_description(component_dict, "|UPDATED|")
                 else:
-                    full_del.append((component_group, name))
+                    full_del.append(name)
             else:
                 _add_to_description(component_dict, "|NEW|")
-        model.math = model.math.update(
-            {f"build.{component_group}": component_group_dict}
-        )
+        if diffed or redefined_here:
+            model.math = model.math.update(
+                {f"build.{component_group}": component_group_dict}
+            )
     math_documentation = MathDocumentation(model)
+    dataset = math_documentation.backend._dataset
 
-    for grp, key in expr_del:
-        math_documentation.backend.math_strings[grp][key] = ""
-    for grp, key in full_del:
-        del math_documentation.backend._dataset[key]
-    for var in math_documentation.backend._dataset.values():
-        var.attrs["references"] = var.attrs["references"].intersection(
-            math_documentation.backend._dataset.keys()
-        )
-        var.attrs["references"] = var.attrs["references"].difference(expr_del)
+    for name, group in removed.items():
+        math_documentation.backend.math_strings[group][name] = ""
+    for name in full_del:
+        del dataset[name]
+    for name, var in dataset.items():
+        if name in removed:
+            var.attrs["references"] = set()
+        else:
+            var.attrs["references"] = (
+                var.attrs["references"].intersection(dataset.keys()) - removed.keys()
+            )
+        # Self-reference to keep redefined parameters/lookups in the documentation,
+        # which would otherwise only be shown if referenced by another component.
+        if name in redefined and not var.attrs["references"]:
+            var.attrs["references"] = {name}
 
     return math_documentation
+
+
+def _find_redefined(
+    base_documentation: MathDocumentation, model: calliope.Model
+) -> dict[str, tuple[str, str]]:
+    """Find math components that the override math moves to a different component group.
+
+    E.g., in operate mode, `flow_cap` switches from being a decision variable to being a parameter.
+
+    Args:
+        base_documentation (MathDocumentation): model documentation with only the base math applied.
+        model (calliope.Model): model with the override math applied.
+
+    Returns:
+        dict[str, tuple[str, str]]: Mapping of component name to its (base, override) component group.
+    """
+
+    def _groups(math) -> dict[str, str]:
+        return {
+            name: group
+            for group in type(math).model_fields
+            for name in math[group]._active
+        }
+
+    base_groups = _groups(base_documentation.math)
+    return {
+        name: (base_groups[name], group)
+        for name, group in _groups(model.math.build).items()
+        if base_groups.get(name, group) != group
+    }
 
 
 def _add_to_description(component_dict: dict, update_string: str) -> None:

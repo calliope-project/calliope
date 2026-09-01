@@ -576,21 +576,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         }
         components = {
             objtype: [
-                {
-                    "expression": math_string,
-                    "name": name,
-                    "used_in": sorted(
-                        list(da.attrs.get("references", set()) - set([name]))
-                    ),
-                    "uses": sorted(list(uses[name] - set([name]))),
-                    "yaml_snippet": to_yaml(
-                        self.math[objtype][name].model_dump(exclude_unset=True)
-                    ),
-                    **self.math[objtype][name].model_dump(),
-                }
+                self._component_doc(objtype, name, da, uses[name])
                 for name, da in sorted(getattr(self, objtype).data_vars.items())
-                if (math_string := self.math_strings[objtype][name]) != ""
-                or (objtype in ["parameters", "lookups"] and da.attrs["references"])
+                if objtype not in ["parameters", "lookups"] or da.attrs["references"]
             ]
             for objtype in [
                 "objectives",
@@ -616,6 +604,30 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         return self._render(
             doc_template, mkdocs_features=mkdocs_features, components=components
         )
+
+    def _component_doc(
+        self, objtype: str, name: str, da: xr.DataArray, uses: set[str]
+    ) -> dict:
+        """Get the attributes of a math component to feed into the documentation template.
+
+        Components without any math to show - e.g., those deactivated by mode math -
+        are documented by their description alone.
+        Parameters and lookups never have math of their own, so keep all their attributes.
+        """
+        math_string = self.math_strings[objtype][name]
+        component = self.math[objtype][name]
+        doc = {
+            "expression": math_string,
+            "name": name,
+            "used_in": sorted(da.attrs.get("references", set()) - set([name])),
+            "uses": sorted(uses - set([name])),
+        }
+        if not math_string and objtype not in ["parameters", "lookups"]:
+            return doc | {"description": component.description}
+        return doc | {
+            "yaml_snippet": to_yaml(component.model_dump(exclude_unset=True)),
+            **component.model_dump(),
+        }
 
     def _eval_top_level_where(
         self,
