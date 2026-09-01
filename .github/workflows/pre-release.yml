@@ -23,6 +23,9 @@ jobs:
         run: uv python install 3.14
       - name: Build
         run: uv build
+      - name: Read package version
+        id: package
+        run: echo "version=$(uvx hatch version)" >> "$GITHUB_OUTPUT"
       - name: Smoke test (wheel)
         run: uv run --isolated --no-project --with dist/*.whl calliope --help
       - name: Smoke test (source distribution)
@@ -32,5 +35,6 @@ jobs:
 
       - name: Test successful publication
         run: >-
-          uv run --with calliope --refresh-package calliope --index testpypi --no-project
+          uv run --with "calliope==${{ steps.package.outputs.version }}"
+          --refresh-package calliope --index testpypi --no-project
           -- calliope --help
