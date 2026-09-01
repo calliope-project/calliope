@@ -82,7 +82,7 @@ demand_file.csv:
 ...
 ```
 
-1. We're using positive numbers here which reflects our change to [positive values for demand data](#negative-positive-demand-and-carrier-consumption-values).
+1. We're using positive numbers here which reflects our change to [positive values for demand data](#negative--positive-demand-and-carrier-consumption-values).
 
 supply_file.csv:
 ```shell
@@ -323,7 +323,7 @@ Here are the main changes to parameter/decision variable names that are not link
 
 * `energy`/`carrier` → `flow`, e.g. `energy_cap_max` is now `flow_cap_max` and `energy_cap` is now `flow_cap`.
 * `prod`/`con` → `out`/`in`, e.g., `carrier_prod` is now `flow_out`.
-* `om_prod`/`con` → `cost_flow_out`/`in`, except in `supply` technologies, where `om_con` → `cost_source_use` (see [below](#om_con-in-supply-technologies-cost_source_use)).
+* `om_prod`/`con` → `cost_flow_out`/`in`, except in `supply` technologies, where `om_con` → `cost_source_use` (see [below](#om_con-in-supply-technologies--cost_source_use)).
 * `resource` → `source_use` (for things entering the model) and `sink_use` (for things leaving the model).
 * `resource_area` → `area_use`.
 * `energy_cap_min_use` → `flow_out_min_relative` (i.e., the value is relative to `flow_cap`).
@@ -337,7 +337,7 @@ Here are the main changes to parameter/decision variable names that are not link
 
 ### Renaming / moving configuration options
 
-Along with [changing the YAML hierarchy of model configuration](#model-and-run-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flatter YAML hierarchy or to group settings alphabetically:
+Along with [changing the YAML hierarchy of model configuration](#model-and-run--configinitbuildsolve), we have changed the name of configuration options, mainly to create a flatter YAML hierarchy or to group settings alphabetically:
 
 * `model.subset_time` → `config.init.subset.timesteps` (subsetting other dimensions is now also possible)
 * `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.resample.timesteps: '6h'` (resampling other dimensions is now also possible)
@@ -361,7 +361,7 @@ Instead of defining the binary trigger `force_resource` to enforce the productio
 
 If you want these resource uses to be upper or lower bounds, use the equivalent `_max`/`_min` parameters.
 
-You can find an example of this change [above](#filedf-data_tables-section).
+You can find an example of this change [above](#filedf--data_tables-section).
 
 ### `units` + `purchased` → `purchased_units`
 
@@ -620,7 +620,7 @@ With `_equals` constraints, it would trigger a completely different mathematical
 
 !!! note
     The exception to this is `source_use_equals`/`sink_use_equals`.
-    These parameters have been _introduced_, to [replace `force_resource`](#force_resource-source_use_equals-sink_use_equals).
+    These parameters have been _introduced_, to [replace `force_resource`](#force_resource--source_use_equals--sink_use_equals).
     They are in the model because these tend to be timeseries parameters, so we want to avoid the memory overhead of repeating the data in `_min` and `_max` parameters.
 
 ### `x`/`y` coordinates
@@ -736,7 +736,7 @@ We have re-implemented all these constraints as tested additional math snippets,
 
 ### Configuration options
 
-* With the [change in how timeseries data is defined](#filedf-data_tables-section), we have removed the reference to a `timeseries_data_path`.
+* With the [change in how timeseries data is defined](#filedf--data_tables-section), we have removed the reference to a `timeseries_data_path`.
 Instead, data table filepaths should always be relative to the `model.yaml` file or they should be absolute paths.
 * We have removed `run.relax_constraint` alongside [removing group constraints](#group-constraints).
 * We have removed `model.file_allowed`, which many users will not even know existed (it was a largely internal configuration option)!
@@ -1001,7 +1001,7 @@ nodes:
 
 ### Loading non-timeseries tabular data
 
-With the [change in loading timeseries data](#filedf-data_tables-section), we have expanded loading of tabular data to allow any data input.
+With the [change in loading timeseries data](#filedf--data_tables-section), we have expanded loading of tabular data to allow any data input.
 Technically, you can now define all your data in tables (although we would still recommend a mix of YAML and tabular model definition).
 
 !!! info "See also"
@@ -1009,7 +1009,7 @@ Technically, you can now define all your data in tables (although we would still
 
 ### Subsetting and resampling other dimensions than `timesteps`
 
-With our [updated configuration syntax](#renaming-moving-configuration-options), you can subset and resample any arbitrary dimension, not only the `timesteps` dimension.
+With our [updated configuration syntax](#renaming--moving-configuration-options), you can subset and resample any arbitrary dimension, not only the `timesteps` dimension.
 
 Subsetting ordered dimensions (e.g. timeseries, integer series) is done by slicing (`[0, 3]` or `[2000-01-01, 2000-01-03]` assumes all values in that range).
 Subsetting unordered dimensions, usually string values selects individual values.
