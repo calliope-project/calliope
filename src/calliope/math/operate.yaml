@@ -75,14 +75,6 @@ global_expressions:
     equations:
       - expression: sum(cost_operation_variable, over=timesteps)
 
-objectives:
-  min_cost_optimisation:
-    description: >-
-      Minimise the total cost of operating all technologies in the system.
-      If multiple cost classes are present (e.g., monetary and co2 emissions),
-      the weighted sum of total costs is minimised.
-      Cost class weights can be defined in the indexed parameter `objective_cost_weights`.
-
 checks:
   operate_mode_cyclic_storage:
     where: cyclic_storage==True AND (base_tech==storage OR include_storage==True)
