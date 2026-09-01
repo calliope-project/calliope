@@ -57,6 +57,12 @@ For example, `model.inputs.flow_cap_max.attrs["default"]` is now only available 
 
 |changed| Community and help links now point to Zulip (https://calliope-modelblocks.zulipchat.com/) instead of GitHub Discussions.
 
+|fixed| Pre-defined operate mode math is now documented alongside the other built-in math.
+
+|fixed| Built-in math documentation now shows components that an override deactivates (`REMOVED`) and those it moves to a different component group, e.g. from decision variable to parameter (`REDEFINED`).
+
+|changed| Math documentation includes math components that have no math expression to show, documenting them by their description alone.
+
 ### Internal changes
 
 |fixed| example user-defined math tests that were missing global expressions in the resulting LP files.

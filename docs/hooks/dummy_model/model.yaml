@@ -22,6 +22,18 @@ overrides:
       solve.spores.number: 2
     data_definitions:
       spores_slack: 0.1
+  operate:
+    config:
+      init.name: operate mode
+      init.mode: operate
+      build.operate:
+        window: 12h
+        horizon: 24h
+    techs:
+      # Cyclic storage must be switched off in operate mode.
+      conversion_tech.cyclic_storage: false
+      supply_tech.cyclic_storage: false
+      storage_tech.cyclic_storage: false
 
 config.init.name: base
 config.build.ensure_feasibility: true
