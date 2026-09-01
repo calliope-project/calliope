@@ -1,3 +1,146 @@
+## 0.7.0 (2026-09-01)
+
+v0.7 is a near-complete rewrite of Calliope's internals and of how models are defined, configured and solved.
+Existing v0.6 models cannot be loaded in v0.7 and will need to be adapted.
+
+**All changes to model definition, configuration, parameter/decision variable names, removed features and new modelling capabilities relative to v0.6 are described in our [migrating from v0.6 to v0.7](https://calliope.readthedocs.io/en/latest/migrating/) documentation.**
+Start there if you are coming from v0.6.
+To avoid duplicating that guide, this entry covers only those changes that it does _not_ describe.
+
+This entry supersedes the `0.7.0.devX` entries below, which are retained for reference but which include changes that were themselves superseded before this release.
+
+### User-facing changes
+
+#### Python API
+
+|changed| |backwards-incompatible| Models are loaded with `calliope.read_yaml(path)`, `calliope.read_dict(dict)` and `calliope.read_netcdf(path)`.
+`calliope.Model(...)` takes in-memory xarray datasets, e.g. `calliope.Model(inputs=input_array, attrs=attributes)`.
+
+|changed| Model attributes are not stored in the input / result array attributes, but are available directly from the model object: `model.definition` (the loaded data definition), `model.config` (the loaded configuration), `model.runtime` (runtime attributes, including timing logs and model creation / build / solve timestamps) and `model.math` (initialised and applied math).
+They can be dumped to a single dictionary with `calliope.Model.dump_all_attrs()`.
+
+|changed| Inputs and results are separate datasets (`model.inputs` / `model.results`) rather than filtered views on the same private dataset.
+They are stored as separate NetCDF "groups", with model attributes stored as a further group and written to an `attrs.yaml` file by `calliope.Model.to_csv`.
+
+|changed| `kwargs` in `model.build()` and `model.solve()` directly update `model.config`, to ensure the configuration always remains in sync with the results.
+
+|changed| `init` config can be updated on re-init _and_ on loading a model from NetCDF, e.g. to apply new subsetting, resampling, clustering or math.
+
+|new| Backend interface methods available on `calliope.Model.backend` to inspect and manipulate the built optimisation problem, including `get_objective` / `set_objective` (to switch between pre-defined objectives), and shadow prices via `model.backend.shadow_prices.get("constraint_name")` (#716, #761).
+
+#### Configuration
+
+|new| `config.init.retain_inactive` (default False) keeps deactivated (`active: false`) components in the input arrays rather than deleting them, so that they can be re-activated after model instantiation but before building the optimisation problem.
+
+|new| `config.init.broadcast_input_data` (default False) to broadcast single data entries in YAML indexed parameters along their indexed dimensions.
+
+|new| `config.init.pre_validate_math_strings` (default False) to scan the math definition for parsing errors at model initialisation, i.e. before the much more expensive optimisation problem build.
+
+|changed| `config.init.datetime_format` and `config.init.date_format` set the expected format of `datetime`- and `date`-dtype data read from file (both default to `ISO8601`).
+
+|new| `config.init.math_paths` to name and point to additional math files, which can then be requested via `config.build.extra_math` or used to _replace_ pre-defined math entries (`base`, `milp`, `operate`, `spores`, `storage_inter_cluster`).
+
+|new| `config.solve.shadow_prices` to list constraints whose shadow prices should be added to the model results, as `shadow_price_{constraint_name}` arrays.
+
+|new| `config.solve.postprocess_active` can be used to skip postprocessing, to save computation time or to avoid crashes if `base` math is made incompatible with it.
+
+|changed| |backwards-incompatible| Updated to support Python >= 3.12, with critical dependency lower bounds of NumPy >= 2.0, pandas >= 2.1.3, xarray >= 2026.4, Pyomo >= 6.8.2 and pydantic >= 2.11.4 (#744, #889).
+Dependencies are pinned on their lower bound only, to minimise clashes when using Calliope as a dependency in another project.
+
+#### Math
+
+|new| Pre-defined math is no longer hardcoded in Python.
+Instead, it is split by mode and feature into separate YAML files - `base.yaml`, `operate.yaml`, `spores.yaml`, `milp.yaml` and `storage_inter_cluster.yaml`.
+Each can be extended, or replaced entirely, by the user (#739, #749, #763).
+
+|new| Math dictionaries can be injected when loading a model in Python, using the `math_dict` argument of `calliope.read_yaml(...)` / `calliope.read_dict(...)`.
+
+|new| `cost_source_use` parameter, for the variable cost of `source_use` in `supply` technologies.
+`cost_flow_in` no longer applies to `supply` technologies (and `cost_flow_out` no longer applies to `demand` technologies); a warning is raised if they are defined (#835).
+
+|changed| Math is accessed via `model.math`, with the applied math at `model.math.build`, e.g. `model.math.build.parameters.flow_cap_max.default`.
+These attributes are no longer duplicated in the model array attributes.
+
+|fixed| Technology capacity lower bound constraints, so that `[cap-type]_min` is not always enforced if the `purchased_units` variable is active (#643), and `purchased_units` is linked to `flow_cap` even if neither `flow_cap_min` nor `flow_cap_max` are defined.
+
+|new| Gallery of user-defined math examples, including monthly peak charges (#727) and complex CHP plant operating spaces.
+
+#### Backends and solvers
+
+|changed| The backend interface is abstracted, to enable non-Pyomo solver interfaces.
+
+|new| Direct interface to the Gurobi Python API (`config.build.backend: gurobi`), which reduces peak memory consumption and runtime of the combined build and solve steps by at least 30%.
+Requires the `gurobipy` package.
+
+|new| Direct interface to the open-source [HiGHS](https://highs.dev/) solver (`config.build.backend: highs`) (#856).
+Piecewise constraints are not yet available in this backend.
+
+|changed| coin-or-cbc is available cross-platform on conda-forge and is the recommended open-source solver for access to full math functionality (#744, #891).
+
+|new| Arbitrary updates to parameters can be passed to any solver backend and it will result in an appropriate re-build of the parts of the math that the parameter touches.
+
+#### Modes
+
+|new| Working SPORES mode, upgraded from v0.6 to include a selection of scoring algorithms (#716).
+The baseline run is named `0` and the `spores` dimension has an integer dtype.
+
+|new| `config.solve.spores.use_latest_results` allows a run to start from existing (e.g. `base` mode) results _and_ to continue an existing set of SPORES.
+E.g., if there are results for 4 SPORES, the run can be continued for 6 more iterations by setting `spores.use_latest_results` and updating `spores.number` to `10`.
+
+|fixed| SPORES mode models are appropriately serialised on saving to NetCDF (#751, #752).
+
+#### Results and postprocessing
+
+|new| Results contain the objective function value of solved models, in arrays named after the corresponding objective in math (e.g., `model.results.min_cost_optimisation`).
+
+|changed| Cost expressions are split into the capital cost (`cost_investment`), its annualised equivalent (`cost_investment_annualised`), fixed operation costs (`cost_operation_fixed`) and variable operation costs (`cost_operation_variable`) (#645, #835).
+
+|fixed| Levelised cost accounts for energy that is generated and exported (`flow_export`) (#767), timeseries capacity factor accounts for time resolution (#762), `cost_om_annual_investment_fraction` does not apply to depreciated costs (#645), and math for multi-carrier variable export costs is corrected (#663).
+
+#### Time series handling
+
+|changed| Time clustering is triggered by pointing `config.init.time_cluster` at the name of an input data array holding the date-to-representative-date mapping (e.g. loaded via `data_tables`).
+
+|fixed| Time clustering handles cases where floating point errors can lead to index mismatches and dropped clusters (#826, #854).
+
+|changed| Parameters declare how they should be aggregated when resampling the time dimension, with `resample_method` (one of `mean`, `sum`, `first`) in the math definition.
+This was previously hardcoded in the source code and could not be updated by the user when supplying their own inputs.
+
+#### Documentation
+
+|changed| The documentation has been overhauled: ported to Markdown and built with MkDocs and the Material theme, with a migration guide from v0.6, an overview of Calliope terminology (including a visual depiction of how defined components connect together, #699), a dedicated section on defining your own math with its own helper function reference (#698), and clarified guidance on unit-agnosticism (#775), dimensions and broadcasting (#667) and dimension subsetting (#829).
+
+|new| Math documentation is generated from the YAML math, including a list of pre-defined parameters, units, default values, cross-references in both directions ("uses" and "used in") (#643), and optional YAML snippet tabs when writing to Markdown.
+Pre-defined `operate` mode math is documented alongside the other built-in math, and SPORES-specific configuration options are documented (#750, #752).
+
+|changed| Community and help links point to Zulip (<https://calliope-modelblocks.zulipchat.com/>) instead of GitHub Discussions.
+
+### Internal changes
+
+|changed| `pydantic` is used throughout to document and validate the model configuration, data tables, techs/nodes data, math and general model definition, replacing the JSON schema introduced earlier in the v0.7 development cycle (#704, #717, #868).
+`pydantic.RootModel` is used for definition dictionaries with arbitrary keys (`techs`, `nodes`, etc.).
+
+|changed| `calliope.AttrDict` is now only used to merge overrides and templates into the model definition dictionary, before creating the `pydantic` models; I/O has moved to `calliope.io` and attribute access to `pydantic` models.
+`AttrDict.union` no longer sorts dictionary keys.
+
+|changed| Model definition reading is defined in a single place (`preprocess/model_definition.py`) and pre-processed model data checks are conducted according to a YAML configuration instead of hard-coded Python functions.
+
+|changed| Costs are backend expressions rather than decision variables.
+
+|changed| Backend component arrays are built with `numpy.frompyfunc` instead of `xarray.apply_ufunc`, and default parameter values fill `NaN`s at expression evaluation time rather than when adding parameters to the backend, both reducing memory peaks.
+
+|changed| Refactored the backend model class to separate out the logic to add different component types to the backend, and removed math conditionals where math component defaults achieve the same result.
+
+|changed| Repository restructured to the `src` layout, relying on `pyproject.toml` for most configuration, with a `py.typed` marker so that mypy recognises Calliope as a typed library when imported as a dependency.
+
+|changed| CI moved to GitHub Actions, with a stronger reliance on `pre-commit` (including a CI check in pull requests), Ruff for both linting (incl. pydocstyle, flake8-pytest and pyupgrade) and formatting, and a global test suite random seed to avoid randomly failing tests (#789).
+
+|changed| Development dependency management moved to a mixture of `uv` and `pixi` (#881, #882), with `rich` added as a dev dependency for readable `repr` strings of our pydantic models.
+
+|fixed| Removed the `stderr` redirect at the Pyomo backend solve stage, to avoid random infinite recursion errors in CI tests (#833).
+
+|new| Automatic release uploads to PyPI, an accompanying pre-release pipeline, and a choice of issue templates.
+
 ## 0.7.0.dev8 (2026-09-01)
 
 ### User-facing changes
