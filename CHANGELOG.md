@@ -1,3 +1,7 @@
+## 0.7.1 (dev)
+
+|fixed| Shadow price extraction in the HiGHS backend no longer iterates over all constraint elements
+
 ## 0.7.0 (2026-09-01)
 
 v0.7 is a near-complete rewrite of Calliope's internals and of how models are defined, configured and solved.

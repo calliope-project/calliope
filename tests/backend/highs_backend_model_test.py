@@ -626,18 +626,34 @@ class TestShadowPrices:
         shadow_prices = supply_milp.backend.shadow_prices.get("system_balance")
         assert shadow_prices.isnull().all()
 
-    def test_get_shadow_price_missing_duals_interface(self, simple_supply, monkeypatch):
-        """Shadow prices must fall back to null if highspy cannot provide duals."""
+    @pytest.mark.parametrize("name", ["system_balance", "balance_demand"])
+    def test_get_shadow_price_matches_per_element_duals(self, simple_supply, name):
+        """Vectorised dual lookup must match highspy's per-element `constrDuals`."""
         simple_supply.solve()
+        backend = simple_supply.backend
+        constraint = backend.get_constraint(name, as_backend_objs=True)
+        expected = backend._apply_func(
+            backend._instance.constrDuals, constraint.notnull(), 1, constraint
+        ).astype(float)
+        shadow_prices = backend.shadow_prices.get(name).astype(float)
+        assert shadow_prices.isnull().equals(constraint.isnull())
+        np.testing.assert_allclose(shadow_prices.values, expected.values)
 
-        def _raise_attribute_error(val):
-            raise AttributeError("no duals available")
+    def test_get_shadow_price_fetches_solution_once(self, simple_supply, monkeypatch):
+        """Duals must be read from one solution object, not once per element."""
+        simple_supply.solve()
+        instance = simple_supply.backend._instance
+        original_get_solution = instance.getSolution
+        calls = []
 
-        monkeypatch.setattr(
-            simple_supply.backend._instance, "constrDuals", _raise_attribute_error
-        )
+        def _counting_get_solution(*args, **kwargs):
+            calls.append(1)
+            return original_get_solution(*args, **kwargs)
+
+        monkeypatch.setattr(instance, "getSolution", _counting_get_solution)
         shadow_prices = simple_supply.backend.shadow_prices.get("system_balance")
-        assert shadow_prices.isnull().all()
+        assert shadow_prices.notnull().all()
+        assert len(calls) == 1
 
     def test_get_shadow_price_unsolved(self, simple_supply):
         """Shadow prices requested before a solve must be null, not garbage."""

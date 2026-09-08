@@ -622,12 +622,15 @@ class HighsShadowPrices(backend_model.ShadowPrices):
 
     def get(self, name: str) -> xr.DataArray:  # noqa: D102, override
         constraint = self._backend_obj.get_constraint(name, as_backend_objs=True)
-        if not self._backend_obj._instance.getSolution().dual_valid:
+        solution = self._backend_obj._instance.getSolution()
+        if not solution.dual_valid:
             # E.g. MILP solutions: HiGHS returns all-zero (invalid) duals rather
             # than raising, so we have to check validity explicitly.
             return xr.full_like(constraint, np.nan, dtype=float)
+        # Obtain the dual vector exactly once for the whole array rather than element-wise
+        row_dual = np.asarray(solution.row_dual)
         return self._backend_obj._apply_func(
-            self._duals_from_highs_constraint, constraint.notnull(), 1, constraint
+            lambda cons: row_dual[cons.index], constraint.notnull(), 1, constraint
         )
 
     def activate(self):
@@ -646,11 +649,3 @@ class HighsShadowPrices(backend_model.ShadowPrices):
     @property
     def available_constraints(self) -> Iterable:  # noqa: D102, override
         return self._backend_obj.constraints.data_vars
-
-    def _duals_from_highs_constraint(self, val: highspy.highs.highs_cons) -> float:
-        try:
-            dual = self._backend_obj._instance.constrDuals(val)  # type: ignore
-        except AttributeError:
-            return np.nan
-        else:
-            return dual
