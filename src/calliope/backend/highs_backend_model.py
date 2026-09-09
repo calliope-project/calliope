@@ -8,6 +8,7 @@ import bisect
 import importlib
 import logging
 from collections.abc import Iterable
+from itertools import chain
 from pathlib import Path
 from typing import Any, Literal, SupportsFloat, overload
 
@@ -83,6 +84,53 @@ class HighsBackendModel(backend_model.BackendModel):
         """
         self._instance.setOptionValue("small_matrix_value", 1e-12)
 
+    @staticmethod
+    def _broadcast_to_mask(
+        where: xr.DataArray, *args: xr.DataArray
+    ) -> tuple[xr.DataArray, np.ndarray, list[np.ndarray]]:
+        """Broadcast `where` against `args` and flatten the results.
+
+        Mirrors the broadcasting done by `_apply_func`, so that components added to
+        HiGHS in batches end up in arrays with the same shape, dims and coords as an
+        element-wise apply would produce.
+
+        Args:
+            where (xr.DataArray): Boolean array masking the elements to act on.
+            *args (xr.DataArray): Arrays to broadcast against `where`.
+
+        Returns:
+            tuple[xr.DataArray, np.ndarray, list[np.ndarray]]:
+                The broadcast `where` array (to use as a template for the result),
+                that array's values flattened to 1D, and the flattened values of
+                each array in `args`.
+        """
+        broadcast_where, *broadcast_args = xr.broadcast(where, *args)
+        return (
+            broadcast_where,
+            broadcast_where.values.ravel(),
+            [arg.values.ravel() for arg in broadcast_args],
+        )
+
+    @staticmethod
+    def _scatter_objects(
+        template: xr.DataArray, mask: np.ndarray, objs: list
+    ) -> xr.DataArray:
+        """Place backend objects at the `mask` positions of an otherwise-NaN array.
+
+        Args:
+            template (xr.DataArray): Array whose shape, dims and coords to reuse.
+            mask (np.ndarray): Flattened boolean mask of `template`.
+            objs (list): One backend object per True element of `mask`.
+
+        Returns:
+            xr.DataArray: Object-dtype array of backend objects, NaN where masked out.
+        """
+        flat = np.full(mask.size, np.nan, dtype=object)
+        flat[mask] = objs
+        return xr.DataArray(
+            flat.reshape(template.shape), dims=template.dims, coords=template.coords
+        )
+
     def _add_variable(  # noqa: D102, override
         self,
         name: str,
@@ -93,11 +141,38 @@ class HighsBackendModel(backend_model.BackendModel):
     ) -> xr.DataArray:
         lb = self._get_variable_bound(bounds.min, name, references)
         ub = self._get_variable_bound(bounds.max, name, references)
-        var = self._apply_func(
-            self._instance.addVariable, where, 1, lb, ub, type=domain_type
-        )
+        template, mask, (lb_vals, ub_vals) = self._broadcast_to_mask(where, lb, ub)
 
-        return var.fillna(value=np.nan)
+        # Variables are added in one batch: `addVariable` allocates arrays and queries
+        # the model on every call, which dominates build time on large models.
+        n_new = int(mask.sum())
+        first_col = self._instance.getNumCol()
+        status = self._instance.addCols(
+            n_new,
+            np.zeros(n_new),
+            np.asarray(lb_vals[mask], dtype=float),
+            np.asarray(ub_vals[mask], dtype=float),
+            0,
+            np.zeros(n_new, dtype=np.int32),
+            np.empty(0, dtype=np.int32),
+            np.empty(0),
+        )
+        if status != highspy.HighsStatus.kOk:
+            raise BackendError(
+                f"Failed to add variable `{name}` to the HiGHS model (status: {status})."
+            )
+        cols = np.arange(first_col, first_col + n_new, dtype=np.int32)
+        if domain_type != self.VARIABLE_DOMAIN_DICT["real"]:
+            # Unlike `addVariable`, `addCols` cannot set the variable domain itself.
+            self._instance.changeColsIntegrality(
+                n_new, cols, np.full(n_new, int(domain_type), dtype=np.uint8)
+            )
+
+        return self._scatter_objects(
+            template,
+            mask,
+            [highspy.highs.highs_var(col, self._instance) for col in cols.tolist()],
+        )
 
     def _add_global_expression(  # noqa: D102, override
         self, name: str, where: xr.DataArray, expression: xr.DataArray
@@ -108,19 +183,90 @@ class HighsBackendModel(backend_model.BackendModel):
 
         return to_fill
 
+    @staticmethod
+    def _to_csr(
+        lengths: np.ndarray, idxs: list[list[int]], vals: list[list[float]]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Flatten per-row column indices and coefficients into a HiGHS CSR matrix.
+
+        Entries are sorted by (row, column) and duplicate columns within a row are
+        summed, mirroring `highs_linear_expression.unique_elements`. HiGHS rejects a
+        row that references the same column twice, so the merge is required, not an
+        optimisation.
+
+        Args:
+            lengths (np.ndarray): Number of entries in each row.
+            idxs (list[list[int]]): Column indices of each row.
+            vals (list[list[float]]): Coefficients of each row.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray, np.ndarray]:
+                Row start offsets, column indices and coefficients.
+        """
+        n_elements = int(lengths.sum())
+        rows = np.repeat(np.arange(lengths.size), lengths)
+        cols = np.fromiter(chain.from_iterable(idxs), np.int32, n_elements)
+        coefs = np.fromiter(chain.from_iterable(vals), np.float64, n_elements)
+
+        order = np.lexsort((cols, rows))
+        rows, cols, coefs = rows[order], cols[order], coefs[order]
+
+        duplicate = np.zeros(n_elements, dtype=bool)
+        duplicate[1:] = (cols[1:] == cols[:-1]) & (rows[1:] == rows[:-1])
+        if duplicate.any():
+            unique = ~duplicate
+            coefs = np.add.reduceat(coefs, np.flatnonzero(unique))
+            rows, cols = rows[unique], cols[unique]
+
+        starts = np.searchsorted(rows, np.arange(lengths.size)).astype(np.int32)
+        return starts, cols, coefs
+
     def _add_constraint(  # noqa: D102, override
         self, name: str, where: xr.DataArray, expression: xr.DataArray
     ) -> xr.DataArray:
-        try:
-            to_fill = self._apply_func(self._instance.addConstr, where, 1, expression)
-        except Exception as err:
-            # highspy raises a bare `Exception` if HiGHS does not accept a constraint,
-            # e.g. when a coefficient's absolute value is below `small_matrix_value`.
-            raise BackendError(
-                f"Failed to add constraint `{name}` to the HiGHS model: {err}"
-            ) from err
+        template, mask, (expr_vals,) = self._broadcast_to_mask(where, expression)
+        exprs = expr_vals[mask]
+        n_new = exprs.size
 
-        return to_fill
+        lower = np.empty(n_new)
+        upper = np.empty(n_new)
+        lengths = np.empty(n_new, dtype=np.int64)
+        idxs: list[list[int]] = []
+        vals: list[list[float]] = []
+        for idx, expr in enumerate(exprs):
+            expr_bounds = getattr(expr, "bounds", None)
+            if expr_bounds is None:
+                raise BackendError(
+                    f"Failed to add constraint `{name}` to the HiGHS model: "
+                    "constraint bounds must be set via a comparison (>=, ==, <=)."
+                )
+            lower[idx], upper[idx] = expr_bounds
+            idxs.append(expr.idxs)
+            vals.append(expr.vals)
+            lengths[idx] = len(expr.idxs)
+
+        starts, cols, coefs = self._to_csr(lengths, idxs, vals)
+        # Constraints are added in one batch: `addConstr` re-sorts each row's
+        # coefficients and re-queries the model on every call.
+        first_row = self._instance.getNumRow()
+        status = self._instance.addRows(
+            n_new, lower, upper, coefs.size, starts, cols, coefs
+        )
+        if status != highspy.HighsStatus.kOk:
+            # E.g. a coefficient whose absolute value is below `small_matrix_value`,
+            # which HiGHS drops, flagging it with a warning status.
+            raise BackendError(
+                f"Failed to add constraint `{name}` to the HiGHS model (status: {status})."
+            )
+
+        return self._scatter_objects(
+            template,
+            mask,
+            [
+                highspy.highs.highs_cons(row, self._instance)
+                for row in range(first_row, first_row + n_new)
+            ],
+        )
 
     @staticmethod
     def _to_highs_objective(
@@ -622,12 +768,15 @@ class HighsShadowPrices(backend_model.ShadowPrices):
 
     def get(self, name: str) -> xr.DataArray:  # noqa: D102, override
         constraint = self._backend_obj.get_constraint(name, as_backend_objs=True)
-        if not self._backend_obj._instance.getSolution().dual_valid:
+        solution = self._backend_obj._instance.getSolution()
+        if not solution.dual_valid:
             # E.g. MILP solutions: HiGHS returns all-zero (invalid) duals rather
             # than raising, so we have to check validity explicitly.
             return xr.full_like(constraint, np.nan, dtype=float)
+        # Obtain the dual vector exactly once for the whole array rather than element-wise
+        row_dual = np.asarray(solution.row_dual)
         return self._backend_obj._apply_func(
-            self._duals_from_highs_constraint, constraint.notnull(), 1, constraint
+            lambda cons: row_dual[cons.index], constraint.notnull(), 1, constraint
         )
 
     def activate(self):
@@ -646,11 +795,3 @@ class HighsShadowPrices(backend_model.ShadowPrices):
     @property
     def available_constraints(self) -> Iterable:  # noqa: D102, override
         return self._backend_obj.constraints.data_vars
-
-    def _duals_from_highs_constraint(self, val: highspy.highs.highs_cons) -> float:
-        try:
-            dual = self._backend_obj._instance.constrDuals(val)  # type: ignore
-        except AttributeError:
-            return np.nan
-        else:
-            return dual
