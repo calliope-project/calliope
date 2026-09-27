@@ -70,6 +70,14 @@ class DataTable:
             df = self.dfs[self.input.table]
 
         self.dataset = self._df_to_ds(df)
+        self._tech_only_params = [
+            k for k, v in self.dataset.data_vars.items() if v.dims == ("techs",)
+        ]
+        self._tech_node_params = [
+            k
+            for k, v in self.dataset.data_vars.items()
+            if set(v.dims) == {"techs", "nodes"}
+        ]
 
     def drop(self, name: str):
         """Drop a data in-place from the data table.
@@ -89,10 +97,12 @@ class DataTable:
         tech_dict = CalliopeTechs.model_validate(
             {k: {} for k in self.dataset.get("techs", xr.DataArray([])).values}
         )
-        params = self.PARAMS_TO_INITIALISE_YAML.intersection(self.dataset.data_vars)
+        init_params = self.PARAMS_TO_INITIALISE_YAML.intersection(
+            self._tech_only_params
+        )
         base_tech_dict: dict[str, dict] = {}
-        if params:
-            df = self.dataset[params].to_dataframe().dropna(how="all").T
+        if init_params:
+            df = self.dataset[init_params].to_dataframe().dropna(how="all").T
             base_tech_dict = {
                 col: series.dropna().to_dict() for col, series in df.items()
             }
@@ -112,41 +122,50 @@ class DataTable:
                 Technology definition dictionary which is a union of any YAML definition and the result of solving tech definition across all data tables.
                 Technologies should have their definition inheritance resolved.
         """
-        node_tech_vars = self.dataset[
+        dims = ["nodes", "techs"]
+        node_tech_ds = self.dataset[
             [
                 k
                 for k, v in self.dataset.data_vars.items()
-                if "nodes" in v.dims and "techs" in v.dims
+                for idx in dims
+                if idx in v.dims
             ]
         ]
-        if not node_tech_vars:
+        if not node_tech_ds:
             return CalliopeNodes()
 
-        other_dims = [i for i in node_tech_vars.dims if i not in ["nodes", "techs"]]
-
-        is_defined = node_tech_vars.notnull().any(other_dims).to_dataframe().any(axis=1)
-
-        techs_by_node: dict[str, list] = {}
-        if not (defined_node_techs := is_defined[is_defined]).empty:
-            techs_by_node = (
-                defined_node_techs.index.to_frame(index=False)
-                .groupby("nodes")["techs"]
-                .apply(list)
-                .to_dict()
+        node_tech_df = node_tech_ds.to_dataframe()
+        is_defined = node_tech_df.notna().groupby(["nodes", "techs"]).any().any(axis=1)
+        is_defined_true = is_defined[is_defined]
+        transmission_techs = list(
+            filter(
+                lambda k: techs_incl_inheritance[k].base_tech == "transmission",
+                techs_incl_inheritance.root,
             )
-        node_tech_def = CalliopeNodes.model_validate(
-            {i: {"techs": {}} for i in self.dataset.nodes.values}
         )
-        for node in node_tech_def.root:
-            for tech in techs_by_node.get(node, []):
-                if tech not in techs_incl_inheritance.root:
-                    continue
-                if techs_incl_inheritance[tech].base_tech == "transmission":
-                    self._raise_error(
-                        "Cannot define transmission technology data over the `nodes` dimension"
-                    )
-                else:
-                    node_tech_def = node_tech_def.update({node: {"techs": {tech: {}}}})
+        if (
+            transmission_techs
+            and not (
+                bad := is_defined_true.reindex(transmission_techs, level="techs")
+            ).empty
+        ):
+            self._raise_error(
+                "Cannot define transmission technology data over the `nodes` dimension."
+                f"Found:\n{bad.index}"
+            )
+
+        init_params = self.PARAMS_TO_INITIALISE_YAML.intersection(
+            self._tech_node_params
+        )
+        if init_params:
+            node_tech_dict = self._to_nested(
+                node_tech_df[list(init_params)][is_defined]
+            )
+        else:
+            node_tech_dict = self._to_nested(
+                is_defined_true.where(~is_defined_true).to_frame("defined")
+            )
+        node_tech_def = CalliopeNodes.model_validate(node_tech_dict["nodes"])
 
         return node_tech_def
 
@@ -355,6 +374,25 @@ class DataTable:
             exceptions.print_warnings_and_raise_errors(
                 errors=list(extra_info), during=f"data table loading ({self.name})"
             )
+
+    @staticmethod
+    def _to_nested(obj: pd.DataFrame) -> dict:
+        index, leaves = (
+            obj.index,
+            (
+                {k: v for k, v in record.items() if pd.notna(v)}
+                for record in obj.to_dict("records")
+            ),
+        )
+        out: dict = {}
+        for idx, leaf in zip(index, leaves):
+            idx = idx if isinstance(idx, tuple) else (idx,)
+            d = out
+            for name, key in zip(index.names, idx):
+                d = d.setdefault(name, {})
+                d = d.setdefault(key, {})
+            d.update(leaf)
+        return out
 
     def _check_processed_tdf(self, tdf: pd.Series):
         if "inputs" not in tdf.index.names:
