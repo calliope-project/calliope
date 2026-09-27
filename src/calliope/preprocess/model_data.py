@@ -161,11 +161,15 @@ class ModelDataBuilder(ModelDTypeUpdater):
                     data_table.drop(param)
 
         techs_incl_inheritance = self._inherit_techs()
+        # Later tables take precedence over earlier ones; YAML takes precedence over all tables.
+        node_data_from_tables = CalliopeNodes()
         for data_table in data_tables:
-            node_def = data_table.node_def(techs_incl_inheritance)
-            self.model_definition = self.model_definition.update(
-                {"nodes": node_def}, overwrite=False
+            node_data_from_tables = node_data_from_tables.update(
+                data_table.node_def(techs_incl_inheritance)
             )
+        self.model_definition = self.model_definition.update(
+            {"nodes": node_data_from_tables}, overwrite=False
+        )
 
         # Pre-populate the dataset with model nodes and techs
         _nodes = self.model_definition.nodes

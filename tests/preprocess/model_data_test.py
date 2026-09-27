@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from calliope import exceptions, io
+from calliope import AttrDict, exceptions, io
 from calliope.preprocess import (
     ModelDataBuilder,
     ModelDataCleaner,
@@ -1279,6 +1279,244 @@ class TestDataTableBuilding:
         assert (to_check.sel(techs="test_supply_elec", nodes="a") == 10).all()
         assert (to_check.sel(techs="test_supply_elec", nodes="b").isnull()).all()
         assert (to_check.sel(techs="test_demand_elec") == 2).all()
+
+
+NODE_TECH = ["nodes", "techs"]
+SUPPLY = "test_supply_elec"
+LINK = {"base_tech": "transmission", "link_from": "a", "link_to": "b", "one_way": True}
+LINK_REVERSED = {**LINK, "link_from": "b", "link_to": "a", "one_way": False}
+
+
+def _pick(d: dict, *keys: str) -> dict:
+    return {k: d[k] for k in keys}
+
+
+class TestBaseAttributesFromDataTables:
+    """Base attributes (`active`, `base_tech`, `one_way`, `link_from`, `link_to`) can be defined in data tables and/or YAML.
+
+    YAML takes precedence over data tables and later data tables take precedence over earlier ones.
+    """
+
+    @pytest.fixture(scope="class")
+    @classmethod
+    def build_dataset(cls, minimal_test_model_path):
+        """Build a dataset from the minimal test model with extra data tables and YAML overrides.
+
+        A new transmission tech `new_link` is defined in YAML with only its carriers.
+        Each table is given as a `(data, rows)` tuple, where `data` is a {input: {row index: value}} dictionary.
+        """
+
+        def _build_dataset(
+            tables: list[tuple[dict, str | list[str]]], yaml: dict | None = None
+        ) -> xr.Dataset:
+            override = AttrDict(
+                {
+                    "techs": {
+                        "new_link": {
+                            "carrier_in": "electricity",
+                            "carrier_out": "electricity",
+                        }
+                    }
+                }
+            )
+            for key, val in (yaml or {}).items():
+                override.set_key(key, val)
+            dfs = {}
+            for i, (data, rows) in enumerate(tables):
+                dfs[f"table_{i}"] = pd.DataFrame(data)
+                override.set_key(
+                    f"data_tables.table_{i}",
+                    {"table": f"table_{i}", "rows": rows, "columns": "inputs"},
+                )
+            model_def = prepare_model_definition(
+                io.read_rich_yaml(minimal_test_model_path),
+                scenario="simple_supply,two_hours",
+                override_dict=override,
+                definition_path=minimal_test_model_path,
+            )
+            math = model_math.build_math(
+                model_math.get_math_priority(model_def.config.init),
+                model_def.math.init.model_dump(),
+            )
+            tables_ = [
+                data_tables.DataTable(name, table, dfs, minimal_test_model_path)
+                for name, table in model_def.definition.data_tables.root.items()
+            ]
+            builder = ModelDataBuilder(
+                model_def.config.init, model_def.definition, math, tables_
+            )
+            builder.build()
+            return builder.dataset
+
+        return _build_dataset
+
+    @pytest.mark.parametrize(
+        ("table_1", "table_2", "yaml"),
+        [
+            (LINK, {}, {}),
+            (
+                _pick(LINK, "base_tech", "link_from"),
+                _pick(LINK, "link_to", "one_way"),
+                {},
+            ),
+            (
+                _pick(LINK, "base_tech", "one_way"),
+                {},
+                _pick(LINK, "link_from", "link_to"),
+            ),
+            (
+                _pick(LINK, "base_tech"),
+                _pick(LINK, "link_from", "link_to"),
+                _pick(LINK, "one_way"),
+            ),
+            ({}, {}, LINK),
+            (LINK_REVERSED, {}, _pick(LINK, "link_from", "link_to", "one_way")),
+            (LINK_REVERSED, _pick(LINK, "link_from", "link_to", "one_way"), {}),
+        ],
+        ids=[
+            "one_table",
+            "two_tables",
+            "table_and_yaml",
+            "two_tables_and_yaml",
+            "yaml_only",
+            "yaml_overrides_table",
+            "later_table_overrides_earlier",
+        ],
+    )
+    def test_tech_attrs(self, build_dataset, table_1, table_2, yaml):
+        """Tech-level base attributes are passed through from any combination of data tables and YAML."""
+        tables = [
+            ({k: {"new_link": v} for k, v in table.items()}, "techs")
+            for table in [table_1, table_2]
+            if table
+        ]
+        ds = build_dataset(tables, {f"techs.new_link.{k}": v for k, v in yaml.items()})
+
+        assert {k: ds[k].sel(techs="new_link").item() for k in LINK} == LINK
+        assert ds.active.sel(techs="new_link").notnull().all()
+
+    @pytest.mark.parametrize("attr", list(LINK))
+    def test_tech_attrs_over_nodes_fails(self, build_dataset, attr):
+        """Tech-level base attributes cannot be defined over the `nodes` dimension."""
+        tables = [({attr: {("a", "new_link"): LINK[attr]}}, NODE_TECH)]
+        yaml = {f"techs.new_link.{k}": v for k, v in LINK.items() if k != attr}
+        with pytest.raises(exceptions.ModelError):
+            build_dataset(tables, yaml)
+
+    @pytest.mark.parametrize(
+        ("tables", "yaml", "expected"),
+        [
+            (
+                [({"active": {("a", SUPPLY): False, ("b", SUPPLY): True}}, NODE_TECH)],
+                {},
+                {"a": False, "b": True},
+            ),
+            (
+                [
+                    (
+                        {"active": {(SUPPLY, "a"): False, (SUPPLY, "b"): True}},
+                        ["techs", "nodes"],
+                    )
+                ],
+                {},
+                {"a": False, "b": True},
+            ),
+            (
+                [
+                    (
+                        {
+                            "active": {("a", SUPPLY): False},
+                            "flow_cap_max": {("a", SUPPLY): 1, ("b", SUPPLY): 2},
+                        },
+                        NODE_TECH,
+                    )
+                ],
+                {},
+                {"a": False, "b": True},
+            ),
+            ([({"active": {SUPPLY: False}}, "techs")], {}, {"a": False, "b": False}),
+            (
+                [
+                    ({"active": {("a", SUPPLY): False}}, NODE_TECH),
+                    ({"flow_cap_max": {("a", SUPPLY): 1, ("b", SUPPLY): 2}}, NODE_TECH),
+                ],
+                {},
+                {"a": False, "b": True},
+            ),
+            (
+                [
+                    ({"flow_cap_max": {("a", SUPPLY): 1, ("b", SUPPLY): 2}}, NODE_TECH),
+                    ({"active": {("a", SUPPLY): False}}, NODE_TECH),
+                ],
+                {},
+                {"a": False, "b": True},
+            ),
+            (
+                [
+                    ({"active": {("a", SUPPLY): False}}, NODE_TECH),
+                    ({"active": {("b", SUPPLY): False}}, NODE_TECH),
+                ],
+                {},
+                {"a": False, "b": False},
+            ),
+            (
+                [
+                    ({"active": {("a", SUPPLY): False}}, NODE_TECH),
+                    ({"active": {("a", SUPPLY): True}}, NODE_TECH),
+                ],
+                {},
+                {"a": True, "b": True},
+            ),
+            (
+                [
+                    ({"active": {SUPPLY: False}}, "techs"),
+                    ({"active": {("a", SUPPLY): True}}, NODE_TECH),
+                ],
+                {},
+                {"a": True, "b": False},
+            ),
+            (
+                [({"flow_cap_max": {("a", SUPPLY): 1, ("b", SUPPLY): 2}}, NODE_TECH)],
+                {f"nodes.a.techs.{SUPPLY}.active": False},
+                {"a": False, "b": True},
+            ),
+            (
+                [({"active": {SUPPLY: False}}, "techs")],
+                {f"techs.{SUPPLY}.active": True},
+                {"a": True, "b": True},
+            ),
+            (
+                [({"active": {("a", SUPPLY): True}}, NODE_TECH)],
+                {f"techs.{SUPPLY}.active": False},
+                {"a": True, "b": False},
+            ),
+            (
+                [({"active": {("a", SUPPLY): False, ("b", SUPPLY): False}}, NODE_TECH)],
+                {f"nodes.a.techs.{SUPPLY}.active": True},
+                {"a": True, "b": False},
+            ),
+        ],
+        ids=[
+            "node_tech_table",
+            "tech_node_table",
+            "node_tech_table_with_other_input",
+            "tech_table",
+            "node_tech_table_then_table_without_active",
+            "table_without_active_then_node_tech_table",
+            "two_node_tech_tables",
+            "later_node_tech_table_overrides_earlier",
+            "node_tech_table_overrides_tech_table",
+            "yaml_node_tech_only",
+            "yaml_tech_overrides_tech_table",
+            "node_tech_table_overrides_yaml_tech",
+            "yaml_node_tech_overrides_node_tech_table",
+        ],
+    )
+    def test_active(self, build_dataset, tables, yaml, expected):
+        """`active` is passed through from any combination of data tables and YAML, over techs or nodes and techs."""
+        ds = build_dataset(tables, yaml)
+
+        assert ds.active.sel(techs=SUPPLY).to_series().to_dict() == expected
 
 
 class TestResample:
