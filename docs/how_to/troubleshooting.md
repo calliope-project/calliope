@@ -65,7 +65,7 @@ A reduction of any of these dimensions will reduce the number of resulting decis
 !!! note
     By reducing the number of locations (e.g. merging nearby locations) you also remove the technologies linking those locations to the rest of the system, which is additionally beneficial.
 
-Calliope has the ability to [resample the time dimension](how_to/time.md#time-resolution-adjustment-resampling) (e.g. 1hr -> 2hr intervals), or for the user to [supply their own clusters](how_to/time.md#time-clustering) on which time steps will be grouped together.
+Calliope has the ability to [resample the time dimension](time.md#time-resolution-adjustment-resampling) (e.g. 1hr -> 2hr intervals), or for the user to [supply their own clusters](time.md#time-clustering) on which time steps will be grouped together.
 In so doing, significant solution time improvements can be achieved.
 
 !!! info "See also"
@@ -77,7 +77,7 @@ In so doing, significant solution time improvements can be achieved.
 
 Calliope is primarily an LP framework, but application of certain constraints will trigger binary or integer decision variables.
 When triggered, a MILP model will be created.
-See our ["MILP" example](examples/milp/index.md) for an example of these variables in action.
+See our ["MILP" example](../examples/milp/index.md) for an example of these variables in action.
 
 In both cases, there will be a time penalty, as linear programming solvers are less able to converge on solutions of problems which include binary or integer decision variables.
 But, the additional functionality can be useful.
@@ -97,7 +97,7 @@ Then, run `operate` mode with these capacities to get a higher resolution operat
 If necessary, this process could be iterated.
 
 !!! info "See also"
-    [Documentation on `operate` mode](building_blocks/modes.md#operate-mode)
+    [Documentation on `operate` mode](../building_blocks/modes.md#operate-mode)
 
 ## Influence of solver choice on speed
 
@@ -133,7 +133,7 @@ If introducing binary constraints, although CBC is an improvement on GLPK, acces
     | CPLEX (4 thread)   | 0:02:16  | 0:03:26 |
 
 !!! info "See also"
-    [Specifying custom solver options](how_to/solver.md)
+    [Specifying custom solver options](solver.md)
 
 ## Understanding infeasibility and numerical instability
 
@@ -191,7 +191,7 @@ By rerunning the backend specifically, you can optimise your problem with these 
 !!! info "See also"
     [Backend model API][calliope.backend.backend_model.BackendModel],
     [Tutorial on interacting with the Backend](../examples/calliope_model_object.py),
-    [Interfacing with the built optimisation problem](how_to/backend_interface.md)
+    [Interfacing with the built optimisation problem](backend_interface.md)
 
 ## Debugging model errors
 
