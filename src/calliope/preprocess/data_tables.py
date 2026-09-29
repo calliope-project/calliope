@@ -3,7 +3,7 @@
 """Preprocessing functionality."""
 
 import logging
-from collections.abc import Hashable
+from collections.abc import Hashable, Iterable
 from pathlib import Path
 from typing import Literal
 
@@ -15,6 +15,7 @@ from calliope import exceptions
 from calliope.io import load_config
 from calliope.schemas.data_table_schema import CalliopeDataTable
 from calliope.schemas.dimension_data_schema import CalliopeNodes, CalliopeTechs
+from calliope.util import NODE_TECH
 from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
@@ -115,17 +116,16 @@ class DataTable:
                 Technology definition dictionary which is a union of any YAML definition and the result of solving tech definition across all data tables.
                 Technologies should have their definition inheritance resolved.
         """
-        dims = ("nodes", "techs")
-        node_tech_vars = self._vars_with_dims(set(dims), exact=False)
+        node_tech_vars = self._vars_with_dims(NODE_TECH, exact=False)
         if not node_tech_vars:
             return CalliopeNodes()
 
         node_tech_ds = self.dataset[node_tech_vars]
+        other_dims = set(node_tech_ds.dims) - set(NODE_TECH)
         is_defined = (
             node_tech_ds.notnull()
-            .groupby(dims)
-            .any(...)
-            .to_dataframe(dim_order=dims)
+            .any(other_dims)
+            .to_dataframe(dim_order=NODE_TECH)
             .any(axis=1)
         )
         defined_node_techs = [
@@ -146,11 +146,13 @@ class DataTable:
             )
 
         init_params = self.PARAMS_TO_INITIALISE_YAML.intersection(
-            self._vars_with_dims(set(dims))
+            self._vars_with_dims(NODE_TECH)
         )
         init_data: dict[Hashable, dict] = {}
         if init_params:
-            init_df = self.dataset[sorted(init_params)].to_dataframe(dim_order=dims)
+            init_df = self.dataset[sorted(init_params)].to_dataframe(
+                dim_order=NODE_TECH
+            )
             init_data = {idx: row.dropna().to_dict() for idx, row in init_df.iterrows()}
 
         node_tech_dict: dict[str, dict] = {
@@ -252,7 +254,6 @@ class DataTable:
             )
         header = [0] if self.columns is None else list(range(len(self.columns)))
         index_col = None if self.index is None else list(range(len(self.index)))
-
         filepath = relative_path(self.model_definition_path, filename)
         df = pd.read_csv(filepath, encoding="utf-8", header=header, index_col=index_col)
         return df
@@ -368,7 +369,7 @@ class DataTable:
                 errors=list(extra_info), during=f"data table loading ({self.name})"
             )
 
-    def _vars_with_dims(self, dims: set[str], exact: bool = True) -> list[str]:
+    def _vars_with_dims(self, dims: Iterable[str], exact: bool = True) -> list:
         """Get names of data variables in the dataset that are indexed over `dims`.
 
         Args:
@@ -381,8 +382,9 @@ class DataTable:
         Returns:
             list[str]: Matching data variable names.
         """
+        dims = set(dims)
         return [
-            str(k)
+            k
             for k, v in self.dataset.data_vars.items()
             if (set(v.dims) == dims if exact else dims.issubset(v.dims))
         ]

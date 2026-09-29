@@ -24,7 +24,7 @@ from calliope.schemas.dimension_data_schema import (
 )
 from calliope.schemas.general import CalliopeBaseModel, CalliopeDictModel
 from calliope.schemas.model_def_schema import CalliopeModelDef
-from calliope.util import DATETIME_DTYPE, DTYPE_OPTIONS
+from calliope.util import DATETIME_DTYPE, DTYPE_OPTIONS, NODE_TECH
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
@@ -161,12 +161,14 @@ class ModelDataBuilder(ModelDTypeUpdater):
                     data_table.drop(param)
 
         techs_incl_inheritance = self._inherit_techs()
-        # Later tables take precedence over earlier ones; YAML takes precedence over all tables.
+
         node_data_from_tables = CalliopeNodes()
+        # Later tables take precedence over earlier ones
         for data_table in data_tables:
             node_data_from_tables = node_data_from_tables.update(
                 data_table.node_def(techs_incl_inheritance)
             )
+        # YAML takes precedence over all tables.
         self.model_definition = self.model_definition.update(
             {"nodes": node_data_from_tables}, overwrite=False
         )
@@ -271,7 +273,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
 
             if "techs" in input_da.dims and "nodes" in input_da.dims:
                 valid_node_techs = (
-                    input_da.to_series().dropna().groupby(["nodes", "techs"]).first()
+                    input_da.to_series().dropna().groupby(list(NODE_TECH)).first()
                 )
                 exceptions.warn(
                     f"(Model inputs, {name}) | This input data will only take effect if you have already defined"

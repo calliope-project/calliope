@@ -656,28 +656,40 @@ class TestDataTableNodeDict:
             foo1={"techs": {"bar1": {}, "bar2": {}}}, foo2={"techs": {}}
         )
 
-    @pytest.mark.parametrize("rows", [["nodes", "techs"], ["techs", "nodes"]])
-    @pytest.mark.parametrize(
-        "other_inputs", [{}, {"available_area": {("foo1", "bar2"): 1}}]
-    )
-    def test_node_dict_active(self, table_obj, rows, other_inputs):
+    def test_node_dict_active_node_tech(self, table_obj):
+        """`active` defined over nodes and techs is passed through to the node definition."""
+        df_dict = {"active": {("foo1", "bar1"): False, ("foo2", "bar1"): True}}
+        tech_dict = CalliopeTechs(bar1={}, bar2={})
+        node_dict = table_obj(df_dict, rows=["nodes", "techs"]).node_def(tech_dict)
+
+        assert node_dict == CalliopeNodes(
+            foo1={"techs": {"bar1": {"active": False}}},
+            foo2={"techs": {"bar1": {"active": True}}},
+        )
+
+    def test_node_dict_active_node_tech_extra_inputs(self, table_obj):
         """`active` defined over nodes and techs is passed through to the node definition."""
         df_dict = {
             "active": {("foo1", "bar1"): False, ("foo2", "bar1"): True},
-            **other_inputs,
+            "available_area": {("foo1", "bar2"): 1},
         }
-        if rows[0] == "techs":
-            df_dict = {
-                k: {idx[::-1]: v for idx, v in d.items()} for k, d in df_dict.items()
-            }
         tech_dict = CalliopeTechs(bar1={}, bar2={})
-        node_dict = table_obj(df_dict, rows=rows).node_def(tech_dict)
+        node_dict = table_obj(df_dict, rows=["nodes", "techs"]).node_def(tech_dict)
 
-        foo1_techs = {"bar1": {"active": False}} | (
-            {"bar2": {}} if other_inputs else {}
-        )
         assert node_dict == CalliopeNodes(
-            foo1={"techs": foo1_techs}, foo2={"techs": {"bar1": {"active": True}}}
+            foo1={"techs": {"bar1": {"active": False}, "bar2": {}}},
+            foo2={"techs": {"bar1": {"active": True}}},
+        )
+
+    def test_node_dict_active_tech_node(self, table_obj):
+        """`active` defined over nodes and techs is passed through to the node definition."""
+        df_dict = {"active": {("bar1", "foo1"): False, ("bar1", "foo2"): True}}
+        tech_dict = CalliopeTechs(bar1={}, bar2={})
+        node_dict = table_obj(df_dict, rows=["techs", "nodes"]).node_def(tech_dict)
+
+        assert node_dict == CalliopeNodes(
+            foo1={"techs": {"bar1": {"active": False}}},
+            foo2={"techs": {"bar1": {"active": True}}},
         )
 
     def test_node_dict_no_info(self, table_obj):
