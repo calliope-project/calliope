@@ -201,6 +201,10 @@ class CalliopeBaseModel(BaseModel):
                     )
                     continue
             elif key_class == val:
+                # Record explicitly given values that match an unset default as set,
+                # so they take precedence in later updates (e.g., when inheriting definitions).
+                if key not in self.model_fields_set:
+                    new_dict[key] = val
                 continue
             else:
                 if not _suppress_log and (

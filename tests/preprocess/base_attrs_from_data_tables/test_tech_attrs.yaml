@@ -1,0 +1,99 @@
+# Variants for `TestBaseAttributesFromDataTables.test_tech_attrs`.
+# All variants modify the existing `test_link_a_b_elec` link, which has `base_tech`, `link_from` and `link_to` defined in YAML (via its template).
+# Where data tables should provide those attributes, the YAML definition of the link is stripped back to its carriers with `_REPLACE_`.
+#
+# `data_table_dfs` are records loaded as in-memory dataframes, indexed over the `rows` of the data table that references them.
+# `overrides` are applied as an override dictionary on the minimal test model.
+# `expected` are the resulting values of the base attributes of `test_link_a_b_elec`.
+
+yaml_only:
+  data_table_dfs: {}
+  overrides: {}
+  expected: {base_tech: transmission, link_from: a, link_to: b}
+
+table_adds_to_yaml:
+  data_table_dfs:
+    table_1:
+      - {techs: test_link_a_b_elec, one_way: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+  expected: {base_tech: transmission, link_from: a, link_to: b, one_way: true}
+
+yaml_overrides_table:
+  data_table_dfs:
+    table_1:
+      - {techs: test_link_a_b_elec, base_tech: transmission, link_from: b, link_to: a, one_way: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+  expected: {base_tech: transmission, link_from: a, link_to: b, one_way: true}
+
+one_table:
+  data_table_dfs:
+    table_1:
+      - {techs: test_link_a_b_elec, base_tech: transmission, link_from: b, link_to: a, one_way: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+    techs:
+      test_link_a_b_elec:
+        _REPLACE_: {carrier_in: electricity, carrier_out: electricity}
+  expected: {base_tech: transmission, link_from: b, link_to: a, one_way: true}
+
+two_tables:
+  data_table_dfs:
+    table_1:
+      - {techs: test_link_a_b_elec, base_tech: transmission, link_from: b}
+    table_2:
+      - {techs: test_link_a_b_elec, link_to: a, one_way: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+      table_2: {table: table_2, rows: techs, columns: inputs}
+    techs:
+      test_link_a_b_elec:
+        _REPLACE_: {carrier_in: electricity, carrier_out: electricity}
+  expected: {base_tech: transmission, link_from: b, link_to: a, one_way: true}
+
+table_and_yaml:
+  data_table_dfs:
+    table_1:
+      - {techs: test_link_a_b_elec, base_tech: transmission, one_way: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+    techs:
+      test_link_a_b_elec:
+        _REPLACE_: {carrier_in: electricity, carrier_out: electricity, link_from: b, link_to: a}
+  expected: {base_tech: transmission, link_from: b, link_to: a, one_way: true}
+
+two_tables_and_yaml:
+  data_table_dfs:
+    table_1:
+      - {techs: test_link_a_b_elec, base_tech: transmission}
+    table_2:
+      - {techs: test_link_a_b_elec, link_from: b, link_to: a}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+      table_2: {table: table_2, rows: techs, columns: inputs}
+    techs:
+      test_link_a_b_elec:
+        _REPLACE_: {carrier_in: electricity, carrier_out: electricity, one_way: true}
+  expected: {base_tech: transmission, link_from: b, link_to: a, one_way: true}
+
+later_table_overrides_earlier:
+  data_table_dfs:
+    table_1:
+      - {techs: test_link_a_b_elec, base_tech: transmission, link_from: a, link_to: b, one_way: false}
+    table_2:
+      - {techs: test_link_a_b_elec, link_from: b, link_to: a, one_way: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+      table_2: {table: table_2, rows: techs, columns: inputs}
+    techs:
+      test_link_a_b_elec:
+        _REPLACE_: {carrier_in: electricity, carrier_out: electricity}
+  expected: {base_tech: transmission, link_from: b, link_to: a, one_way: true}
