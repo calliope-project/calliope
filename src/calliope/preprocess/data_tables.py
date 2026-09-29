@@ -115,16 +115,17 @@ class DataTable:
                 Technology definition dictionary which is a union of any YAML definition and the result of solving tech definition across all data tables.
                 Technologies should have their definition inheritance resolved.
         """
-        node_tech_vars = self._vars_with_dims({"nodes", "techs"}, exact=False)
+        dims = ("nodes", "techs")
+        node_tech_vars = self._vars_with_dims(set(dims), exact=False)
         if not node_tech_vars:
             return CalliopeNodes()
 
         node_tech_ds = self.dataset[node_tech_vars]
-        other_dims = [dim for dim in node_tech_ds.dims if dim not in ["nodes", "techs"]]
         is_defined = (
             node_tech_ds.notnull()
-            .any(other_dims)
-            .to_dataframe(dim_order=["nodes", "techs"])
+            .groupby(dims)
+            .any(...)
+            .to_dataframe(dim_order=dims)
             .any(axis=1)
         )
         defined_node_techs = [
@@ -145,13 +146,11 @@ class DataTable:
             )
 
         init_params = self.PARAMS_TO_INITIALISE_YAML.intersection(
-            self._vars_with_dims({"nodes", "techs"})
+            self._vars_with_dims(set(dims))
         )
         init_data: dict[Hashable, dict] = {}
         if init_params:
-            init_df = self.dataset[sorted(init_params)].to_dataframe(
-                dim_order=["nodes", "techs"]
-            )
+            init_df = self.dataset[sorted(init_params)].to_dataframe(dim_order=dims)
             init_data = {idx: row.dropna().to_dict() for idx, row in init_df.iterrows()}
 
         node_tech_dict: dict[str, dict] = {
