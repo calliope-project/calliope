@@ -1,3 +1,9 @@
+## 0.7.1.dev (Unreleased)
+
+### User-facing changes
+
+|changed| documentation directory structure to match URLs to the navigation branch names (#892).
+
 ## 0.7.0 (2026-09-01)
 
 v0.7 is a near-complete rewrite of Calliope's internals and of how models are defined, configured and solved.

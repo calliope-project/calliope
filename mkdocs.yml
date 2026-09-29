@@ -113,7 +113,7 @@ nav:
   - Examples & tutorials:
       - examples/index.md
       - Math gallery:
-          - user_defined_math/examples/index.md
+          - examples/math_gallery/index.md
       - National scale example model:
           - examples/national_scale/index.md
           - examples/national_scale/notebook.py
@@ -129,33 +129,33 @@ nav:
       - examples/calliope_model_object.py
       - examples/calliope_logging.py
   - Building blocks:
-      - basic/index.md
-      - Model configuration: basic/config.md
-      - Modes: basic/modes.md
-      - Technologies: basic/techs.md
-      - Nodes: basic/nodes.md
-      - Data tables: basic/data_tables.md
-      - Data definitions: basic/data_definitions.md
-      - Scenarios and overrides: basic/scenarios.md
-      - Running in the command line: basic/running-cli.md
-      - Running in Python: basic/running-python.md
-      - Postprocessing: basic/postprocessing.md
+      - building_blocks/index.md
+      - Model configuration: building_blocks/config.md
+      - Modes: building_blocks/modes.md
+      - Technologies: building_blocks/techs.md
+      - Nodes: building_blocks/nodes.md
+      - Data tables: building_blocks/data_tables.md
+      - Data definitions: building_blocks/data_definitions.md
+      - Scenarios and overrides: building_blocks/scenarios.md
+      - Running in the command line: building_blocks/running-cli.md
+      - Running in Python: building_blocks/running-python.md
+      - Postprocessing: building_blocks/postprocessing.md
       - User-defined math:
-          - user_defined_math/index.md
-          - user_defined_math/components.md
-          - user_defined_math/syntax.md
-          - user_defined_math/helper_functions.md
-          - user_defined_math/customise.md
+          - building_blocks/user_defined_math/index.md
+          - building_blocks/user_defined_math/components.md
+          - building_blocks/user_defined_math/syntax.md
+          - building_blocks/user_defined_math/helper_functions.md
+          - building_blocks/user_defined_math/customise.md
   - How to:
-      - advanced/index.md
-      - Troubleshoot: troubleshooting.md
-      - advanced/constraints.md
-      - advanced/time.md
-      - advanced/scripts.md
-      - advanced/solver.md
-      - advanced/backend_choice.md
-      - advanced/backend_interface.md
-      - advanced/shadow_prices.md
+      - how_to/index.md
+      - Troubleshoot: how_to/troubleshooting.md
+      - how_to/constraints.md
+      - how_to/time.md
+      - how_to/scripts.md
+      - how_to/solver.md
+      - how_to/backend_choice.md
+      - how_to/backend_interface.md
+      - how_to/shadow_prices.md
   - Reference:
       - reference/index.md
       - YAML as used in Calliope: reference/yaml.md

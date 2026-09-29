@@ -2,7 +2,7 @@
 # Helper functions
 
 For [`where` strings](syntax.md#where-strings) and [`expression` strings](syntax.md#where-strings), there are many helper functions available to use, to allow for more complex operations to be undertaken within the string.
-Their functionality is detailed in the [helper function API page](../reference/api/helper_functions.md).
+Their functionality is detailed in the [helper function API page](../../reference/api/helper_functions.md).
 Here, we give a brief summary.
 Helper functions generally require a good understanding of their functionality, so make sure you are comfortable with them beforehand.
 
@@ -24,7 +24,7 @@ Using `sum(..., over=)` in an expression allows you to sum over one or more dime
 
 Some of our arrays in [`model.inputs`][calliope.Model.inputs] are not data arrays, but "lookup" arrays.
 These arrays are used to map the array's data from one index item to another.
-For instance when using [time clustering](../advanced/time.md#time-clustering), the `lookup_cluster_last_timestep` array is used to get the timestep resolution and the stored energy for the last timestep in each cluster.
+For instance when using [time clustering](../../how_to/time.md#time-clustering), the `lookup_cluster_last_timestep` array is used to get the timestep resolution and the stored energy for the last timestep in each cluster.
 Using `select_from_lookup_arrays(..., dim_name=lookup_array)` allows you to apply this lookup array to your data array.
 
 The lookup array data must be indexed over the same dimension as the data they contain.

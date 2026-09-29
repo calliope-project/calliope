@@ -13,7 +13,7 @@ This includes [operate](#operate-mode) and [spores](#spores-mode) modes.
 !!! note
 
     The `base` mode is called base because it is active by default.
-    However, it is possible to heavily modify or even completely replace this built-in base math. See the documentation on [user-defined custom math](../user_defined_math/index.md) for more on this.
+    However, it is possible to heavily modify or even completely replace this built-in base math. See the documentation on [user-defined custom math](../building_blocks/user_defined_math/index.md) for more on this.
 
 In addition to perfect foresight optimisation, we have a [receding horizon "operate" optimisation mode](#operate-mode) and the ["SPORES" mode](#spores-mode) to generate alternative system configurations that are within a small deviation of the optimal cost that is computed in `base` mode. Read on to find out more about each of these run modes.
 
@@ -31,7 +31,7 @@ To load optional pre-defined math on top of the base math, you can reference it 
 All pre-defined math YAML files can be found in [`math` directory of the Calliope source code](https://github.com/calliope-project/calliope/blob/main/src/calliope/math/storage_inter_cluster.yaml).
 
 If you want to introduce new constraints, decision variables, or objectives, you can do so as part of the collection of YAML files describing your model.
-See the [user-defined math](../user_defined_math/index.md) section for an in-depth guide to applying your own math.
+See the [user-defined math](../building_blocks/user_defined_math/index.md) section for an in-depth guide to applying your own math.
 
 
 ### Base mode

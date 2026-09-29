@@ -29,7 +29,7 @@ A model which solved successfully has two primary [xarray.Dataset][]s with data 
 
 * `model.inputs`: contains all input data, such as renewable resource capacity factors.
 * `model.results`: contains all results data, such as dispatch decisions and installed capacities.
-  It also includes [results calculated in postprocessing][postprocessed-statistics], such as levelised cost of electricity (LCOE) and capacity factor.
+  It also includes [results calculated in postprocessing](../building_blocks/user_defined_math/components.md#postprocessed-expressions), such as levelised cost of electricity (LCOE) and capacity factor.
 
 Both of these are an  [xarray.Dataset][] and can be further processed with Python.
 
@@ -66,7 +66,7 @@ model.inputs.flow_cap_max.broadcast_like(model.inputs.definition_matrix).where(
     Broadcasting is easiest to do in [xarray][], so we recommend saving to NetCDF ([calliope.Model.to_netcdf][]) if your post-processing script will be doing broadcasting after reading the data back in.
 
 !!! info "See also"
-    If you would rather have Calliope produce an output over a fixed set of dimensions for you, you can define a [post-processed result](../basic/postprocessing.md) in your math with an explicit `foreach`, and reference the parameter in its expression.
+    If you would rather have Calliope produce an output over a fixed set of dimensions for you, you can define a [post-processed result](../building_blocks/postprocessing.md) in your math with an explicit `foreach`, and reference the parameter in its expression.
     For example, to get `flow_cap_max` indexed over a known set of dimensions:
 
     ```yaml

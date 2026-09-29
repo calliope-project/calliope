@@ -116,7 +116,7 @@ Math that comes later in this order can modify and overwrite the earlier math.
 ### Model definition (data)
 
 The model definition is your representation of the physical system you are modelling and includes the data with which the components specified in the math will be "populated".
-It spans across the four top-level keys [`techs`](../basic/techs.md), [`nodes`](../basic/nodes.md), [`data_definitions`](../basic/data_definitions.md), and [`data_tables`](../basic/data_tables.md).
+It spans across the four top-level keys [`techs`](../building_blocks/techs.md), [`nodes`](../building_blocks/nodes.md), [`data_definitions`](../building_blocks/data_definitions.md), and [`data_tables`](../building_blocks/data_tables.md).
 
 Note that you can define your data directly in the YAML text files that make up your model, but you can also define them in tabular data files in the CSV format.
 More on this will follow in the next "getting started" section, [Creating a model](creating.md).
@@ -135,10 +135,10 @@ More on this will follow in the next "getting started" section, [Creating a mode
 
 The model configuration are the options provided to Calliope to do its work, and this includes specifying what maths to use.
 Specifying what maths to use means specifying what kinds of model components will exist and how they will behave.
-The configuration is listed under the top-level key [`config`](../basic/config.md).
+The configuration is listed under the top-level key [`config`](../building_blocks/config.md).
 
 Any customisation to the math used in your model is specified in the model configuration (that is, it is specified under the `config` top-level key).
-This is explained in more detail in the documentation on [modes](../basic/modes.md) and [user-defined math](../user_defined_math/index.md).
+This is explained in more detail in the documentation on [modes](../building_blocks/modes.md) and [user-defined math](../building_blocks/user_defined_math/index.md).
 
 Again, more on this will follow in the next "getting started" section, [Creating a model](creating.md).
 
@@ -146,7 +146,7 @@ Again, more on this will follow in the next "getting started" section, [Creating
 
 **Templates** allow you to reuse model parts to reduce repetition and increase readability. They are under the `templates` top-level key. You can see them in use in the example models and find more details in the [YAML reference](../reference/yaml.md#reusing-definitions-through-templates).
 
-**Overrides** and **scenarios** define alternatives to the model configuration/definition that you can refer to when you initialise your model. They are defined in the top-level YAML keys [`overrides` and `scenarios`](../basic/scenarios.md). Find more on them on the next page of the getting started guide, [Creating a model](creating.md).
+**Overrides** and **scenarios** define alternatives to the model configuration/definition that you can refer to when you initialise your model. They are defined in the top-level YAML keys [`overrides` and `scenarios`](../building_blocks/scenarios.md). Find more on them on the next page of the getting started guide, [Creating a model](creating.md).
 
 ## Model data structure
 
@@ -162,7 +162,7 @@ They can be one of three things:
 
 * **Variables** are defined in the math, for example, `flow_cap`, a technology's flow capacity, also known as its nominal or nameplate capacity.
 * **Global expressions** are defined in the math and combine variables and parameters. For example, `cost`, the total annualised cost of a technology, is a combination of several variables and parameters.
-* **Post-processed results** are calculated after a model is solved. For example, `capacity_factor` is calculated in post-processing based on the operation of all technologies, but it is _not_ a variable in the mathematical model. More detail on these are in the [postprocessing documentation](../basic/postprocessing.md).
+* **Post-processed results** are calculated after a model is solved. For example, `capacity_factor` is calculated in post-processing based on the operation of all technologies, but it is _not_ a variable in the mathematical model. More detail on these are in the [postprocessing documentation](../building_blocks/postprocessing.md).
 
 !!! note
     All parameters, lookups, variables, and global expressions are defined in the model math.

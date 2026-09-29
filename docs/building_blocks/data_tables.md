@@ -265,7 +265,7 @@ In this section we will show some examples of loading data and provide the equiv
     1. To limit repetition, we have defined [templates](../reference/yaml.md#reusing-definitions-through-templates) for our costs.
 
 !!! info "See also"
-    Our [data table loading tutorial][loading-tabular-data] has more examples of loading tabular data into your model.
+    Our [data table loading tutorial](../examples/loading_tabular_data.py) has more examples of loading tabular data into your model.
 
 ## Selecting dimension values and dropping dimensions
 

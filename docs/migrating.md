@@ -128,7 +128,7 @@ supply_file.csv:
     ```
 
 !!! info "See also"
-    [`data_tables` introduction](basic/data_tables.md); [`data_tables` tutorial][loading-tabular-data].
+    [`data_tables` introduction](building_blocks/data_tables.md); [`data_tables` tutorial](examples/loading_tabular_data.py).
 
 ### Negative → positive demand and carrier consumption values
 
@@ -139,7 +139,7 @@ Demand data are now strictly _positive_ numbers and so are the values of the `ca
 When running in Python, building and solving your optimisation problem have been split into two steps:
 
 1. `model.build()` creates the in-memory Python objects that define optimisation problem components (decision variables, constraints, the objective function, ...).
-This creates the [calliope.Model.backend][] object, which you can query and use to [tweak the optimisation problem](advanced/backend_interface.md) before sending it to the solver.
+This creates the [calliope.Model.backend][] object, which you can query and use to [tweak the optimisation problem](how_to/backend_interface.md) before sending it to the solver.
 
 2. `model.solve()` sends the built optimisation problem to the configured solver and, provided an optimal solution is available, creates the [calliope.Model.results][] object which contains the optimal results.
 
@@ -176,7 +176,7 @@ This split means you can change configuration options on-the-fly if you are work
     ```
 
 !!! info "See also"
-    [Configuring your model](basic/config.md).
+    [Configuring your model](building_blocks/config.md).
 
 ### `locations` → `nodes`
 
@@ -345,7 +345,7 @@ Along with [changing the YAML hierarchy of model configuration](#model-and-run--
 * `run.operation.horizon` → `config.build.operate.horizon`
 * `run.operation.use_cap_results` → `config.build.operate.use_cap_results`
 
-We have also moved some _data_ out of the configuration and into the [top-level `data_definitions` key](basic/data_definitions.md):
+We have also moved some _data_ out of the configuration and into the [top-level `data_definitions` key](building_blocks/data_definitions.md):
 
 * `run.objective_options.cost_class` → `data_definitions.objective_cost_weights`
 * `run.bigM` → `data_definitions.bigM`
@@ -594,7 +594,7 @@ As in v0.6, cyclic storage defaults to being _on_ (`cyclic_storage: true`).
 
 parameters such as `energy_cap_equals` have been removed.
 You can reimplement them by setting `_max` and `_min` parameters to the same value.
-The benefit of this is that you can switch between fixing the parameter value (previously `_equals`) and having a range of values (different `_min`/`_max` values) by [updating parameters in the build optimisation model](advanced/backend_interface.md).
+The benefit of this is that you can switch between fixing the parameter value (previously `_equals`) and having a range of values (different `_min`/`_max` values) by [updating parameters in the build optimisation model](how_to/backend_interface.md).
 With `_equals` constraints, it would trigger a completely different mathematical formulation, which you could not then tweak - you had to rebuild the optimisation problem entirely.
 
 === "v0.6"
@@ -642,7 +642,7 @@ We have removed the `supply_plus` and `conversion_plus` base technology classes.
 Instead, `supply_plus` can be effectively represented by using `supply` as the base tech and setting [`include_storage: true`](#explicitly-triggering-milp-and-storage-decision-variablesconstraints) in the model definition.
 
 `conversion_plus` can be represented by using `conversion` as the base tech and using lists of carriers in `carrier_in` and/or `carrier_out`.
-To reimplement arbitrary links between carrier "tiers" (`in_2`, `out_2` etc.), you can [define your own math](user_defined_math/index.md), which is a simultaneously more powerful and more human-readable way of defining complex conversion technologies.
+To reimplement arbitrary links between carrier "tiers" (`in_2`, `out_2` etc.), you can [define your own math](building_blocks/user_defined_math/index.md), which is a simultaneously more powerful and more human-readable way of defining complex conversion technologies.
 
 !!! info "See also"
     [Example of additional math to link carrier flows](examples/urban_scale/index.md#interlude-user-defined-math).
@@ -730,9 +730,9 @@ For instance, here's how you represent a reversible heat pump without additional
 
 ### Group constraints
 
-One driving reason to implement our [own math syntax](user_defined_math/index.md) was to replace our "group constraints".
+One driving reason to implement our [own math syntax](building_blocks/user_defined_math/index.md) was to replace our "group constraints".
 These constraints were becoming more and more complex and it ultimately proved impossible to manage all the different ways users wanted to apply them.
-We have re-implemented all these constraints as tested additional math snippets, which you can explore in our [example gallery](user_defined_math/examples/index.md).
+We have re-implemented all these constraints as tested additional math snippets, which you can explore in our [example gallery](examples/math_gallery/index.md).
 
 ### Configuration options
 
@@ -741,7 +741,7 @@ Instead, data table filepaths should always be relative to the `model.yaml` file
 * We have removed `run.relax_constraint` alongside [removing group constraints](#group-constraints).
 * We have removed `model.file_allowed`, which many users will not even know existed (it was a largely internal configuration option)!
 Instead, it is possible to index any parameter over the time dimension.
-It is up to you to ensure the math formulation is set up to handle this change, which may require [tweaking existing math](user_defined_math/customise.md#adding-your-own-math-to-a-model).
+It is up to you to ensure the math formulation is set up to handle this change, which may require [tweaking existing math](building_blocks/user_defined_math/customise.md#adding-your-own-math-to-a-model).
 * With the [reduced scope of time clustering](#clustering), we have removed the `model.random_seed` and `model.time` options.
 Time resampling is now set with `config.init.resample` and clustering with `config.init.time_cluster`.
 
@@ -759,7 +759,7 @@ Time masking and clustering capabilities have been severely reduced.
 Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.resample.timesteps: 2h`, `config.init.time_cluster: cluster_param` (where `cluster_param` should separately be read in via e.g. `data_tables`; see the national-scale example model).
 Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries.
 
-If you want to mask/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](advanced/time.md#time-clustering) page.
+If you want to mask/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](how_to/time.md#time-clustering) page.
 We made this decision due to the complex nature of time clustering.
 With our former implementation, we were making decisions about the data that the user should have more awareness of and control over.
 It is also a constantly evolving field, but not the focus of Calliope, so we are liable to fall behind on the best-in-class methods.
@@ -770,7 +770,7 @@ It is also a constantly evolving field, but not the focus of Calliope, so we are
 
 On [removing `supply_plus`](#supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have a storage "buffer" for any technology base class.
 This enables any flow into the technology to be stored across timesteps as it is in a `storage` technology.
-We have not yet enabled this for `demand` technologies, but you could [add your own math](user_defined_math/index.md) to enable it.
+We have not yet enabled this for `demand` technologies, but you could [add your own math](building_blocks/user_defined_math/index.md) to enable it.
 
 !!! warning
     Although our math should be set up to handle a storage buffer for a `conversion` or `transmission` technology, we do not have any direct tests to check possible edge cases.
@@ -957,7 +957,7 @@ data_definitions:
 ```
 
 !!! info "See also"
-    [Defining parameters via `data_definitions`](basic/data_definitions.md).
+    [Defining parameters via `data_definitions`](building_blocks/data_definitions.md).
 
 ### Indexing parameters over arbitrary dimensions
 
@@ -992,12 +992,12 @@ nodes:
 
 !!! note
     1. Just defining data for new parameters is not enough to have an effect on the optimisation problem.
-    You also need to [define your own math](user_defined_math/index.md).
+    You also need to [define your own math](building_blocks/user_defined_math/index.md).
     2. Because we process your YAML files to create the `nodes` and `techs` dimensions you will find in your Calliope model, you cannot use `nodes`/`techs` as dimensions of parameters defined through the data definition syntax under the `nodes` or `techs` keys.
     It _is_ possible to refer to `nodes` and `techs` as dimensions under the top-level `data_definitions` key.
 
 !!! info "See also"
-    [Defining parameters when you create your model](basic/data_definitions.md).
+    [Defining parameters when you create your model](building_blocks/data_definitions.md).
 
 ### Loading non-timeseries tabular data
 
@@ -1005,7 +1005,7 @@ With the [change in loading timeseries data](#filedf--data_tables-section), we h
 Technically, you can now define all your data in tables (although we would still recommend a mix of YAML and tabular model definition).
 
 !!! info "See also"
-    `data_tables` [introduction](basic/data_tables.md) and [tutorial][loading-tabular-data].
+    `data_tables` [introduction](building_blocks/data_tables.md) and [tutorial](examples/loading_tabular_data.py).
 
 ### Subsetting and resampling other dimensions than `timesteps`
 
@@ -1024,10 +1024,10 @@ Now, all components of our internal math are defined in a readable YAML syntax t
 
 You can add your own math to update the pre-defined math and to represent the physical system in ways we do not cover in our base math, or to apply new modelling methods and problem types (e.g., pathway or stochastic optimisation)!
 
-When adding your own math, you can add [piecewise linear constraints](user_defined_math/components.md#piecewise-constraints), which is a new type of constraint compared to what could be defined in v0.6.
+When adding your own math, you can add [piecewise linear constraints](building_blocks/user_defined_math/components.md#piecewise-constraints), which is a new type of constraint compared to what could be defined in v0.6.
 
 !!! info "See also"
-    Our [pre-defined](basic/modes.md) and [user-defined](user_defined_math/index.md) math documentation.
+    Our [pre-defined](building_blocks/modes.md) and [user-defined](building_blocks/user_defined_math/index.md) math documentation.
 
 ### Postprocessed arrays
 
