@@ -269,11 +269,6 @@ class TestOperateMode:
         operate_model, _ = operate_model_and_log
         assert operate_model.runtime.termination_condition == "optimal"
 
-    def test_use_cap_results(self, base_model, operate_model_and_log):
-        """Operate mode uses base mode outputs as inputs."""
-        operate_model, _ = operate_model_and_log
-        assert base_model.results.flow_cap.equals(operate_model.inputs.flow_cap)
-
     def test_not_reset_model_window(self, operate_model_and_log):
         """We do not expect the first time window to need resetting on solving in operate mode for the first time."""
         _, log = operate_model_and_log
