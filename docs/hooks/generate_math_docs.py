@@ -34,7 +34,7 @@ For each [objective](#objective), [constraint](#subject-to) and [global expressi
 
 In the expressions, terms in **bold** font are [decision variables](#decision-variables) and terms in *italic* font are [parameters](#parameters).
 The [decision variables](#decision-variables) and [parameters](#parameters) are listed at the end of the page; they also refer back to the global expressions / constraints in which they are used.
-Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe](../creating/data_tables.md).
+Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe][loading-tabular-data-data_tables].
 
 !!! note
 
@@ -54,7 +54,7 @@ def on_files(files: list, config: dict, **kwargs):
         textwrap.dedent(
             """
         Complete base mathematical formulation for a Calliope model.
-        This math is _always_ applied but can be overridden with pre-defined additional math or [your own math](../user_defined_math/index.md).
+        This math is _always_ applied but can be overridden with pre-defined additional math or [your own math](../building_blocks/user_defined_math/index.md).
         """
         ),
         base_documentation,

@@ -69,7 +69,7 @@ Therefore, we reference `timesteps` in our data table _rows_, and `nodes` and `t
 Since all the data refers to the one parameter `sink_use_equals`, we don't add that information in the CSV file, but instead add it on as a dimension when loading the file.
 
 !!! info
-    You can read more about loading data from file in [our dedicated tutorial][loading-tabular-data].
+    You can read more about loading data from file in [our dedicated tutorial](../loading_tabular_data.py).
 
 ### Data definitions for indexed parameters
 
@@ -300,5 +300,5 @@ These revenue possibilities are reflected in the technologies' and locations' de
 
 ---
 !!! info "Where to go next"
-    To try loading and solving the model yourself, move on to the accompanying notebook [here][running-the-urban-scale-example-model].
+    To try loading and solving the model yourself, move on to [the accompanying notebook](notebook.py).
     You can also find a list of all the example models available in Calliope [here][calliope.examples].

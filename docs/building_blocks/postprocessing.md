@@ -17,7 +17,7 @@ Levelised costs are calculated by dividing cost by production: `cost / productio
 The production is based on `flow_out` + `flow_export` and is (temporarily, for calculation purposes only) scaled by weights to be consistent with the model.
 The costs are the `cost` expression from the model results.
 Costs are multiplied by weight in the constraints, so not further adjusted here.
-For the exact implementation, refer to the [systemwide_levelised_cost][calliope.postprocess.systemwide_levelised_cost] function.
+For the exact implementation, refer to the postprocessing section in the [base math reference page][base-math].
 
 !!! tip
     To disable the first part of postprocessing, set `config.solve.postprocessing_active` to `false`.

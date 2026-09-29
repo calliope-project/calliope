@@ -12,9 +12,9 @@
 
 -   :fontawesome-solid-book:{ .lg .middle } __Going deeper__
 
-    * [Building blocks](basic/index.md): more detailed explanation of all the building blocks that make up a Calliope model.
-    * [How to](advanced/index.md): how to troubleshoot and access more advanced features like solver customisation or shadow prices.
-    * [Math gallery](user_defined_math/examples/index.md): gallery of reusable, user-defined math for implementing advanced constraints.
+    * [Building blocks](building_blocks/index.md): more detailed explanation of all the building blocks that make up a Calliope model.
+    * [How to](how_to/index.md): how to troubleshoot and access more advanced features like solver customisation or shadow prices.
+    * [Math gallery](examples/math_gallery/index.md): gallery of reusable, user-defined math for implementing advanced constraints.
 
 -   :material-bookshelf:{ .lg .middle } __Reference__
 

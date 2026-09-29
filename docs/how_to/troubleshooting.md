@@ -55,7 +55,7 @@ model.backend.to_lp('my_saved_model.lp')
 ## Improving solution times by reducing problem size
 
 One way to improve solution time is to reduce the size of a problem.
-Another way is to address potential numerical issues, which is dealt with [further below][understanding-infeasibility-and-numerical-instability].
+Another way is to address potential numerical issues, which is dealt with [further below](#understanding-infeasibility-and-numerical-instability).
 
 ### Number of variables
 
@@ -65,7 +65,7 @@ A reduction of any of these dimensions will reduce the number of resulting decis
 !!! note
     By reducing the number of locations (e.g. merging nearby locations) you also remove the technologies linking those locations to the rest of the system, which is additionally beneficial.
 
-Calliope has the ability to [resample the time dimension](advanced/time.md#time-resolution-adjustment-resampling) (e.g. 1hr -> 2hr intervals), or for the user to [supply their own clusters](advanced/time.md#time-clustering) on which time steps will be grouped together.
+Calliope has the ability to [resample the time dimension](how_to/time.md#time-resolution-adjustment-resampling) (e.g. 1hr -> 2hr intervals), or for the user to [supply their own clusters](how_to/time.md#time-clustering) on which time steps will be grouped together.
 In so doing, significant solution time improvements can be achieved.
 
 !!! info "See also"
@@ -97,7 +97,7 @@ Then, run `operate` mode with these capacities to get a higher resolution operat
 If necessary, this process could be iterated.
 
 !!! info "See also"
-    [Documentation on `operate` mode](basic/modes.md#operate-mode)
+    [Documentation on `operate` mode](building_blocks/modes.md#operate-mode)
 
 ## Influence of solver choice on speed
 
@@ -133,7 +133,7 @@ If introducing binary constraints, although CBC is an improvement on GLPK, acces
     | CPLEX (4 thread)   | 0:02:16  | 0:03:26 |
 
 !!! info "See also"
-    [Specifying custom solver options](advanced/solver.md)
+    [Specifying custom solver options](how_to/solver.md)
 
 ## Understanding infeasibility and numerical instability
 
@@ -190,8 +190,8 @@ By rerunning the backend specifically, you can optimise your problem with these 
 
 !!! info "See also"
     [Backend model API][calliope.backend.backend_model.BackendModel],
-    [Tutorial on interacting with the Backend][building-and-checking-the-optimisation-problem],
-    [Interfacing with the built optimisation problem](advanced/backend_interface.md)
+    [Tutorial on interacting with the Backend](../examples/calliope_model_object.py),
+    [Interfacing with the built optimisation problem](how_to/backend_interface.md)
 
 ## Debugging model errors
 
@@ -205,7 +205,7 @@ If you have a bit more Python experience, you can also consider accessing and wo
 * For input YAML and CSV file processing: `logging.getLogger("calliope.preprocess")`.
 * For processing of math syntax: `logging.getLogger("calliope.backend")`.
 
-For more examples of using loggers, see the [logging notebook example][calliope-logging-examples].
+For more examples of using loggers, see the [logging notebook example](../examples/calliope_logging.py).
 
 ### Validating your math syntax
 
@@ -223,4 +223,4 @@ There are private attributes of the Calliope `Model` object that you can access 
     If using Calliope in a Python session, we recommend reading up on the [Python debugger](https://docs.python.org/3/library/pdb.html) and making use of the [`%debug` magic](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug).
 
 !!! info "See also"
-    We go into the details of the Calliope model in [one of our tutorial notebooks][the-calliope-model-and-backend-objects].
+    We go into the details of the Calliope model in [one of our tutorial notebooks](../examples/calliope_model_object.py).

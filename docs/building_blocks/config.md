@@ -25,7 +25,7 @@ To test your model pipeline, `config.init.subset.timesteps` is a good way to lim
 
 !!! note
     Various capabilities are available to adjust the temporal resolution of a model on-the-fly, both by resampling or using externally-provided clustering.
-    See our [time adjustment page](../advanced/time.md) for more details.
+    See our [time adjustment page](../how_to/time.md) for more details.
 
 !!! info "See also"
     The full set of available configuration options is documented in the [configuration schema][model-configuration-schema].
@@ -75,7 +75,7 @@ In fact, you can use a set of results from models run in `base` mode to initiali
 
 !!! warning
 
-    Both `operate` and `spores` modes are designed to work with our pre-defined math and may stop working if it is overridden with [user-defined math](../user_defined_math/customise.md#re-defining-calliopes-pre-defined-base-math).
+    Both `operate` and `spores` modes are designed to work with our pre-defined math and may stop working if it is overridden with [user-defined math](../building_blocks/user_defined_math/customise.md#re-defining-calliopes-pre-defined-base-math).
 
 ### `config.solve.solver`
 
