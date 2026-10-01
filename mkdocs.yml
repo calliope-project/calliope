@@ -105,7 +105,7 @@ nav:
       - Contributing: contributing.md
       - Version history: version_history.md
   - Getting started:
-      - Download and installation: installation.md
+      - Download and installation: getting_started/installation.md
       - Basic concepts: getting_started/concepts.md
       - Creating a model: getting_started/creating.md
       - Running a model: getting_started/running.md

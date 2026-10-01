@@ -6,7 +6,7 @@
 
 -   :fontawesome-solid-rocket:{ .lg .middle } __Starting quickly__
 
-    * [Download and installation](installation.md): get Calliope installed and ready to use.
+    * [Download and installation](getting_started/installation.md): get Calliope installed and ready to use.
     * [Getting started](getting_started/concepts.md): read through this first to understand Calliope's basic concepts.
     * [Examples & tutorials](examples/index.md): these examples are best understood after you've gone through the basic concepts.
 
