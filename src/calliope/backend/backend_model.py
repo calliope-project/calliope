@@ -196,7 +196,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 self._dataset, references, parsed_component
             )
 
-            if top_level_where.any():
+            if top_level_where.any() or not self._break_early:
                 component_da = self._add_variable(
                     name,
                     top_level_where,
@@ -237,7 +237,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             self._dataset, references, parsed_component
         )
 
-        if top_level_where.any():
+        if top_level_where.any() or not self._break_early:
             component_da = self._eval_equations(
                 name,
                 parsed_component,
@@ -281,7 +281,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             self._dataset, references, parsed_component
         )
 
-        if top_level_where.any():
+        if top_level_where.any() or not self._break_early:
             component_da = self._eval_equations(
                 name,
                 parsed_component,
@@ -340,7 +340,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         )
 
         sense = self.OBJECTIVE_SENSE_DICT[definition.sense]
-        if top_level_where.any():
+        if top_level_where.any() or not self._break_early:
             component_da = self._eval_equations(
                 name,
                 parsed_component,
@@ -390,7 +390,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         top_level_where = self._eval_top_level_where(
             dataset, references, parsed_component
         )
-        if top_level_where.any():
+        if top_level_where.any() or not self._break_early:
             component_da = self._eval_equations(
                 name,
                 parsed_component,

@@ -351,6 +351,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             raise ValueError(f"Invalid `include` option: {include}")
 
         self.include = include
+        # With `include="all"`, also document components that are never valid.
+        self._break_early = include == "valid"
         self.math_strings: dict[str, dict] = defaultdict(lambda: defaultdict(str))
 
     def add_parameter(  # noqa: D102, override
