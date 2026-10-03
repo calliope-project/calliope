@@ -351,8 +351,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             raise ValueError(f"Invalid `include` option: {include}")
 
         self.include = include
-        # With `include="all"`, also document components that are never valid.
-        self._break_early = include == "valid"
         self.math_strings: dict[str, dict] = defaultdict(lambda: defaultdict(str))
 
     def add_parameter(  # noqa: D102, override
@@ -539,6 +537,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     _add_variable = _add_global_expression = _add_constraint = _add_objective = (
         _add_component_passthrough
     )
+
+    def _check_any_component(self, top_level_where: xr.DataArray) -> bool:
+        """Return whether component evaluation should continue."""
+        return self.include == "all" or super()._check_any_component(top_level_where)
 
     def delete_component(  # noqa: D102, override
         self, key: str, component_type: backend_model.ALL_COMPONENTS_T
