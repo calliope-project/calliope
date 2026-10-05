@@ -84,53 +84,6 @@ class HighsBackendModel(backend_model.BackendModel):
         """
         self._instance.setOptionValue("small_matrix_value", 1e-12)
 
-    @staticmethod
-    def _broadcast_to_mask(
-        where: xr.DataArray, *args: xr.DataArray
-    ) -> tuple[xr.DataArray, np.ndarray, list[np.ndarray]]:
-        """Broadcast `where` against `args` and flatten the results.
-
-        Mirrors the broadcasting done by `_apply_func`, so that components added to
-        HiGHS in batches end up in arrays with the same shape, dims and coords as an
-        element-wise apply would produce.
-
-        Args:
-            where (xr.DataArray): Boolean array masking the elements to act on.
-            *args (xr.DataArray): Arrays to broadcast against `where`.
-
-        Returns:
-            tuple[xr.DataArray, np.ndarray, list[np.ndarray]]:
-                The broadcast `where` array (to use as a template for the result),
-                that array's values flattened to 1D, and the flattened values of
-                each array in `args`.
-        """
-        broadcast_where, *broadcast_args = xr.broadcast(where, *args)
-        return (
-            broadcast_where,
-            broadcast_where.values.ravel(),
-            [arg.values.ravel() for arg in broadcast_args],
-        )
-
-    @staticmethod
-    def _scatter_objects(
-        template: xr.DataArray, mask: np.ndarray, objs: list
-    ) -> xr.DataArray:
-        """Place backend objects at the `mask` positions of an otherwise-NaN array.
-
-        Args:
-            template (xr.DataArray): Array whose shape, dims and coords to reuse.
-            mask (np.ndarray): Flattened boolean mask of `template`.
-            objs (list): One backend object per True element of `mask`.
-
-        Returns:
-            xr.DataArray: Object-dtype array of backend objects, NaN where masked out.
-        """
-        flat = np.full(mask.size, np.nan, dtype=object)
-        flat[mask] = objs
-        return xr.DataArray(
-            flat.reshape(template.shape), dims=template.dims, coords=template.coords
-        )
-
     def _add_variable(  # noqa: D102, override
         self,
         name: str,
@@ -143,19 +96,19 @@ class HighsBackendModel(backend_model.BackendModel):
         ub = self._get_variable_bound(bounds.max, name, references)
         template, mask, (lb_vals, ub_vals) = self._broadcast_to_mask(where, lb, ub)
 
-        # Variables are added in one batch: `addVariable` allocates arrays and queries
-        # the model on every call, which dominates build time on large models.
+        # Adding all variables in one batch is much faster in HiGHS than one at a time
+        # Variables get bounds here, but no objective or constraint coefficients
         n_new = int(mask.sum())
         first_col = self._instance.getNumCol()
         status = self._instance.addCols(
             n_new,
-            np.zeros(n_new),
-            np.asarray(lb_vals[mask], dtype=float),
-            np.asarray(ub_vals[mask], dtype=float),
-            0,
-            np.zeros(n_new, dtype=np.int32),
-            np.empty(0, dtype=np.int32),
-            np.empty(0),
+            np.zeros(n_new),  # objective coefficients
+            np.asarray(lb_vals[mask], dtype=float),  # lower bounds
+            np.asarray(ub_vals[mask], dtype=float),  # upper bounds
+            0,  # number of constraint matrix entries
+            np.zeros(n_new, dtype=np.int32),  # matrix column starts
+            np.empty(0, dtype=np.int32),  # matrix row indices
+            np.empty(0),  # matrix values
         )
         if status != highspy.HighsStatus.kOk:
             raise BackendError(
@@ -163,16 +116,15 @@ class HighsBackendModel(backend_model.BackendModel):
             )
         cols = np.arange(first_col, first_col + n_new, dtype=np.int32)
         if domain_type != self.VARIABLE_DOMAIN_DICT["real"]:
-            # Unlike `addVariable`, `addCols` cannot set the variable domain itself.
+            # Integer/binary domains have to be set separately after a batch add
             self._instance.changeColsIntegrality(
                 n_new, cols, np.full(n_new, int(domain_type), dtype=np.uint8)
             )
 
-        return self._scatter_objects(
-            template,
-            mask,
-            [highspy.highs.highs_var(col, self._instance) for col in cols.tolist()],
-        )
+        variables = [
+            highspy.highs.highs_var(col, self._instance) for col in cols.tolist()
+        ]
+        return self._scatter_objects(template, mask, variables)
 
     def _add_global_expression(  # noqa: D102, override
         self, name: str, where: xr.DataArray, expression: xr.DataArray
@@ -190,9 +142,8 @@ class HighsBackendModel(backend_model.BackendModel):
         """Flatten per-row column indices and coefficients into a HiGHS CSR matrix.
 
         Entries are sorted by (row, column) and duplicate columns within a row are
-        summed, mirroring `highs_linear_expression.unique_elements`. HiGHS rejects a
-        row that references the same column twice, so the merge is required, not an
-        optimisation.
+        summed (3x + 3x + 3y -> 6x + 3y). Otherwise, HiGHS would reject a row that
+        references the same column twice.
 
         Args:
             lengths (np.ndarray): Number of entries in each row.
@@ -245,28 +196,23 @@ class HighsBackendModel(backend_model.BackendModel):
             vals.append(expr.vals)
             lengths[idx] = len(expr.idxs)
 
+        # Adding all constraints in one batch, as a compressed sparse row (CSR) matrix,
+        # is much faster in HiGHS than one at a time
         starts, cols, coefs = self._to_csr(lengths, idxs, vals)
-        # Constraints are added in one batch: `addConstr` re-sorts each row's
-        # coefficients and re-queries the model on every call.
         first_row = self._instance.getNumRow()
         status = self._instance.addRows(
             n_new, lower, upper, coefs.size, starts, cols, coefs
         )
         if status != highspy.HighsStatus.kOk:
-            # E.g. a coefficient whose absolute value is below `small_matrix_value`,
-            # which HiGHS drops, flagging it with a warning status.
             raise BackendError(
                 f"Failed to add constraint `{name}` to the HiGHS model (status: {status})."
             )
 
-        return self._scatter_objects(
-            template,
-            mask,
-            [
-                highspy.highs.highs_cons(row, self._instance)
-                for row in range(first_row, first_row + n_new)
-            ],
-        )
+        constraints = [
+            highspy.highs.highs_cons(row, self._instance)
+            for row in range(first_row, first_row + n_new)
+        ]
+        return self._scatter_objects(template, mask, constraints)
 
     @staticmethod
     def _to_highs_objective(
@@ -773,7 +719,7 @@ class HighsShadowPrices(backend_model.ShadowPrices):
             # E.g. MILP solutions: HiGHS returns all-zero (invalid) duals rather
             # than raising, so we have to check validity explicitly.
             return xr.full_like(constraint, np.nan, dtype=float)
-        # Obtain the dual vector exactly once for the whole array rather than element-wise
+        # Fetch all duals once rather than per constraint element
         row_dual = np.asarray(solution.row_dual)
         return self._backend_obj._apply_func(
             lambda cons: row_dual[cons.index], constraint.notnull(), 1, constraint

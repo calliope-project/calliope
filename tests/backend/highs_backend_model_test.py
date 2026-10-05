@@ -172,6 +172,15 @@ class TestNewBackend:
                 },
             )
 
+    def test_add_constraint_without_bounds_error(self, simple_supply_highs_func):
+        """An expression without a comparison operator cannot become a constraint."""
+        backend = simple_supply_highs_func.backend
+        flow_cap = backend.get_variable("flow_cap", as_backend_objs=True)
+        with pytest.raises(
+            exceptions.BackendError, match="constraint bounds must be set"
+        ):
+            backend._add_constraint("foo", flow_cap.notnull(), flow_cap * 2)
+
     def test_new_build_get_constraint_as_vals(self, simple_supply_highs):
         """Constraint bodies cannot be evaluated by the HiGHS backend."""
         with pytest.raises(exceptions.BackendError) as excinfo:
@@ -437,6 +446,20 @@ class TestNewBackend:
         m = build_model({}, "supply_milp,two_hours,investment_costs")
         m.build(backend="highs")
         assert m.backend.has_integer_or_binary_variables
+
+    def test_integer_variable_domain(self):
+        """Batch-added integer variables must have their integrality set in HiGHS."""
+        m = build_model({}, "supply_milp,two_hours,investment_costs")
+        m.build(backend="highs")
+        integrality = m.backend._instance.getLp().integrality_
+        for name, expected in [
+            ("purchased_units", highspy.HighsVarType.kInteger),
+            ("flow_cap", highspy.HighsVarType.kContinuous),
+        ]:
+            var = m.backend.get_variable(name, as_backend_objs=True)
+            cols = [v.index for v in var.values.flat if not pd.isnull(v)]
+            assert cols
+            assert all(integrality[col] == expected for col in cols)
 
     def test_add_piecewise_constraint_not_implemented(self):
         m = build_model(
