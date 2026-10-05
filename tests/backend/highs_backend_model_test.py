@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
 
@@ -171,6 +172,15 @@ class TestNewBackend:
                     ]
                 },
             )
+
+    def test_add_constraint_without_bounds_error(self, simple_supply_highs_func):
+        """An expression without a comparison operator cannot become a constraint."""
+        backend = simple_supply_highs_func.backend
+        flow_cap = backend.get_variable("flow_cap", as_backend_objs=True)
+        with pytest.raises(
+            exceptions.BackendError, match="constraint bounds must be set"
+        ):
+            backend._add_constraint("foo", flow_cap.notnull(), flow_cap * 2)
 
     def test_new_build_get_constraint_as_vals(self, simple_supply_highs):
         """Constraint bodies cannot be evaluated by the HiGHS backend."""
@@ -438,6 +448,20 @@ class TestNewBackend:
         m.build(backend="highs")
         assert m.backend.has_integer_or_binary_variables
 
+    def test_integer_variable_domain(self):
+        """Batch-added integer variables must have their integrality set in HiGHS."""
+        m = build_model({}, "supply_milp,two_hours,investment_costs")
+        m.build(backend="highs")
+        integrality = m.backend._instance.getLp().integrality_
+        for name, expected in [
+            ("purchased_units", highspy.HighsVarType.kInteger),
+            ("flow_cap", highspy.HighsVarType.kContinuous),
+        ]:
+            var = m.backend.get_variable(name, as_backend_objs=True)
+            cols = [v.index for v in var.values.flat if not pd.isnull(v)]
+            assert cols
+            assert all(integrality[col] == expected for col in cols)
+
     def test_add_piecewise_constraint_not_implemented(self):
         m = build_model(
             {
@@ -626,18 +650,34 @@ class TestShadowPrices:
         shadow_prices = supply_milp.backend.shadow_prices.get("system_balance")
         assert shadow_prices.isnull().all()
 
-    def test_get_shadow_price_missing_duals_interface(self, simple_supply, monkeypatch):
-        """Shadow prices must fall back to null if highspy cannot provide duals."""
+    @pytest.mark.parametrize("name", ["system_balance", "balance_demand"])
+    def test_get_shadow_price_matches_per_element_duals(self, simple_supply, name):
+        """Vectorised dual lookup must match highspy's per-element `constrDuals`."""
         simple_supply.solve()
+        backend = simple_supply.backend
+        constraint = backend.get_constraint(name, as_backend_objs=True)
+        expected = backend._apply_func(
+            backend._instance.constrDuals, constraint.notnull(), 1, constraint
+        ).astype(float)
+        shadow_prices = backend.shadow_prices.get(name).astype(float)
+        assert shadow_prices.isnull().equals(constraint.isnull())
+        np.testing.assert_allclose(shadow_prices.values, expected.values)
 
-        def _raise_attribute_error(val):
-            raise AttributeError("no duals available")
+    def test_get_shadow_price_fetches_solution_once(self, simple_supply, monkeypatch):
+        """Duals must be read from one solution object, not once per element."""
+        simple_supply.solve()
+        instance = simple_supply.backend._instance
+        original_get_solution = instance.getSolution
+        calls = []
 
-        monkeypatch.setattr(
-            simple_supply.backend._instance, "constrDuals", _raise_attribute_error
-        )
+        def _counting_get_solution(*args, **kwargs):
+            calls.append(1)
+            return original_get_solution(*args, **kwargs)
+
+        monkeypatch.setattr(instance, "getSolution", _counting_get_solution)
         shadow_prices = simple_supply.backend.shadow_prices.get("system_balance")
-        assert shadow_prices.isnull().all()
+        assert shadow_prices.notnull().all()
+        assert len(calls) == 1
 
     def test_get_shadow_price_unsolved(self, simple_supply):
         """Shadow prices requested before a solve must be null, not garbage."""

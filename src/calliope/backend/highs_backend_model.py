@@ -8,6 +8,7 @@ import bisect
 import importlib
 import logging
 from collections.abc import Iterable
+from itertools import chain
 from pathlib import Path
 from typing import Any, Literal, SupportsFloat, overload
 
@@ -93,11 +94,37 @@ class HighsBackendModel(backend_model.BackendModel):
     ) -> xr.DataArray:
         lb = self._get_variable_bound(bounds.min, name, references)
         ub = self._get_variable_bound(bounds.max, name, references)
-        var = self._apply_func(
-            self._instance.addVariable, where, 1, lb, ub, type=domain_type
-        )
+        template, mask, (lb_vals, ub_vals) = self._broadcast_to_mask(where, lb, ub)
 
-        return var.fillna(value=np.nan)
+        # Adding all variables in one batch is much faster in HiGHS than one at a time
+        # Variables get bounds here, but no objective or constraint coefficients
+        n_new = int(mask.sum())
+        first_col = self._instance.getNumCol()
+        status = self._instance.addCols(
+            n_new,
+            np.zeros(n_new),  # objective coefficients
+            np.asarray(lb_vals[mask], dtype=float),  # lower bounds
+            np.asarray(ub_vals[mask], dtype=float),  # upper bounds
+            0,  # number of constraint matrix entries
+            np.zeros(n_new, dtype=np.int32),  # matrix column starts
+            np.empty(0, dtype=np.int32),  # matrix row indices
+            np.empty(0),  # matrix values
+        )
+        if status != highspy.HighsStatus.kOk:
+            raise BackendError(
+                f"Failed to add variable `{name}` to the HiGHS model (status: {status})."
+            )
+        cols = np.arange(first_col, first_col + n_new, dtype=np.int32)
+        if domain_type != self.VARIABLE_DOMAIN_DICT["real"]:
+            # Integer/binary domains have to be set separately after a batch add
+            self._instance.changeColsIntegrality(
+                n_new, cols, np.full(n_new, int(domain_type), dtype=np.uint8)
+            )
+
+        variables = [
+            highspy.highs.highs_var(col, self._instance) for col in cols.tolist()
+        ]
+        return self._scatter_objects(template, mask, variables)
 
     def _add_global_expression(  # noqa: D102, override
         self, name: str, where: xr.DataArray, expression: xr.DataArray
@@ -108,19 +135,84 @@ class HighsBackendModel(backend_model.BackendModel):
 
         return to_fill
 
+    @staticmethod
+    def _to_csr(
+        lengths: np.ndarray, idxs: list[list[int]], vals: list[list[float]]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Flatten per-row column indices and coefficients into a HiGHS CSR matrix.
+
+        Entries are sorted by (row, column) and duplicate columns within a row are
+        summed (3x + 3x + 3y -> 6x + 3y). Otherwise, HiGHS would reject a row that
+        references the same column twice.
+
+        Args:
+            lengths (np.ndarray): Number of entries in each row.
+            idxs (list[list[int]]): Column indices of each row.
+            vals (list[list[float]]): Coefficients of each row.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray, np.ndarray]:
+                Row start offsets, column indices and coefficients.
+        """
+        n_elements = int(lengths.sum())
+        rows = np.repeat(np.arange(lengths.size), lengths)
+        cols = np.fromiter(chain.from_iterable(idxs), np.int32, n_elements)
+        coefs = np.fromiter(chain.from_iterable(vals), np.float64, n_elements)
+
+        order = np.lexsort((cols, rows))
+        rows, cols, coefs = rows[order], cols[order], coefs[order]
+
+        duplicate = np.zeros(n_elements, dtype=bool)
+        duplicate[1:] = (cols[1:] == cols[:-1]) & (rows[1:] == rows[:-1])
+        if duplicate.any():
+            unique = ~duplicate
+            coefs = np.add.reduceat(coefs, np.flatnonzero(unique))
+            rows, cols = rows[unique], cols[unique]
+
+        starts = np.searchsorted(rows, np.arange(lengths.size)).astype(np.int32)
+        return starts, cols, coefs
+
     def _add_constraint(  # noqa: D102, override
         self, name: str, where: xr.DataArray, expression: xr.DataArray
     ) -> xr.DataArray:
-        try:
-            to_fill = self._apply_func(self._instance.addConstr, where, 1, expression)
-        except Exception as err:
-            # highspy raises a bare `Exception` if HiGHS does not accept a constraint,
-            # e.g. when a coefficient's absolute value is below `small_matrix_value`.
-            raise BackendError(
-                f"Failed to add constraint `{name}` to the HiGHS model: {err}"
-            ) from err
+        template, mask, (expr_vals,) = self._broadcast_to_mask(where, expression)
+        exprs = expr_vals[mask]
+        n_new = exprs.size
 
-        return to_fill
+        lower = np.empty(n_new)
+        upper = np.empty(n_new)
+        lengths = np.empty(n_new, dtype=np.int64)
+        idxs: list[list[int]] = []
+        vals: list[list[float]] = []
+        for idx, expr in enumerate(exprs):
+            expr_bounds = getattr(expr, "bounds", None)
+            if expr_bounds is None:
+                raise BackendError(
+                    f"Failed to add constraint `{name}` to the HiGHS model: "
+                    "constraint bounds must be set via a comparison (>=, ==, <=)."
+                )
+            lower[idx], upper[idx] = expr_bounds
+            idxs.append(expr.idxs)
+            vals.append(expr.vals)
+            lengths[idx] = len(expr.idxs)
+
+        # Adding all constraints in one batch, as a compressed sparse row (CSR) matrix,
+        # is much faster in HiGHS than one at a time
+        starts, cols, coefs = self._to_csr(lengths, idxs, vals)
+        first_row = self._instance.getNumRow()
+        status = self._instance.addRows(
+            n_new, lower, upper, coefs.size, starts, cols, coefs
+        )
+        if status != highspy.HighsStatus.kOk:
+            raise BackendError(
+                f"Failed to add constraint `{name}` to the HiGHS model (status: {status})."
+            )
+
+        constraints = [
+            highspy.highs.highs_cons(row, self._instance)
+            for row in range(first_row, first_row + n_new)
+        ]
+        return self._scatter_objects(template, mask, constraints)
 
     @staticmethod
     def _to_highs_objective(
@@ -622,12 +714,15 @@ class HighsShadowPrices(backend_model.ShadowPrices):
 
     def get(self, name: str) -> xr.DataArray:  # noqa: D102, override
         constraint = self._backend_obj.get_constraint(name, as_backend_objs=True)
-        if not self._backend_obj._instance.getSolution().dual_valid:
+        solution = self._backend_obj._instance.getSolution()
+        if not solution.dual_valid:
             # E.g. MILP solutions: HiGHS returns all-zero (invalid) duals rather
             # than raising, so we have to check validity explicitly.
             return xr.full_like(constraint, np.nan, dtype=float)
+        # Fetch all duals once rather than per constraint element
+        row_dual = np.asarray(solution.row_dual)
         return self._backend_obj._apply_func(
-            self._duals_from_highs_constraint, constraint.notnull(), 1, constraint
+            lambda cons: row_dual[cons.index], constraint.notnull(), 1, constraint
         )
 
     def activate(self):
@@ -646,11 +741,3 @@ class HighsShadowPrices(backend_model.ShadowPrices):
     @property
     def available_constraints(self) -> Iterable:  # noqa: D102, override
         return self._backend_obj.constraints.data_vars
-
-    def _duals_from_highs_constraint(self, val: highspy.highs.highs_cons) -> float:
-        try:
-            dual = self._backend_obj._instance.constrDuals(val)  # type: ignore
-        except AttributeError:
-            return np.nan
-        else:
-            return dual
