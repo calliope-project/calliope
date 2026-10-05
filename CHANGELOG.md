@@ -1,8 +1,15 @@
-## 0.7.1 (dev)
+## 0.7.1.dev (Unreleased)
 
-|fixed| Shadow price extraction in the HiGHS backend no longer iterates over all constraint elements
+### User-facing changes
 
-|fixed| The HiGHS backend batches variable and constraint construction, leading to model build times on a similar order as the Gurobi backend
+|fixed| documented references to dropped config item `use_cap_results` for passing results from a capacity expansion run to an operate run (#903).
+Now correctly defines the recommended approach to re-initialise the model with the `operate` mode config flag.
+
+|fixed| math documentation is no longer empty for components whose `where` string is never valid in the documented model, when including all math (`include="all"`) (#902).
+
+### Internal changes
+
+|fixed| Improved HiGHS backend: faster shadow price extraction; batched variable and constraint construction, leading to model build times on a similar order as the Gurobi backend
 
 ## 0.7.0 (2026-09-01)
 

@@ -343,7 +343,11 @@ Along with [changing the YAML hierarchy of model configuration](#model-and-run--
 * `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.resample.timesteps: '6h'` (resampling other dimensions is now also possible)
 * `run.operation.window` → `config.build.operate.window`
 * `run.operation.horizon` → `config.build.operate.horizon`
-* `run.operation.use_cap_results` → `config.build.operate.use_cap_results`
+* `run.operation.use_cap_results` → removed in favour of reinitialising and passing capacity results explicitly:
+  ```python
+  cap_results = m.results[[i for i in m.math.init["operate"]["parameters"] if i in m.results]]
+  m_operate = calliope.Model(m.inputs.assign(cap_results), m.all_attrs(), mode="operate")
+  ```
 
 We have also moved some _data_ out of the configuration and into the [top-level `data_definitions` key](basic/data_definitions.md):
 
