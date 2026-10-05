@@ -538,6 +538,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         _add_component_passthrough
     )
 
+    def _check_any_component(self, top_level_where: xr.DataArray) -> bool:
+        """Return whether component evaluation should continue."""
+        return self.include == "all" or super()._check_any_component(top_level_where)
+
     def delete_component(  # noqa: D102, override
         self, key: str, component_type: backend_model.ALL_COMPONENTS_T
     ) -> None:
