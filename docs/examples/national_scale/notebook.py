@@ -265,10 +265,10 @@ fig = px.line_map(
     height=300,
 )
 fig.update_layout(
-    mapbox_style="open-street-map",
-    mapbox_zoom=4,
-    mapbox_center_lat=df_coords.latitude.mean(),
-    mapbox_center_lon=df_coords.longitude.mean(),
+    map_style="open-street-map",
+    map_zoom=4,
+    map_center_lat=df_coords.latitude.mean(),
+    map_center_lon=df_coords.longitude.mean(),
     margin={"r": 0, "t": 0, "l": 0, "b": 0},
 )
 
