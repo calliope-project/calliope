@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| documentation directory structure to match URLs to the navigation branch names (#892).
+
 |fixed| documented references to dropped config item `use_cap_results` for passing results from a capacity expansion run to an operate run (#903).
 Now correctly defines the recommended approach to re-initialise the model with the `operate` mode config flag.
 

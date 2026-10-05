@@ -54,7 +54,7 @@ We will first look at that in more detail, before moving on to the model definit
 
 ## Model configuration
 
-The [model configuration](../basic/config.md) specifies the information Calliope needs to initialise, build, and solve the model.
+The [model configuration](../building_blocks/config.md) specifies the information Calliope needs to initialise, build, and solve the model.
 This includes for example the choice of solver with which to actually solve the mathematical optimisation problem.
 Configuration split into `init`, `build`, and `solve`, which mirrors the three main stages through which Calliope creates and runs a model.
 A more complete example would look like this:
@@ -71,11 +71,11 @@ config:
     solver: cbc
 ```
 
-More details on what is available in the model configuration is in the [model configuration documentation](../basic/config.md).
+More details on what is available in the model configuration is in the [model configuration documentation](../building_blocks/config.md).
 
 ## Techs
 
-The model's [techs](../basic/techs.md) (technologies) are defined under the `techs` top-level key.
+The model's [techs](../building_blocks/techs.md) (technologies) are defined under the `techs` top-level key.
 Each technology must specify its `base_tech`, which defines its basic characteristics (i.e., its decision variables and constraints):
 
 * `supply`: Draws from a source to produce a carrier.
@@ -117,13 +117,13 @@ You can, but do not need to, enclose them in quotation marks.
 However, in this example using quotation marks is important.
 Without them, the colour code would be interpreted as a YAML comment due to the `#` character!
 2. The period at the start of `.inf` will ensure that this is read as a floating-point number (`float`) type rather than as the text string `"inf"`.
-3. Costs require us to explicitly define data in the [data definition syntax](../basic/data_definitions.md) format so that we can define their mandatory cost class (in this case: `monetary`).
+3. Costs require us to explicitly define data in the [data definition syntax](../building_blocks/data_definitions.md) format so that we can define their mandatory cost class (in this case: `monetary`).
 
-More details on how techs are defined is in the [techs documentation](../basic/techs.md).
+More details on how techs are defined is in the [techs documentation](../building_blocks/techs.md).
 
 ## Nodes
 
-The model's [nodes](../basic/nodes.md) are the locations in space where technologies can be placed and are defined under the `nodes` top-level key.
+The model's [nodes](../building_blocks/nodes.md) are the locations in space where technologies can be placed and are defined under the `nodes` top-level key.
 A model can specify any number of nodes.
 These nodes can be linked together by transmission technologies.
 By consuming a carrier in one node and outputting it in another, linked node, transmission technologies allow resources to be drawn from the system at a different node from where they are brought into it.
@@ -149,7 +149,7 @@ Note that:
 
 If given, node-specific parameters supersede any parameters given at the technology level. In the above example, `flow_cap_max` for the tech `ccgt` in the node `region` will supersede any model-wide value for `ccgt`'s `flow_cap_max` defined in the `techs` top-level key.
 
-More details on how techs are defined is in the [nodes documentation](../basic/nodes.md).
+More details on how techs are defined is in the [nodes documentation](../building_blocks/nodes.md).
 
 ## Transmission techs
 
@@ -198,17 +198,17 @@ data_tables:
       inputs: source_use_equals
 ```
 
-More detail on how to use this powerful feature and how to structure your CSV files is in the [data tables documentation](../basic/data_tables.md).
+More detail on how to use this powerful feature and how to structure your CSV files is in the [data tables documentation](../building_blocks/data_tables.md).
 
 The [examples and tutorials section](../examples/index.md) is also particularly useful to see in small example models how this feature works.
 
 ## Data definitions
 
 Sometimes we want to define data neither via the node-specific or tech-specific ways outlined above, nor read data in as data tables from separate files.
-We can also specify model data via [data definitions](../basic/data_definitions.md), with the `data_definitions` top-level key.
-This is particularly useful when making use of more advanced functionality such as [user-defined custom math](../user_defined_math/index.md), where we may want to introduce custom parameters.
+We can also specify model data via [data definitions](../building_blocks/data_definitions.md), with the `data_definitions` top-level key.
+This is particularly useful when making use of more advanced functionality such as [user-defined custom math](../building_blocks/user_defined_math/index.md), where we may want to introduce custom parameters.
 
-More details on how techs are defined is in the [data definitions documentation](../basic/data_definitions.md).
+More details on how techs are defined is in the [data definitions documentation](../building_blocks/data_definitions.md).
 
 !!! note "Three kinds of parameters: tech-specific, node-specific and indexed parameters"
     Above, we describe how you can directly define data for tech-specific parameters within `techs` and node-specific parameters within `nodes`.
@@ -227,7 +227,7 @@ The `scenarios` can combine several `overrides`.
 For example, you might also want to explore different future cost developments, and define `overrides` for those.
 In your scenarios, you can then combine overrides for a specific realisation of future costs and a specific grid configuration.
 
-For more details on how these are used in practice, refer to the example models, and to the [overrides and scenarios documentation](../basic/scenarios.md).
+For more details on how these are used in practice, refer to the example models, and to the [overrides and scenarios documentation](../building_blocks/scenarios.md).
 
 
 ## Creating a new model from a built-in template

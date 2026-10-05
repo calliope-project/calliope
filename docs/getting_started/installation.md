@@ -20,7 +20,7 @@ We recommend two installation paths depending on your use-case:
 1. **`uv` or `pip`**: use pip or [`uv`](https://docs.astral.sh/uv/) for fast Python package installation.
    You will need to ensure you have all non-Python libraries installed and available if taking this approach.
 
-If you are interested in developing Calliope, see our [contributing page](./contributing.md) for specific installation instructions.
+If you are interested in developing Calliope, see our [contributing page](../contributing.md) for specific installation instructions.
 
 ### `conda` or `pixi` (recommended)
 
@@ -79,7 +79,7 @@ This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.read
 ### HiGHS
 
 [HiGHS](https://highs.dev/) is free and open-source and is installed automatically with Calliope (via the [highspy](https://pypi.org/project/highspy/) package).
-Unlike the other solvers listed here, it cannot be used with Pyomo, only through its own [optimisation problem backend](./advanced/backend_choice.md) - this is due to the HiGHS interface not being supported by the Pyomo kernel interface, which we use.
+Unlike the other solvers listed here, it cannot be used with Pyomo, only through its own [optimisation problem backend](../how_to/backend_choice.md) - this is due to the HiGHS interface not being supported by the Pyomo kernel interface, which we use.
 Set `#!yaml config.build.backend: highs` to use it.
 
 ### CBC
@@ -116,7 +116,7 @@ If you do not have it in your working environment (i.e., there is no,thing liste
     conda install conda-forge::glpk
     ```
 
-Unlike [CBC](#cbc), it is possible to extract [shadow prices](./advanced/shadow_prices.md) from a model solved with GLPK, which is why you may with to use it instead of CBC.
+Unlike [CBC](#cbc), it is possible to extract [shadow prices](../how_to/shadow_prices.md) from a model solved with GLPK, which is why you may with to use it instead of CBC.
 
 ### Gurobi
 
@@ -140,7 +140,7 @@ The Gurobi solver interface can be installed on all platforms:
 This also gives you access to the `grbgetkey` command in your command line, which you will need to activate your license for use locally.
 
 !!! note
-    If using the Gurobi solver, you can also leverage the reduced time and memory consumption of our [Gurobi optimisation problem backend](advanced/backend_choice.md) - this circumvents Pyomo entirely.
+    If using the Gurobi solver, you can also leverage the reduced time and memory consumption of our [Gurobi optimisation problem backend](../how_to/backend_choice.md) - this circumvents Pyomo entirely.
 
 ### CPLEX
 
@@ -155,4 +155,4 @@ IBM offers academic licenses for CPLEX; refer to the IBM website for details.
 
 Solvers typically allow users to specify custom `solver_options`, by which you may tailor their performance to what
 best suits the features of the model you are working with.
-For further nformation, see our guide on [solver options customisation](advanced/solver.md).
+For further nformation, see our guide on [solver options customisation](../how_to/solver.md).

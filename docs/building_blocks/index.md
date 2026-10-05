@@ -30,10 +30,10 @@ If you are new to Calliope, work through the [getting started](../getting_starte
 
     ---
 
-    * [Defining your own math](../user_defined_math/index.md): extending Calliope's base math.
-    * [Math components](../user_defined_math/components.md): variables, constraints, expressions, and objectives.
-    * [Math syntax](../user_defined_math/syntax.md): the syntax for writing math expressions.
-    * [Helper functions](../user_defined_math/helper_functions.md): functions available within math.
-    * [Adding your own math to a model](../user_defined_math/customise.md): applying custom math to a model.
+    * [Defining your own math](../building_blocks/user_defined_math/index.md): extending Calliope's base math.
+    * [Math components](../building_blocks/user_defined_math/components.md): variables, constraints, expressions, and objectives.
+    * [Math syntax](../building_blocks/user_defined_math/syntax.md): the syntax for writing math expressions.
+    * [Helper functions](../building_blocks/user_defined_math/helper_functions.md): functions available within math.
+    * [Adding your own math to a model](../building_blocks/user_defined_math/customise.md): applying custom math to a model.
 
 </div>
