@@ -193,6 +193,30 @@ class TestLatexBackendModel:
             "math_string" not in valid_latex_backend.constraints["invalid_constr"].attrs
         )
 
+    @pytest.mark.parametrize(
+        ("group", "definition"),
+        [
+            ("variables", {"bounds": {"min": 0, "max": 1}}),
+            (
+                "global_expressions",
+                {"equations": [{"expression": "multi_dim_var + no_dims"}]},
+            ),
+            (
+                "constraints",
+                {"equations": [{"expression": "multi_dim_var >= no_dims"}]},
+            ),
+        ],
+    )
+    def test_add_component_not_valid_include_all(
+        self, dummy_latex_backend_model, group, definition
+    ):
+        """With `include="all"`, math is generated even if `where` is never valid."""
+        name = f"invalid_{group}_include_all"
+        adder = getattr(dummy_latex_backend_model, f"add_{group.removesuffix('s')}")
+        adder(name, {"foreach": ["nodes", "techs"], "where": "False", **definition})
+        math_string = dummy_latex_backend_model.math_strings[group][name]
+        assert r"\forall{}" in math_string
+
     def test_add_constraint_one_not_valid(self, valid_latex_backend):
         valid_latex_backend.add_constraint(
             "valid_constr",
