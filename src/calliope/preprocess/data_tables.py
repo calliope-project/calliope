@@ -94,7 +94,7 @@ class DataTable:
         init_params = self.PARAMS_TO_INITIALISE_YAML.intersection(
             self._vars_with_dims({"techs"})
         )
-        base_tech_dict: dict[str, dict] = {}
+        base_tech_dict: dict[Hashable, dict] = {}
         if init_params:
             df = self.dataset[init_params].to_dataframe().dropna(how="all").T
             base_tech_dict = {
