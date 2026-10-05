@@ -3,6 +3,7 @@
 """Preprocessing functionality."""
 
 import logging
+from collections.abc import Hashable, Iterable
 from pathlib import Path
 from typing import Literal
 
@@ -14,6 +15,7 @@ from calliope import exceptions
 from calliope.io import load_config
 from calliope.schemas.data_table_schema import CalliopeDataTable
 from calliope.schemas.dimension_data_schema import CalliopeNodes, CalliopeTechs
+from calliope.util import NODE_TECH
 from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
@@ -89,10 +91,12 @@ class DataTable:
         tech_dict = CalliopeTechs.model_validate(
             {k: {} for k in self.dataset.get("techs", xr.DataArray([])).values}
         )
-        params = self.PARAMS_TO_INITIALISE_YAML.intersection(self.dataset.data_vars)
-        base_tech_dict: dict[str, dict] = {}
-        if params:
-            df = self.dataset[params].to_dataframe().dropna(how="all").T
+        init_params = self.PARAMS_TO_INITIALISE_YAML.intersection(
+            self._vars_with_dims({"techs"})
+        )
+        base_tech_dict: dict[Hashable, dict] = {}
+        if init_params:
+            df = self.dataset[init_params].to_dataframe().dropna(how="all").T
             base_tech_dict = {
                 col: series.dropna().to_dict() for col, series in df.items()
             }
@@ -112,41 +116,51 @@ class DataTable:
                 Technology definition dictionary which is a union of any YAML definition and the result of solving tech definition across all data tables.
                 Technologies should have their definition inheritance resolved.
         """
-        node_tech_vars = self.dataset[
-            [
-                k
-                for k, v in self.dataset.data_vars.items()
-                if "nodes" in v.dims and "techs" in v.dims
-            ]
-        ]
+        node_tech_vars = self._vars_with_dims(NODE_TECH, exact=False)
         if not node_tech_vars:
             return CalliopeNodes()
 
-        other_dims = [i for i in node_tech_vars.dims if i not in ["nodes", "techs"]]
-
-        is_defined = node_tech_vars.notnull().any(other_dims).to_dataframe().any(axis=1)
-
-        techs_by_node: dict[str, list] = {}
-        if not (defined_node_techs := is_defined[is_defined]).empty:
-            techs_by_node = (
-                defined_node_techs.index.to_frame(index=False)
-                .groupby("nodes")["techs"]
-                .apply(list)
-                .to_dict()
-            )
-        node_tech_def = CalliopeNodes.model_validate(
-            {i: {"techs": {}} for i in self.dataset.nodes.values}
+        node_tech_ds = self.dataset[node_tech_vars]
+        other_dims = set(node_tech_ds.dims) - set(NODE_TECH)
+        is_defined = (
+            node_tech_ds.notnull()
+            .any(other_dims)
+            .to_dataframe(dim_order=NODE_TECH)
+            .any(axis=1)
         )
-        for node in node_tech_def.root:
-            for tech in techs_by_node.get(node, []):
-                if tech not in techs_incl_inheritance.root:
-                    continue
-                if techs_incl_inheritance[tech].base_tech == "transmission":
-                    self._raise_error(
-                        "Cannot define transmission technology data over the `nodes` dimension"
-                    )
-                else:
-                    node_tech_def = node_tech_def.update({node: {"techs": {tech: {}}}})
+        defined_node_techs = [
+            (node, tech)
+            for node, tech in is_defined[is_defined].index
+            if tech in techs_incl_inheritance.root
+        ]
+
+        transmission_node_techs = [
+            (node, tech)
+            for node, tech in defined_node_techs
+            if techs_incl_inheritance[tech].base_tech == "transmission"
+        ]
+        if transmission_node_techs:
+            self._raise_error(
+                "Cannot define transmission technology data over the `nodes` dimension. "
+                f"Found: {transmission_node_techs}"
+            )
+
+        init_params = self.PARAMS_TO_INITIALISE_YAML.intersection(
+            self._vars_with_dims(NODE_TECH)
+        )
+        init_data: dict[Hashable, dict] = {}
+        if init_params:
+            init_df = self.dataset[sorted(init_params)].to_dataframe(
+                dim_order=NODE_TECH
+            )
+            init_data = {idx: row.dropna().to_dict() for idx, row in init_df.iterrows()}
+
+        node_tech_dict: dict[str, dict] = {
+            node: {"techs": {}} for node in self.dataset.nodes.values
+        }
+        for node, tech in defined_node_techs:
+            node_tech_dict[node]["techs"][tech] = init_data.get((node, tech), {})
+        node_tech_def = CalliopeNodes.model_validate(node_tech_dict)
 
         return node_tech_def
 
@@ -240,7 +254,6 @@ class DataTable:
             )
         header = [0] if self.columns is None else list(range(len(self.columns)))
         index_col = None if self.index is None else list(range(len(self.index)))
-
         filepath = relative_path(self.model_definition_path, filename)
         df = pd.read_csv(filepath, encoding="utf-8", header=header, index_col=index_col)
         return df
@@ -355,6 +368,26 @@ class DataTable:
             exceptions.print_warnings_and_raise_errors(
                 errors=list(extra_info), during=f"data table loading ({self.name})"
             )
+
+    def _vars_with_dims(self, dims: Iterable[str], exact: bool = True) -> list:
+        """Get names of data variables in the dataset that are indexed over `dims`.
+
+        Args:
+            dims (set[str]): Dimensions to search for.
+            exact (bool, optional):
+                If True, only return variables indexed over exactly `dims`.
+                If False, return variables indexed over at least `dims`.
+                Defaults to True.
+
+        Returns:
+            list[str]: Matching data variable names.
+        """
+        dims = set(dims)
+        return [
+            k
+            for k, v in self.dataset.data_vars.items()
+            if (set(v.dims) == dims if exact else dims.issubset(v.dims))
+        ]
 
     def _check_processed_tdf(self, tdf: pd.Series):
         if "inputs" not in tdf.index.names:

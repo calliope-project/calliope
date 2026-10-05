@@ -21,6 +21,7 @@ from calliope.preprocess import (
     model_math,
 )
 from calliope.schemas import CalliopeAttrs, ModelStructure, config_schema
+from calliope.util import NODE_TECH
 from calliope.util.logging import log_time
 
 if TYPE_CHECKING:
@@ -754,7 +755,7 @@ class Model(ModelStructure):
 
             # Make sure that penalties are applied only to non-negligible deployments of capacity
             min_relevant_size = spores_config.score_threshold_factor * previous_cap.max(
-                ["nodes", "techs"]
+                NODE_TECH
             )
 
             new_score = (
