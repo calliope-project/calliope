@@ -33,6 +33,49 @@ To test your model pipeline, `config.init.subset.timesteps` is a good way to lim
 
 ## Deep-dive into some key configuration options
 
+### `config.init.mode`
+
+The `init.mode` option specifies pre-defined mathematical formulations that require additional processing.
+A model can run in `base`, `operate`, or `spores` mode.
+
+* In `base` mode, the default option, Calliope will not execute any additional processing beyond building the mathematical problem defined in `config.init.base_math`.
+* In `operate` mode, capacities are fixed and the system is operated with a receding horizon control algorithm.
+* In `spores` mode, the model is first run in `base` mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location (node).
+
+In most cases, you will want to use the `base` mode.
+
+!!! note "Start other modes from `base` run results"
+    You can use a set of results from models run in `base` mode to initialise both the `operate` and `spores` modes.
+    In both cases, you re-initialise your model with the new `mode` selected.
+
+    === "`operate`"
+
+        ```python
+        m = calliope.read_yaml(..., mode="base")
+        m.build()
+        m.solve()
+
+        cap_results = m.results[[i for i in m.math.init["operate"]["parameters"] if i in m.results]]
+        m_operate = calliope.Model(m.inputs.assign(cap_results), m.all_attrs(), mode="operate")
+        m_operate.build()
+        m_operate.solve()
+        ```
+
+    === "`spores`"
+
+        ```python
+        m = calliope.read_yaml(..., mode="base")
+        m.build()
+        m.solve()
+
+        m_spores = calliope.Model(m.inputs, m.attrs, mode="spores")
+        m_spores.build(spores={"use_latest_results": True})
+        ```
+
+!!! warning
+
+    Both `operate` and `spores` modes are designed to work with our pre-defined math and may stop working if it is overridden with [user-defined math](user_defined_math/customise.md#re-defining-calliopes-pre-defined-base-math).
+
 ### `config.build.backend`
 
 By default, the optimisation problem is built using the [Pyomo](https://www.pyomo.org/) library.
@@ -60,22 +103,6 @@ These have a very high cost associated with its use, so will only appear when ab
     It is possible to make model convergence very slow if bigM is set too high.
     Default bigM is 1x10$^9$, but should be close to the maximum total system cost that you can imagine.
     This is perhaps closer to 1x10$^6$ for urban scale models and can be as low as 1x10$^4$ if you have re-scaled your data in advance.
-
-### `config.build.mode`
-
-The `build.mode` option specifies pre-defined mathematical formulations that require additional processing.
-A model can run in `base`, `operate`, or `spores` mode.
-
-* In `base` mode, the default option, Calliope will not execute any additional processing beyond building the mathematical problem defined in `config.init.base_math`.
-* In `operate` mode, capacities are fixed and the system is operated with a receding horizon control algorithm.
-* In `spores` mode, the model is first run in `base` mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location (node).
-
-In most cases, you will want to use the `base` mode.
-In fact, you can use a set of results from models run in `base` mode to initialise both the `operate` (via`config.build.operate.use_cap_results`) and `spores` (via `config.solve.spores.use_latest_results`) modes.
-
-!!! warning
-
-    Both `operate` and `spores` modes are designed to work with our pre-defined math and may stop working if it is overridden with [user-defined math](../building_blocks/user_defined_math/customise.md#re-defining-calliopes-pre-defined-base-math).
 
 ### `config.solve.solver`
 

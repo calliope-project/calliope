@@ -116,7 +116,6 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         self.config = build_config
         self.math = math
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
-        self._break_early: bool = True
         self.inputs = self._add_inputs(inputs)
         self.objective: str = self.config.objective
 
@@ -196,7 +195,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 self._dataset, references, parsed_component
             )
 
-            if top_level_where.any():
+            if self._check_any_component(top_level_where):
                 component_da = self._add_variable(
                     name,
                     top_level_where,
@@ -237,7 +236,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             self._dataset, references, parsed_component
         )
 
-        if top_level_where.any():
+        if self._check_any_component(top_level_where):
             component_da = self._eval_equations(
                 name,
                 parsed_component,
@@ -281,7 +280,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             self._dataset, references, parsed_component
         )
 
-        if top_level_where.any():
+        if self._check_any_component(top_level_where):
             component_da = self._eval_equations(
                 name,
                 parsed_component,
@@ -340,7 +339,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         )
 
         sense = self.OBJECTIVE_SENSE_DICT[definition.sense]
-        if top_level_where.any():
+        if self._check_any_component(top_level_where):
             component_da = self._eval_equations(
                 name,
                 parsed_component,
@@ -390,7 +389,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         top_level_where = self._eval_top_level_where(
             dataset, references, parsed_component
         )
-        if top_level_where.any():
+        if self._check_any_component(top_level_where):
             component_da = self._eval_equations(
                 name,
                 parsed_component,
@@ -402,6 +401,10 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
         else:
             component_da = default_empty
         return component_da.astype(float).assign_attrs(references=references)
+
+    def _check_any_component(self, top_level_where: xr.DataArray) -> bool:
+        """Return whether component evaluation should continue."""
+        return bool(top_level_where.any())
 
     def _eval_top_level_where(
         self,
