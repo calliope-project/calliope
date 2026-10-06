@@ -4,6 +4,7 @@ The most basic way to run a model programmatically from within a Python interpre
 
 ```python
 import calliope
+
 model = calliope.read_yaml("path/to/model.yaml")
 model.build()
 model.solve()
@@ -42,8 +43,7 @@ There are two ways to override a base model when running in Python which are ana
 
     ```python
     model = calliope.read_yaml(
-        "model.yaml",
-        override_dict={"config.solve.solver": "gurobi"}
+        "model.yaml", override_dict={"config.solve.solver": "gurobi"}
     )
     ```
 

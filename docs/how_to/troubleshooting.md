@@ -49,7 +49,7 @@ or in Python:
 
 ```python
 model.build()
-model.backend.to_lp('my_saved_model.lp')
+model.backend.to_lp("my_saved_model.lp")
 ```
 
 ## Improving solution times by reducing problem size
