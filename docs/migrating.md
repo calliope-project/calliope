@@ -170,7 +170,10 @@ This split means you can change configuration options on-the-fly if you are work
 
     ```python
     import calliope
-    model = calliope.read_yaml("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
+
+    model = calliope.read_yaml(
+        "path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]}
+    )
     model.build(mode="base")
     model.solve(solver="cbc")
     ```
@@ -345,7 +348,9 @@ Along with [changing the YAML hierarchy of model configuration](#model-and-run--
 * `run.operation.horizon` → `config.build.operate.horizon`
 * `run.operation.use_cap_results` → removed in favour of reinitialising and passing capacity results explicitly:
   ```python
-  cap_results = m.results[[i for i in m.math.init["operate"]["parameters"] if i in m.results]]
+  cap_results = m.results[
+      [i for i in m.math.init["operate"]["parameters"] if i in m.results]
+  ]
   m_operate = calliope.Model(m.inputs.assign(cap_results), m.all_attrs(), mode="operate")
   ```
 
