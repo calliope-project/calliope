@@ -83,7 +83,7 @@ model.inputs.flow_cap_max.broadcast_like(model.inputs.definition_matrix).where(
 Calliope provides functionality to read a previously-saved model from a single NetCDF file:
 
 ```python
-solved_model = calliope.read_netcdf('my_saved_model.nc')
+solved_model = calliope.read_netcdf("my_saved_model.nc")
 ```
 
 Once loaded, the input and results data can be accessed as above (i.e., `solved_model.inputs` and `solved_model.results`).

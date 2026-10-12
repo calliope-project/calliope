@@ -207,7 +207,7 @@ This is useful to further explore the option space, restart a run that was stopp
     model = calliope.read_yaml(...)
 
     model.build(mode="spores")
-    model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
+    model.solve(spores={"number": 5})  # `model.results` will now have 5 SPORES run results
 
     # `model.results` will now have an additional 5 SPORES run results (6-10)
     model.solve(spores={"use_latest_results": True, "number": 10})
@@ -223,12 +223,14 @@ This is useful to further explore the option space, restart a run that was stopp
     model = calliope.read_yaml(...)
 
     model.build(mode="spores")
-    model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
+    model.solve(spores={"number": 5})  # `model.results` will now have 5 SPORES run results
 
     model.backend.update_input("spores_slack", xr.DataArray(0.3))
 
     # `model.results` will now have an additional 5 SPORES run results (6-10)
-    model.solve(spores={"use_latest_results": True, "number": 10, "scoring_algorithm": "random"})
+    model.solve(
+        spores={"use_latest_results": True, "number": 10, "scoring_algorithm": "random"}
+    )
     ```
 
     3. Restarting after premature failure, assuming [results were being saved per SPORE](#saving-results-per-spore).
@@ -245,7 +247,9 @@ This is useful to further explore the option space, restart a run that was stopp
 
     # Create a new calliope model that merges the input and results data
     m_rerun = calliope.Model(
-        inputs=m_init.inputs, results=m_most_recent.results, **m_most_recent.dump_all_attrs()
+        inputs=m_init.inputs,
+        results=m_most_recent.results,
+        **m_most_recent.dump_all_attrs(),
     )
 
     # Run use the latest SPORE results as the starting point

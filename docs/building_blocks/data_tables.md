@@ -529,12 +529,12 @@ To load from a [pandas.DataFrame][], you can specify the `data_table_dfs` dictio
 ```python
 import calliope
 import pandas as pd
+
 df1 = pd.DataFrame(...)
 df2 = pd.DataFrame(...)
 
 model = calliope.read_yaml(
-    "path/to/model.yaml",
-    data_table_dfs={"data_source_1": df1, "data_source_2": df2}
+    "path/to/model.yaml", data_table_dfs={"data_source_1": df1, "data_source_2": df2}
 )
 ```
 
