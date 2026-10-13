@@ -42,7 +42,7 @@ plugins:
   - mkdocs-jupyter:
       enabled: !ENV [FULL_BUILD, true]
       include: ["examples/**/*.py", "examples/*.py"]
-      ignore: ["examples/.*/*.py"]
+      ignore: ["examples/.*/*.py", "*.md"]
       allow_errors: false
       include_source: True
       execute: true

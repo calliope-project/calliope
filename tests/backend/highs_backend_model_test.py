@@ -14,14 +14,16 @@ highspy = pytest.importorskip("highspy")
 
 class TestNewBackend:
     @pytest.fixture(scope="class")
-    def simple_supply_longnames(self):
+    @classmethod
+    def simple_supply_longnames(cls):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build(backend="highs")
         m.backend.verbose_strings()
         return m
 
     @pytest.fixture(scope="class")
-    def simple_supply_highs(self):
+    @classmethod
+    def simple_supply_highs(cls):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build(backend="highs")
         m.solve()
