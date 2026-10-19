@@ -101,6 +101,41 @@ class TestScenarioOverrides:
             excinfo, "(scenarios, scenario_1) | Unrecognised override name: foo."
         )
 
+    def test_circular_scenario_error(self):
+        """Test that a self-referencing scenario raises a clear error, not RecursionError."""
+        override = read_rich_yaml(
+            """
+            scenarios:
+                making_a_mess: ['making_a_mess']
+            """
+        )
+        with pytest.raises(ModelError) as excinfo:
+            build_model(override_dict=override, scenario="making_a_mess")
+
+        assert check_error_or_warning(
+            excinfo,
+            "(scenarios, making_a_mess) | Circular scenario reference detected: "
+            "making_a_mess -> making_a_mess.",
+        )
+
+    def test_indirect_circular_scenario_error(self):
+        """Test that an indirectly circular scenario reference raises a clear error."""
+        override = read_rich_yaml(
+            """
+            scenarios:
+                scenario_1: ['scenario_2']
+                scenario_2: ['scenario_1']
+            """
+        )
+        with pytest.raises(ModelError) as excinfo:
+            build_model(override_dict=override, scenario="scenario_1")
+
+        assert check_error_or_warning(
+            excinfo,
+            "(scenarios, scenario_1) | Circular scenario reference detected: "
+            "scenario_1 -> scenario_2 -> scenario_1.",
+        )
+
 
 class TestTemplateSolver:
     @pytest.fixture
