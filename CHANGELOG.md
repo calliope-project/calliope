@@ -9,6 +9,8 @@ Now correctly defines the recommended approach to re-initialise the model with t
 
 |fixed| math documentation is no longer empty for components whose `where` string is never valid in the documented model, when including all math (`include="all"`) (#902).
 
+|fixed| circular scenario references now raise a clear `ModelError` naming the reference cycle instead of a bare `RecursionError` (#900).
+
 ## 0.7.0 (2026-09-01)
 
 v0.7 is a near-complete rewrite of Calliope's internals and of how models are defined, configured and solved.
@@ -560,8 +562,6 @@ For more detail, see our migrating from v0.6 to v0.7 section in our [documentati
 
 |changed| |backwards-incompatible| Cost parameters are flattened and use the indexed parameter syntax.
 
-|changed| |backwards-incompatible| `links` top-level key → transmission links defined in `techs`.
-
 |changed| |backwards-incompatible| Various parameters/decision variables renamed (namely `energy_` → `flow_`, `carrier_prod`/`_con` → `flow_out`/`_in`, and `resource` → `source_use`/`sink_use`).
 
 |changed| |backwards-incompatible| Various configuration options renamed.
@@ -676,8 +676,6 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 
 |fixed| Spurious negative values in `storage_inital` in operate mode are ignored in subsequent optimisation runs (#379). Negative values are a result of optimisation tolerances allowing a strictly positive decision variable to end up with (very small in magnitude) negative values. Forcing these to zero between operate mode runs ensures that Pyomo doesn't raise an exception that input values are outside the valid domain (NonNegativeReals).
 
-|fixed| `om_annual` investment costs will be calculated for technologies with only an `om_annual` cost defined in their configuration (#373). Previously, no investment costs would be calculated in this edge case.
-
 ## 0.6.8 (2022-02-07)
 
 |new| run configuration parameter to enable relaxation of the `demand_share_per_timestep_decision` constraint.
@@ -687,6 +685,8 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 |changed| Updated to Pyomo 6.2, pandas 1.3, xarray 0.20, numpy 1.20.
 
 |changed| |backwards-incompatible| parameters defaulting to False now default to None, to avoid confusion with zero. To 'switch off' a constraint, a user should now set it to 'null' rather than 'false' in their YAML configuration.
+
+|changed| Updated to Pyomo 6.2, pandas 1.3, xarray 0.20, numpy 1.20.
 
 |changed| `INFO` logging level includes logs for dataset cleaning steps before saving to NetCDF and for instantiation of timeseries clustering/resampling (if taking place).
 
@@ -705,6 +705,8 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 |new| `model.backend.rerun()` can work with both `spores` and `plan` run modes (previously only `plan` worked). In the `spores` case, this only works with a built backend that has not been previously run (i.e. `model.run(build_only=True)`), but allows a user to update constraints etc. before running the SPORES method.
 
 |changed| |backwards-incompatible| Carrier-specific group constraints are only allowed in isolation (one constraint in the group).
+
+|changed| If `ensure_feasibility` is set to `True`, `unmet_demand` will always be returned in the model results, even if the model is feasible. Fixes issue #355.
 
 |changed| If `ensure_feasibility` is set to `True`, `unmet_demand` will always be returned in the model results, even if the model is feasible. Fixes issue #355.
 
@@ -730,15 +732,13 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 
 |new| New group constraints `carrier_con_min`, `carrier_con_max`, `carrier_con_equals` which restrict the total consumed energy of a subgroup of conversion and/or demand technologies.
 
-|new| Add ability to pass timeseries as dataframes in `calliope.Model` instead of only as CSV files.
-
-|new| Pyomo backend interfaces added to get names of all model objects (`get_all_model_attrs`) and to attach custom constraints to the backend model (`add_constraint`).
+|new| New group constraints `net_import_share_min`, `net_import_share_max`, `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
 
 |changed| Parameters are assigned a domain in Pyomo based on their dtype in `model_data`
 
 |changed| Internal code reorganisation.
 
-|changed| Updated to Pyomo 5.7, pandas 1.1, and xarray 0.16
+|changed| Updated to Pyomo 6.2, pandas 1.3, xarray 0.20, numpy 1.20.
 
 |fixed| One-way transmission technologies can have `om` costs
 
@@ -748,11 +748,15 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 
 |new| New group constraints `energy_cap_equals`, `resource_area_equals`, and  `energy_cap_share_equals` to add the equality constraint to existing `min/max` group constraints.
 
-|new| New group constraints `carrier_prod_min`, `carrier_prod_max`, and  `carrier_prod_equals` which restrict the absolute energy produced by a subgroup of technologies and locations.
+|new| `spores` run mode now available, to find Spatially-explicit Practically Optimal REsultS (SPORES)
 
 |new| Introduced a `storage_discharge_depth` constraint, which allows to set a minimum stored-energy level to be preserved by a storage technology.
 
-|new| New group constraints `net_import_share_min`, `net_import_share_max`, and `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
+|new| New group constraints `net_import_share_min`, `net_import_share_max`, and  `net_import_share_equals` which restrict the net imported energy of a subgroup of conversion and/or demand technologies.
+
+|new| New group constraints `carrier_con_min`, `carrier_con_max`, `carrier_con_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
+
+|new| New group constraints `net_import_share_min`, `net_import_share_max`, and  `net_import_share_equals` which restrict the net imported energy of a certain carrier into subgroups of locations.
 
 |changed| |backwards-incompatible| Group constraints with the prefix `supply_share` are renamed to use the prefix `carrier_prod_share`. This ensures consistent naming for all group constraints.
 
@@ -764,7 +768,7 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 
 |changed| Allowed `om_con` cost for demand technologies. This is conceived to allow better representing generic international exports as demand sinks with a given revenue (e.g. the average electricity price on a given bidding zone), not restricted to any particular type of technology.
 
-|changed| |backwards-incompatible| `model.backend.rerun()` returns a calliope Model object instead of an xarray Dataset, allowing a user to access calliope Model methods, such as `get_formatted_array`.
+|changed| |backwards-incompatible| The backend interface to update a parameter value (`Model.backend.update_param()`) has been updated to allow multiple values in a parameter to be updated at once, using a dictionary.
 
 |changed| Carrier ratios can be loaded from file, to allow timeseries carrier ratios to be defined, e.g. ``carrier_ratios.carrier_out_2.heat: file=ratios.csv``.
 
@@ -831,8 +835,6 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 
 |changed| `get_formatted_array` improved in both speed and memory consumption.
 
-|changed| `model` and `run` configurations are now available as attributes of the Model object, specifically as editable dictionaries which automatically update a YAML string in the `model_data` xarray dataset attribute list (i.e. the information is stored when sending to the solver backend and when saving to and loading from NetCDF file)
-
 |changed| All tests and example models have been updated to solve with Coin-CBC, instead of GLPK. Documentation has been updated to reflect this, and aid in installing CBC (which is not simple for Windows users).
 
 |changed| Additional and improved pre-processing checks and errors for common model mistakes.
@@ -854,6 +856,10 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 |fixed| Unknown technology parameters are detected and the user is warned.
 
 |fixed| Loc::techs with empty cost classes (i.e. value == None) are handled by a warning and cost class deletion, instead of messy failure.
+
+|fixed| If only `interest_rate` is defined within a cost class of a technology, the entire cost class is correctly removed after deleting the `interest_rate` key. This ensures an empty cost key doesn't break things later on. Fixes issue #113.
+
+|fixed| Models saved to NetCDF now include the fully built internal YAML model and debug data so that `Model.save_commented_model_yaml()` is available after loading a NetCDF model from disk
 
 ## 0.6.3 (2018-10-03)
 
@@ -879,15 +885,13 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 
 |changed| Removed comment persistence in AttrDict and the associated API in order to improve compatibility with newer versions of ruamel.yaml
 
-|fixed| Operate mode is more robust, by being explicit about timestep and loc_tech indexing in `storage_initial` preparation and `resource_cap` checks, respectively, instead of assuming an order.
+|fixed| Operate mode is more robust, by being explicit about timestep and loc_tech indexing in `storage_initial` preparation and `where` array handling, respectively, instead of assuming an order.
 
 |fixed| When setting `ensure_feasibility`, the resulting `unmet_demand` variable can also be negative, accounting for possible infeasibility when there is unused supply, once all demand has been met (assuming no load shedding abilities). This is particularly pertinent when the `force_resource` constraint is in place.
 
 |fixed| When applying systemwide constraints to transmission technologies, they are no longer silently ignored. Instead, the constraint value is doubled (to account for the constant existence of a pair of technologies to describe one link) and applied to the relevant transmission techs.
 
-|fixed| Permit groups in override files to specify imports of other YAML files
-
-|fixed| If only `interest_rate` is defined within a cost class of a technology, the entire cost class is correctly removed after deleting the `interest_rate` key. This ensures an empty cost key doesn't break things later on. Fixes issue #113.
+|fixed| If only `interest_rate` is defined within a `cost class` of a technology, the entire cost class is correctly removed after deleting the `interest_rate` key. This ensures an empty cost key doesn't break things later on. Fixes issue #113.
 
 |fixed| If time clustering with 'storage_inter_cluster' = True, but no storage technologies, the model doesn't break. Fixes issue #142.
 
@@ -895,7 +899,7 @@ Serialisation and de-serialisation only occur on saving and loading from NetCDF,
 
 |new| ``units_max_systemwide`` and ``units_equals_systemwide`` can be applied to an integer/binary constrained technology (capacity limited by ``units`` not ``energy_cap``, or has an associated ``purchase`` (binary) cost). Constraint works similarly to existing ``energy_cap_max_systemwide``, limiting the number of units of a technology that can be purchased across all locations in the model.
 
-|new| |backwards-incompatible| ``primary_carrier`` for `conversion_plus` techs is now split into ``primary_carrier_in`` and ``primary_carrier_out``. Previously, it only accounted for output costs, by separating it, `om_con` and `om_prod` are correctly accounted for. These are required conversion_plus essentials if there's more than one input and output carrier, respectively.
+|new| ``primary_carrier`` for `conversion_plus` techs is now split into ``primary_carrier_in`` and ``primary_carrier_out``. Previously, it only accounted for output costs, by separating it, `om_con` and `om_prod` are correctly accounted for. These are required conversion_plus essentials if there's more than one input and output carrier, respectively.
 
 |new| Storage can be set to cyclic using ``run.cyclic_storage``. The last timestep in the series will then be used as the 'previous day' conditions for the first timestep in the series. This also applies to ``storage_inter_cluster``, if clustering. Defaults to False, with intention of defaulting to True in 0.6.3.
 
@@ -967,9 +971,11 @@ Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See
 
 ### Other changes
 
+* |fixed| e_cap constraints for unmet_demand technologies are ignored in operational mode. Capacities are fixed for all other technologies, which previously raised an exception, as a fixed infinite capacity is not physically allowable.
 * |fixed| Allow plotting carrier production using `calliope.analysis.plot_carrier_production` if that carrier does not have an associated demand technology (previously would raise an exception).
 * |fixed| Define time clustering method (sum/mean) for more constraints that can be time varying. Previously only included `r` and `e_eff`.
 * |changed| storage technologies default `s_cap.max` to `inf`, not 0 and are automatically included in the `loc_tech_store` subset. This ensures relevant constraints are not ignored by storage technologies.
+* |changed| Some values in the urban scale MILP example were updated to provide results that would show the functionality more clearly
 * |changed| Some values in the urban scale MILP example were updated to provide results that would show the functionality more clearly
 * |changed| technologies have set colours in the urban scale example model, as random colours were often hideous.
 * |changed| ruamel.yaml, not ruamel_yaml, is now used for parsing YAML files.
@@ -1030,12 +1036,39 @@ Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See
 
 |changed| |backwards-incompatible| Revised technology definitions and internal definition of sets and subsets, in particular subsets of various technology types. Supply technologies are now split into two types: ``supply`` and ``supply_plus``. Most of the more advanced functionality of the original ``supply`` technology is now contained in ``supply_plus``, making it necessary to update model definitions accordingly. In addition to the existing ``conversion`` technology type, a new more complex ``conversion_plus`` was added.
 
-### Other changes
+|changed| |backwards-incompatible| Flat technology definitions, removing the distinction between `essentials`, `constraints` and `costs`.
 
-* |changed| |backwards-incompatible| Creating a ``Model()`` with no arguments now raises a ``ModelError`` rather than returning an instance of the built-in national-scale example model. Use the new ``calliope.examples`` module to access example models.
-* |changed| Improvements to the national-scale example model and its tutorial notebook
-* |changed| Removed SolutionModel class
-* |fixed| Other minor fixes
+|changed| |backwards-incompatible| `charge_rate` has been renamed to `energy_cap_per_storage_cap_max`. `charge_rate` will be removed in Calliope 0.7.0.
+
+|changed| Default value of resource_area_max now is ``inf`` instead of ``0``, deactivating the constraint by default.
+
+|changed| Constraint files are auto-loaded in the pyomo backend and applied in the order set by 'ORDER' variables given in each constraint file (such that those constraints which depend on pyomo expressions existing are built after the expressions are built).
+
+|changed| Error on defining a technology in both directions of the same link.
+
+|changed| Any inexistent locations and / or technologies defined in model-wide (group) constraints will be caught and filtered out, raising a warning of their existence in the process.
+
+|changed| All tests and example models have been updated to solve with Coin-CBC, instead of GLPK. Documentation has been updated to reflect this, and aid in installing CBC (which is not simple for Windows users).
+
+|changed| Additional and improved pre-processing checks and errors for common model mistakes.
+
+|fixed| Total levelised cost of energy considers all costs, but energy generation only from ``supply``, ``supply_plus``, ``conversion``, and ``conversion_plus``.
+
+|fixed| If a space is left between two locations in a link (i.e. `A, B` instead of `A,B`), the space is stripped, instead of leading to the expectation of a location existing with the name ` B`.
+
+|fixed| Timeseries efficiencies can be included in operate mode without failing on preprocessing checks.
+
+|fixed| Name of data variables is retained when accessed through `model.get_formatted_array()`
+
+|fixed| Systemwide constraints work in models without transmission systems.
+
+|fixed| Updated documentation on amendments of abstract base technology groups.
+
+|fixed| Models without time series data fail gracefully.
+
+|fixed| Unknown technology parameters are detected and the user is warned.
+
+|fixed| Loc::techs with empty cost classes (i.e. value == None) are handled by a warning and cost class deletion, instead of messy failure.
 
 ## 0.4.1 (2017-01-12)
 
@@ -1052,8 +1085,6 @@ Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See
 
 |changed| |backwards-incompatible| Major change to solution data structure. Model solution is now returned as a single [xarray DataSet](https://docs.xarray.dev/en/v0.8.2/data-structures.html#dataset) instead of multiple pandas DataFrames and Panels. Instead of as a generic HDF5 file, complete solutions can be saved as a NetCDF4 file via xarray's NetCDF functionality.
 
-While the recommended way to save and process model results is by NetCDF4, CSV saving functionality has now been upgraded for more flexibility. Each variable is saved as a separate CSV file with a single value column and as many index columns as required.
-
 |changed| |backwards-incompatible| Model data structures simplified and based on xarray
 
 ### Other changes
@@ -1062,7 +1093,11 @@ While the recommended way to save and process model results is by NetCDF4, CSV s
 * |changed| Pandas 0.18/0.19 compatibility
 * |changed| 1.11 is now the minimum required numpy version. This version makes datetime64 tz-naive by default, thus preventing some odd behavior when displaying time series.
 * |changed| Improved logging, status messages, and error reporting
-* |fixed| Other minor fixes
+* |changed| Improved solution speed
+* |changed| Better error messages and basic logging
+* |changed| Better sanity checking and error messages for common mistakes
+* |changed| Basic distance-dependent constraints (only implemented for e_loss and cost of e_cap for now)
+* |changed| Other improvements and fixes
 
 ## 0.3.7 (2016-03-10)
 
@@ -1099,7 +1134,9 @@ The following settings cannot be overridden on a per-location basis:
 
 |changed| Removed the ``level`` option for locations. Level is now implicitly derived from the nested structure given by the ``within`` settings. Locations that define no or an empty ``within`` are implicitly at the topmost (0) level.
 
-|changed| |backwards-incompatible| Revised configuration of capacity constraints: ``e_cap_max`` becomes ``e_cap.max``, addition of ``e_cap.min`` and ``e_cap.equals`` (analogous for r_cap, s_cap, rb_cap, r_area). The ``e_cap.equals`` constraint supersedes ``e_cap_max_force`` (analogous for the other constraints). No backwards-compatibility is retained, models must change all constraints to the new formulation. See :ref:`config_reference_constraints` for a complete list of all available constraints. Some additional constraints have name changes:
+|changed| Removed comment persistence in AttrDict and the associated API in order to improve compatibility with newer versions of ruamel.yaml
+
+|changed| |backwards-incompatible| Revised configuration of capacity constraints: ``e_cap_max`` becomes ``e_cap.max``, addition of ``e_cap.min`` and ``e_cap.equals`` (analogous for r_cap, s_cap, rb_cap, r_scale_to_peak, r_area). The ``e_cap.equals`` constraint supersedes ``e_cap_max_force`` (analogous for the other constraints). No backwards-compatibility is retained, models must change all constraints to the new formulation. See :ref:`config_reference_constraints` for a complete list of all available constraints. Some additional constraints have name changes:
 
 * ``e_cap_max_scale`` becomes ``e_cap_scale``
 * ``rb_cap_follows`` becomes ``rb_cap_follow``, and addition of ``rb_cap_follow_mode``
@@ -1107,8 +1144,8 @@ The following settings cannot be overridden on a per-location basis:
 
 |changed| |backwards-incompatible| All optional constraints are now grouped together, under ``constraints.optional``:
 
-* ``constraints.group_fraction.group_fraction`` becomes ``constraints.optional.group_fraction``
-* ``constraints.ramping.ramping_rate`` becomes ``constraints.optional.ramping_rate``
+* ``constraints.group_fraction.group_fraction`` becomes ``constraints.group_fraction.group_fraction``
+* ``constraints.ramping.ramping_rate`` becomes ``constraints.ramping.ramping_rate``
 
 ### Other changes
 
@@ -1116,8 +1153,9 @@ The following settings cannot be overridden on a per-location basis:
 * |new| Various other additions to analysis functionality, particularly in the analysis_utils module
 * |new| analysis.get_levelized_cost to get technology and location specific costs
 * |new| Allow dynamically loading time mask functions
+* |changed| Improved solution speed
 * |changed| Improved summary table in the model solution: now shows only aggregate information for transmission technologies, also added missing ``s_cap`` column and technology type
-* |fixed| Bug causing some total levelized transmission costs to be infinite instead of zero
+* |changed| Bug causing some total levelized transmission costs to be infinite instead of zero
 * |fixed| Bug causing some CSV solution files to be empty
 
 ## 0.3.4 (2015-04-27)
@@ -1138,18 +1176,24 @@ The following settings cannot be overridden on a per-location basis:
 * |changed| More verbose ``calliope run``
 * |changed| Analysis tools restructured
 * |changed| Renamed ``debug.keepfiles`` setting to ``debug.keep_temp_files`` and better documented debug configuration
+* |changed| Better error messages and CLI error handling
+* |changed| Better sanity checking and error messages for common mistakes
+* |changed| Basic distance-dependent constraints (only implemented for e_loss and cost of e_cap for now)
+* |changed| Other minor improvements and fixes
 
 ## 0.3.2 (2015-02-13)
 
 * |new| Run setting ``model_override`` allows specifying the path to a YAML file with overrides for the model configuration, applied at model initialization (path is given relative to the run configuration file used). This is in addition to the existing ``override`` setting, and is applied first (so ``override`` can override ``model_override``).
-* |new| Run settings ``output.save_constraints`` and ``output.save_constraints_options``
+* |new| Run settings ``output.save_constraints`` and ``output.save_parallel``
 * |new| Run setting ``parallel.post_run``
 * |changed| Solution column names more in line with model component names
 * |changed| Can specify more than one output format as a list, e.g. ``output.format: ['csv', 'hdf']``
 * |changed| Run setting ``parallel.additional_lines`` renamed to ``parallel.pre_run``
+* |changed| Run setting ``parallel.additional_lines`` renamed to ``parallel.pre_run``
 * |changed| Better error messages and CLI error handling
-* |fixed| Bug on saving YAML files with numpy dtypes fixed
-* Other minor improvements and fixes
+* |changed| Better sanity checking and error messages for common mistakes
+* |changed| Basic distance-dependent constraints (only implemented for e_loss and cost of e_cap for now)
+* |changed| Other minor improvements and fixes
 
 ## 0.3.1 (2015-01-06)
 
@@ -1161,7 +1205,7 @@ The following settings cannot be overridden on a per-location basis:
 * Python 3 and Pyomo 4 are now minimum requirements
 * Significantly improved documentation
 * Improved model solution management by saving to HDF5 instead of CSV
-* Calculate shares of technologies, including the ability to define groups for the purpose of computing shares
+* Calculate shares of technologies, including the ability to define shares
 * Improved operational mode
 * Simplified time_tools
 * Improved output plotting, including dispatch, transmission flows, and installed capacities, and added model configuration to support these plots
@@ -1170,6 +1214,7 @@ The following settings cannot be overridden on a per-location basis:
 * Better error messages and basic logging
 * Better sanity checking and error messages for common mistakes
 * Basic distance-dependent constraints (only implemented for e_loss and cost of e_cap for now)
+* Ability to add additional constraints without editing core source code
 * Other improvements and fixes
 
 ## 0.2.0 (2014-03-18)
@@ -1186,7 +1231,6 @@ The following settings cannot be overridden on a per-location basis:
 * Improved TimeSummarizer masking and added new masks
 * Removed technology classes
 * Improved operational mode with results output matching planning mode and dynamic updating of parameters in model instance
-* Working parallel_tools
 * Improved documentation
 * Apache 2.0 licensed
 * Other improvements and fixes
