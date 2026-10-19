@@ -105,7 +105,7 @@ def _load_scenario_overrides(
     scenarios = model_def_with_overrides.pop("scenarios", {})
     if scenario is not None:
         applied_overrides = _load_overrides_from_scenario(
-            model_def_with_overrides, scenario, scenario_overrides, scenarios
+            scenario, scenario_overrides, scenarios
         )
         LOGGER.info(
             f"(scenarios, {scenario} ) | Applying the following overrides: {applied_overrides}."
@@ -162,42 +162,64 @@ def _combine_overrides(overrides: AttrDict, scenario_overrides: list[str]):
 
 
 def _load_overrides_from_scenario(
-    model_def: AttrDict,
-    scenario: str,
-    overrides: dict,
-    scenarios: dict,
-    _chain: tuple[str, ...] = (),
+    scenario: str, overrides: dict, scenarios: dict
 ) -> list[str]:
-    if scenario in _chain:
-        raise exceptions.ModelError(
-            f"(scenarios, {scenario}) | Circular scenario reference detected: "
-            f"{' -> '.join([*_chain, scenario])}."
-        )
-    if scenario in scenarios.keys():
-        LOGGER.info(f"Loading overrides from scenario: {scenario} ")
-        scenario_list = listify(scenarios[scenario])
-    else:
-        scenario_list = scenario.split(",")
-    scenario_overrides = set()
-    for override in scenario_list:
-        if isinstance(override, dict):
-            raise exceptions.ModelError(
-                f"(scenarios, {scenario}) | Scenario definition must be a list of override or other scenario names."
-            )
-        if override in scenarios:
-            scenario_overrides.update(
-                _load_overrides_from_scenario(
-                    model_def, override, overrides, scenarios, (*_chain, scenario)
-                )
-            )
-        elif override not in overrides.keys():
-            raise exceptions.ModelError(
-                f"(scenarios, {scenario}) | Unrecognised override name: {override}."
-            )
-        else:
-            scenario_overrides.add(override)
+    """Efficiently expand scenarios into unique overrides in first-seen order.
 
-    return list(scenario_overrides)
+    Solves the scenario tree and ensures it is a direct acyclic graph:
+    - Valid:
+        - A -> B -> C
+        - A -> B -> D and A -> C -> D (D is expanded once)
+    - Invalid cycles:
+        - A -> A
+        - A -> B -> C -> B (nested cycle)
+    """
+    active: set[str] = set()  # scenarios being currently expanded (dupes are cyclic)
+    completed: set[str] = set()  # scenarios successfully expanded
+    traversal: list[str] = []  # current scenario path being travelled
+    resolved_overrides: dict[str, None] = {}  # ordered set of override names
+
+    def expand(name: str) -> None:
+        if name in active:
+            raise exceptions.ModelError(
+                f"(scenarios, {name}) | Circular scenario reference detected: "
+                f"{' -> '.join([*traversal, name])}."
+            )
+
+        if name in completed:
+            return
+
+        if name in scenarios:
+            LOGGER.info("Loading overrides from scenario: %s", name)
+            entries = listify(scenarios[name])
+        else:
+            entries = name.split(",")
+
+        active.add(name)
+        traversal.append(name)
+
+        for entry in entries:
+            if isinstance(entry, dict):
+                raise exceptions.ModelError(
+                    f"(scenarios, {name}) | Scenario definition must "
+                    "be a list of override or other scenario names."
+                )
+
+            if entry in scenarios:
+                expand(entry)
+            elif entry in overrides:
+                resolved_overrides[entry] = None
+            else:
+                raise exceptions.ModelError(
+                    f"(scenarios, {name}) | Unrecognised override name: {entry}."
+                )
+
+        traversal.pop()
+        active.remove(name)
+        completed.add(name)
+
+    expand(scenario)
+    return list(resolved_overrides)
 
 
 def _log_overrides(init_model_def: AttrDict, overridden_model_def: AttrDict) -> None:
