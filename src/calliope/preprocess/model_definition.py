@@ -162,8 +162,17 @@ def _combine_overrides(overrides: AttrDict, scenario_overrides: list[str]):
 
 
 def _load_overrides_from_scenario(
-    model_def: AttrDict, scenario: str, overrides: dict, scenarios: dict
+    model_def: AttrDict,
+    scenario: str,
+    overrides: dict,
+    scenarios: dict,
+    _chain: tuple[str, ...] = (),
 ) -> list[str]:
+    if scenario in _chain:
+        raise exceptions.ModelError(
+            f"(scenarios, {scenario}) | Circular scenario reference detected: "
+            f"{' -> '.join([*_chain, scenario])}."
+        )
     if scenario in scenarios.keys():
         LOGGER.info(f"Loading overrides from scenario: {scenario} ")
         scenario_list = listify(scenarios[scenario])
@@ -173,11 +182,13 @@ def _load_overrides_from_scenario(
     for override in scenario_list:
         if isinstance(override, dict):
             raise exceptions.ModelError(
-                "(scenarios, {scenario}) | Scenario definition must be a list of override or other scenario names."
+                f"(scenarios, {scenario}) | Scenario definition must be a list of override or other scenario names."
             )
         if override in scenarios:
             scenario_overrides.update(
-                _load_overrides_from_scenario(model_def, override, overrides, scenarios)
+                _load_overrides_from_scenario(
+                    model_def, override, overrides, scenarios, (*_chain, scenario)
+                )
             )
         elif override not in overrides.keys():
             raise exceptions.ModelError(
