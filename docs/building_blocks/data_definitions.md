@@ -17,7 +17,7 @@ data_definitions:
     data: 10
 ```
 
-which can then be accessed in the model inputs `model.inputs.my_param` and used in [any math you add](../user_defined_math/index.md) as `my_param`.
+which can then be accessed in the model inputs `model.inputs.my_param` and used in [any math you add](../building_blocks/user_defined_math/index.md) as `my_param`.
 
 Or, it can be indexed over one or more model dimension(s):
 
@@ -36,7 +36,7 @@ data_definitions:
 1. The length of the inner index lists is equal to the length of `dims`.
 The length of the outer list is equal to the length of `data`.
 
-which can be accessed in the model inputs and [any math you add](../user_defined_math/index.md), e.g., `model.inputs.my_multiindexed_param.sel(costs="monetary")` and `my_multiindexed_param`.
+which can be accessed in the model inputs and [any math you add](../building_blocks/user_defined_math/index.md), e.g., `model.inputs.my_multiindexed_param.sel(costs="monetary")` and `my_multiindexed_param`.
 
 You can also index over a new dimension:
 
@@ -82,7 +82,7 @@ This will add the new dimension `my_new_dim` to your model (`model.inputs.my_new
 
 When you specify data through `data_definitions`, you may be populating either a parameter or what Calliope calls a "lookup". A lookup is essentially a "helper parameter" with non-numeric values, for example, a string or a boolean (True/False) value.
 
-Whether your data definition becomes a parameter or a lookup depends on the defined model math [see the documentation on user-defined math](../user_defined_math/customise.md) for more on how to create new parameters and lookups.
+Whether your data definition becomes a parameter or a lookup depends on the defined model math [see the documentation on user-defined math](../building_blocks/user_defined_math/customise.md) for more on how to create new parameters and lookups.
 
 ## Broadcasting data along indexed dimensions
 

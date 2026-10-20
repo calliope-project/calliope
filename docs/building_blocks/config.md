@@ -12,7 +12,9 @@ You do this by providing additional keyword arguments on calling `calliope.read_
 
 ```python
 # Overriding `config.init` items in `calliope.read_yaml`
-model = calliope.read_yaml("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
+model = calliope.read_yaml(
+    "path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]}
+)
 # Overriding `config.build` items in `calliope.Model.build`
 model.build(ensure_feasibility=True)
 # Overriding `config.solve` items in `calliope.Model.solve`
@@ -25,7 +27,7 @@ To test your model pipeline, `config.init.subset.timesteps` is a good way to lim
 
 !!! note
     Various capabilities are available to adjust the temporal resolution of a model on-the-fly, both by resampling or using externally-provided clustering.
-    See our [time adjustment page](../advanced/time.md) for more details.
+    See our [time adjustment page](../how_to/time.md) for more details.
 
 !!! info "See also"
     The full set of available configuration options is documented in the [configuration schema][model-configuration-schema].
@@ -55,7 +57,9 @@ In most cases, you will want to use the `base` mode.
         m.build()
         m.solve()
 
-        cap_results = m.results[[i for i in m.math.init["operate"]["parameters"] if i in m.results]]
+        cap_results = m.results[
+            [i for i in m.math.init["operate"]["parameters"] if i in m.results]
+        ]
         m_operate = calliope.Model(m.inputs.assign(cap_results), m.all_attrs(), mode="operate")
         m_operate.build()
         m_operate.solve()
@@ -74,7 +78,7 @@ In most cases, you will want to use the `base` mode.
 
 !!! warning
 
-    Both `operate` and `spores` modes are designed to work with our pre-defined math and may stop working if it is overridden with [user-defined math](../user_defined_math/customise.md#re-defining-calliopes-pre-defined-base-math).
+    Both `operate` and `spores` modes are designed to work with our pre-defined math and may stop working if it is overridden with [user-defined math](user_defined_math/customise.md#re-defining-calliopes-pre-defined-base-math).
 
 ### `config.build.backend`
 

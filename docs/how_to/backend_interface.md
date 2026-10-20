@@ -28,7 +28,7 @@ This will not affect results at this stage, you'll need to rerun the backend (po
 1. Update decision variable bounds.
 Most of the time, decision variable bounds are actually input parameters (e.g., `flow_cap_max` for the upper bound of the `flow_cap` decision variable).
 Therefore, to update the bounds you will update the parameter with [`#!python model.backend.update_input`][calliope.backend.backend_model.BackendModel.update_input].
-If a fixed numeric value is instead used, e.g. in [math that you have additionally defined](../user_defined_math/index.md), you can update bounds using [`#!python model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds].
+If a fixed numeric value is instead used, e.g. in [math that you have additionally defined](../building_blocks/user_defined_math/index.md), you can update bounds using [`#!python model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds].
 For instance, to update `flow_out` lower bound to 70 for `battery` at `region2`:
 
     ```python
@@ -58,5 +58,5 @@ Once solved, [`model.results`][calliope.Model.results] will contain new result d
 
 !!! info "See also"
     [Backend model API][calliope.backend.backend_model.BackendModel],
-    [Tutorial on interacting with the Backend][building-and-checking-the-optimisation-problem],
-    [Troubleshooting strategies](../troubleshooting.md)
+    [Tutorial on interacting with the Backend](../examples/calliope_model_object.py),
+    [Troubleshooting strategies](../how_to/troubleshooting.md)

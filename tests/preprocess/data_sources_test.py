@@ -656,6 +656,42 @@ class TestDataTableNodeDict:
             foo1={"techs": {"bar1": {}, "bar2": {}}}, foo2={"techs": {}}
         )
 
+    def test_node_dict_active_node_tech(self, table_obj):
+        """`active` defined over nodes and techs is passed through to the node definition."""
+        df_dict = {"active": {("foo1", "bar1"): False, ("foo2", "bar1"): True}}
+        tech_dict = CalliopeTechs(bar1={}, bar2={})
+        node_dict = table_obj(df_dict, rows=["nodes", "techs"]).node_def(tech_dict)
+
+        assert node_dict == CalliopeNodes(
+            foo1={"techs": {"bar1": {"active": False}}},
+            foo2={"techs": {"bar1": {"active": True}}},
+        )
+
+    def test_node_dict_active_node_tech_extra_inputs(self, table_obj):
+        """`active` defined over nodes and techs is passed through to the node definition."""
+        df_dict = {
+            "active": {("foo1", "bar1"): False, ("foo2", "bar1"): True},
+            "available_area": {("foo1", "bar2"): 1},
+        }
+        tech_dict = CalliopeTechs(bar1={}, bar2={})
+        node_dict = table_obj(df_dict, rows=["nodes", "techs"]).node_def(tech_dict)
+
+        assert node_dict == CalliopeNodes(
+            foo1={"techs": {"bar1": {"active": False}, "bar2": {}}},
+            foo2={"techs": {"bar1": {"active": True}}},
+        )
+
+    def test_node_dict_active_tech_node(self, table_obj):
+        """`active` defined over nodes and techs is passed through to the node definition."""
+        df_dict = {"active": {("bar1", "foo1"): False, ("bar1", "foo2"): True}}
+        tech_dict = CalliopeTechs(bar1={}, bar2={})
+        node_dict = table_obj(df_dict, rows=["techs", "nodes"]).node_def(tech_dict)
+
+        assert node_dict == CalliopeNodes(
+            foo1={"techs": {"bar1": {"active": False}}},
+            foo2={"techs": {"bar1": {"active": True}}},
+        )
+
     def test_node_dict_no_info(self, table_obj):
         df_dict = {"param": {"foo1": 1, "foo2": 2}}
         tech_dict = CalliopeTechs(bar1={"base_tech": "transmission"}, bar2={})

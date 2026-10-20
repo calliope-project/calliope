@@ -278,9 +278,7 @@ class CustomMathExamples(ABC):
     EXTRA_MATH: list = []
 
     #: source of all example math files
-    CUSTOM_MATH_DIR = (
-        CALLIOPE_DIR.parent.parent / "docs" / "user_defined_math" / "examples"
-    )
+    CUSTOM_MATH_DIR = CALLIOPE_DIR.parent.parent / "docs" / "examples" / "math_gallery"
 
     @property
     @abstractmethod

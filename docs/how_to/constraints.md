@@ -4,7 +4,7 @@ On this page, we look at some of the more advanced features of Calliope's math a
 
 !!! info "See also"
     [Pre-defined math formulation][base-math] (which includes a description of our pre-defined parameters),
-    [Introducing your own math to your model](../user_defined_math/customise.md),
+    [Introducing your own math to your model](../building_blocks/user_defined_math/customise.md),
     ["MILP" example model](../examples/milp/index.md).
 
 ## Multiple input/output carriers
@@ -45,7 +45,7 @@ This is valid for our heat pump and coal-fired power plant examples above, but n
 In these examples, the inflow is linked to a specific outflow (gas / nuclear fuel consumption is a function of electricity production).
 The other carrier outflows are then linked to the "primary" outflow.
 
-To capture this slightly different math, you will need to [apply your own math](../user_defined_math/index.md).
+To capture this slightly different math, you will need to [apply your own math](../building_blocks/user_defined_math/index.md).
 For example, the CHP example is dealt with in our [urban scale example model](../examples/urban_scale/index.md#interlude-user-defined-math) and in an [example additional math file][chp-plants].
 
 No matter how you formulate your math, you can (and probably will need to) extend your technology parameters to account for these different carriers.
@@ -182,4 +182,4 @@ Any excess stored energy would result in double the excess the following year, a
 
 !!! note
     Cyclic storage also functions when [time clustering](time.md#time-clustering), if allowing storage to be tracked between clusters.
-    However, it cannot be used in [`operate` mode](../basic/modes.md#operate-mode).
+    However, it cannot be used in [`operate` mode](../building_blocks/modes.md#operate-mode).

@@ -26,7 +26,7 @@
 
 # In this notebook we will run the Calliope national scale example model in these three modes.
 
-# More detail on these modes is given in the [_advanced_ section of the Calliope documentation](https://calliope.readthedocs.io/en/latest/advanced/mode/).
+# More detail on these modes is given in the [_advanced_ section of the Calliope documentation](https://calliope.readthedocs.io/en/latest/how_to/mode/).
 
 # %%
 

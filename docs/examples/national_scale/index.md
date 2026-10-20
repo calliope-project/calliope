@@ -53,7 +53,7 @@ Since all the data refers to the one cost class `monetary`, we don't add that in
 Where there is no data for that combination of technology and cost parameter, the value is Not-a-Number (NaN) and this combination will be ignored on loading the table.
 
 !!! info
-    You can read more about loading data from file in [our dedicated tutorial][loading-tabular-data].
+    You can read more about loading data from file in [our dedicated tutorial](../loading_tabular_data.py).
 
 ### Data definitions for indexed parameters
 
@@ -264,5 +264,5 @@ They allow only the `csp` technology, this allows us to model three possible sit
 
 ---
 !!! info "Where to go next"
-    To try loading and solving the model yourself, move on to the accompanying notebook [here][running-the-national-scale-example-model].
+    To try loading and solving the model yourself, move on to [the accompanying notebook](notebook.py).
     You can also find a list of all the example models available in Calliope [here][calliope.examples].

@@ -13,7 +13,7 @@ This includes [operate](#operate-mode) and [spores](#spores-mode) modes.
 !!! note
 
     The `base` mode is called base because it is active by default.
-    However, it is possible to heavily modify or even completely replace this built-in base math. See the documentation on [user-defined custom math](../user_defined_math/index.md) for more on this.
+    However, it is possible to heavily modify or even completely replace this built-in base math. See the documentation on [user-defined custom math](../building_blocks/user_defined_math/index.md) for more on this.
 
 In addition to perfect foresight optimisation, we have a [receding horizon "operate" optimisation mode](#operate-mode) and the ["SPORES" mode](#spores-mode) to generate alternative system configurations that are within a small deviation of the optimal cost that is computed in `base` mode. Read on to find out more about each of these run modes.
 
@@ -31,7 +31,7 @@ To load optional pre-defined math on top of the base math, you can reference it 
 All pre-defined math YAML files can be found in [`math` directory of the Calliope source code](https://github.com/calliope-project/calliope/blob/main/src/calliope/math/storage_inter_cluster.yaml).
 
 If you want to introduce new constraints, decision variables, or objectives, you can do so as part of the collection of YAML files describing your model.
-See the [user-defined math](../user_defined_math/index.md) section for an in-depth guide to applying your own math.
+See the [user-defined math](../building_blocks/user_defined_math/index.md) section for an in-depth guide to applying your own math.
 
 
 ### Base mode
@@ -207,7 +207,7 @@ This is useful to further explore the option space, restart a run that was stopp
     model = calliope.read_yaml(...)
 
     model.build(mode="spores")
-    model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
+    model.solve(spores={"number": 5})  # `model.results` will now have 5 SPORES run results
 
     # `model.results` will now have an additional 5 SPORES run results (6-10)
     model.solve(spores={"use_latest_results": True, "number": 10})
@@ -223,12 +223,14 @@ This is useful to further explore the option space, restart a run that was stopp
     model = calliope.read_yaml(...)
 
     model.build(mode="spores")
-    model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
+    model.solve(spores={"number": 5})  # `model.results` will now have 5 SPORES run results
 
     model.backend.update_input("spores_slack", xr.DataArray(0.3))
 
     # `model.results` will now have an additional 5 SPORES run results (6-10)
-    model.solve(spores={"use_latest_results": True, "number": 10, "scoring_algorithm": "random"})
+    model.solve(
+        spores={"use_latest_results": True, "number": 10, "scoring_algorithm": "random"}
+    )
     ```
 
     3. Restarting after premature failure, assuming [results were being saved per SPORE](#saving-results-per-spore).
@@ -245,7 +247,9 @@ This is useful to further explore the option space, restart a run that was stopp
 
     # Create a new calliope model that merges the input and results data
     m_rerun = calliope.Model(
-        inputs=m_init.inputs, results=m_most_recent.results, **m_most_recent.dump_all_attrs()
+        inputs=m_init.inputs,
+        results=m_most_recent.results,
+        **m_most_recent.dump_all_attrs(),
     )
 
     # Run use the latest SPORE results as the starting point

@@ -60,7 +60,7 @@ Additional cost classes can be created simply by adding them to the definition o
 
 ??? info "Costs in the objective function"
     By default, all defined cost classes are used in the objective function, i.e., the default objective is to minimize total costs.
-    Limiting the considered costs can be achieved by [customising the in-built objective function](../user_defined_math/customise.md) to only focus on e.g. monetary costs (`[monetary] in costs`),
+    Limiting the considered costs can be achieved by [customising the in-built objective function](../building_blocks/user_defined_math/customise.md) to only focus on e.g. monetary costs (`[monetary] in costs`),
     or updating the `objective_cost_weights` data_definitions-defined parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
 
     ```yaml
@@ -123,7 +123,7 @@ However, if you want to add your own parameters, that is also possible.
 
 ### Adding your own parameter
 
-You can also add any new parameter you like, which will then be available to use in any [math you want to additionally apply](../user_defined_math/index.md).
+You can also add any new parameter you like, which will then be available to use in any [math you want to additionally apply](../building_blocks/user_defined_math/index.md).
 The only requirements we apply are that it _cannot_ start with an underscore or a number.
 
 We also have a check for any parameter starting with `cost_`.
@@ -138,7 +138,7 @@ techs:
       dims: costs
 ```
 
-If you forget to use the [data_definitions](../basic/data_definitions.md) format for a parameter starting with `cost_` then our YAML schema will raise an error.
+If you forget to use the [data_definitions](../building_blocks/data_definitions.md) format for a parameter starting with `cost_` then our YAML schema will raise an error.
 For example, this is not valid and will create an error:
 
 ```yaml
@@ -149,7 +149,7 @@ techs:
 
 ### Using the data_definitions format to define parameter data
 
-The [data_definitions](../basic/data_definitions.md) format allows you to add dimensions to your data.
+The [data_definitions](../building_blocks/data_definitions.md) format allows you to add dimensions to your data.
 By defining just a data value, the resulting parameter will only be indexed over the `techs` dimension (+ optionally the `nodes` dimension if you provide a new value for it at a [node](nodes.md)).
 By using the data_definitions format, you can add new dimensions.
 We saw this above with `costs`, but you can add _any_ dimension _except_ `nodes`.

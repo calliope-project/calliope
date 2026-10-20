@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| documentation directory structure to match URLs to the navigation branch names (#892).
+
 |fixed| documented references to dropped config item `use_cap_results` for passing results from a capacity expansion run to an operate run (#903).
 Now correctly defines the recommended approach to re-initialise the model with the `operate` mode config flag.
 
@@ -10,6 +12,8 @@ Now correctly defines the recommended approach to re-initialise the model with t
 ### Internal changes
 
 |fixed| Improved HiGHS backend: faster shadow price extraction; batched variable and constraint construction, leading to model build times on a similar order as the Gurobi backend
+
+|fixed| circular scenario references now raise a clear `ModelError` naming the reference cycle instead of a bare `RecursionError` (#900).
 
 ## 0.7.0 (2026-09-01)
 

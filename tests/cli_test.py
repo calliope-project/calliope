@@ -1,6 +1,5 @@
 import importlib.resources
 import os
-from pathlib import Path
 
 import pytest  # noqa: F401
 from click.testing import CliRunner
@@ -86,96 +85,56 @@ class TestCLI:
         )
         assert result.exit_code == 1
 
-    def test_run_from_netcdf(self):
+    def test_run_from_netcdf(self, tmp_path):
         runner = CliRunner()
         model = calliope.examples.national_scale()
+        model_file = tmp_path / "model.nc"
+        out_file = tmp_path / "output.nc"
+        model.to_netcdf(model_file)
+        result = runner.invoke(cli.run, [str(model_file), f"--save_netcdf={out_file}"])
+        assert result.exit_code == 0, result.output
+        assert out_file.is_file()
 
-        model_file = "model.nc"
-        out_file = "output.nc"
-
-        with runner.isolated_filesystem() as tempdir:
-            model.to_netcdf(model_file)
-            result = runner.invoke(cli.run, [model_file, f"--save_netcdf={out_file}"])
-            assert result.exit_code == 0, result.output
-            assert (Path(tempdir) / out_file).is_file()
-
-    def test_run_save_lp(self):
+    def test_run_save_lp(self, tmp_path):
         runner = CliRunner()
+        out_file = tmp_path / "output.lp"
+        result = runner.invoke(cli.run, [_MODEL_NATIONAL, f"--save_lp={out_file}"])
+        assert result.exit_code == 0, result.output
+        assert out_file.is_file()
 
-        with runner.isolated_filesystem() as tempdir:
-            result = runner.invoke(cli.run, [_MODEL_NATIONAL, "--save_lp=output.lp"])
-            assert result.exit_code == 0, result.output
-            assert os.path.isfile(os.path.join(tempdir, "output.lp"))
-
-    def test_generate_runs_bash(self):
+    @pytest.mark.parametrize(
+        ("kind", "out_name", "extra_args", "expected_files"),
+        [
+            ("bash", "test.sh", [], ["test.sh"]),
+            ("windows", "test.bat", [], ["test.bat"]),
+            (
+                "bsub",
+                "test.sh",
+                ["--cluster_mem=1G", "--cluster_time=100"],
+                ["test.sh", "test.sh.array.sh"],
+            ),
+            (
+                "sbatch",
+                "test.sh",
+                ["--cluster_mem=1G", "--cluster_time=100"],
+                ["test.sh", "test.sh.array.sh"],
+            ),
+        ],
+    )
+    def test_generate_runs(self, tmp_path, kind, out_name, extra_args, expected_files):
         runner = CliRunner()
-
-        with runner.isolated_filesystem() as tempdir:
-            result = runner.invoke(
-                cli.generate_runs,
-                [
-                    _MODEL_NATIONAL,
-                    "test.sh",
-                    "--kind=bash",
-                    '--scenarios="run1;run2;run3;run4"',
-                ],
-            )
-            assert result.exit_code == 0, result.output
-            assert os.path.isfile(os.path.join(tempdir, "test.sh"))
-
-    def test_generate_runs_windows(self):
-        runner = CliRunner()
-
-        with runner.isolated_filesystem() as tempdir:
-            result = runner.invoke(
-                cli.generate_runs,
-                [
-                    _MODEL_NATIONAL,
-                    "test.bat",
-                    "--kind=windows",
-                    '--scenarios="run1;run2;run3;run4"',
-                ],
-            )
-            assert result.exit_code == 0, result.output
-            assert os.path.isfile(os.path.join(tempdir, "test.bat"))
-
-    def test_generate_runs_bsub(self):
-        runner = CliRunner()
-
-        with runner.isolated_filesystem() as tempdir:
-            result = runner.invoke(
-                cli.generate_runs,
-                [
-                    _MODEL_NATIONAL,
-                    "test.sh",
-                    "--kind=bsub",
-                    '--scenarios="run1;run2;run3;run4"',
-                    "--cluster_mem=1G",
-                    "--cluster_time=100",
-                ],
-            )
-            assert result.exit_code == 0, result.output
-            assert os.path.isfile(os.path.join(tempdir, "test.sh"))
-            assert os.path.isfile(os.path.join(tempdir, "test.sh.array.sh"))
-
-    def test_generate_runs_sbatch(self):
-        runner = CliRunner()
-
-        with runner.isolated_filesystem() as tempdir:
-            result = runner.invoke(
-                cli.generate_runs,
-                [
-                    _MODEL_NATIONAL,
-                    "test.sh",
-                    "--kind=sbatch",
-                    '--scenarios="run1;run2;run3;run4"',
-                    "--cluster_mem=1G",
-                    "--cluster_time=100",
-                ],
-            )
-            assert result.exit_code == 0, result.output
-            assert os.path.isfile(os.path.join(tempdir, "test.sh"))
-            assert os.path.isfile(os.path.join(tempdir, "test.sh.array.sh"))
+        result = runner.invoke(
+            cli.generate_runs,
+            [
+                _MODEL_NATIONAL,
+                str(tmp_path / out_name),
+                f"--kind={kind}",
+                '--scenarios="run1;run2;run3;run4"',
+                *extra_args,
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert all((tmp_path / f).is_file() for f in expected_files)
 
     def test_fail_no_debug_no_stderr(self):
         """Traceback should not be printed if debug mode not active."""
@@ -191,29 +150,28 @@ class TestCLI:
         assert result.exit_code == 1
         assert "Traceback (most recent call last)" in result.stderr
 
-    def test_generate_scenarios(self):
+    def test_generate_scenarios(self, tmp_path):
         runner = CliRunner()
-        with runner.isolated_filesystem() as tempdir:
-            out_file = os.path.join(tempdir, "scenarios.yaml")
-            result = runner.invoke(
-                cli.generate_scenarios,
-                [
-                    _MODEL_NATIONAL,
-                    out_file,
-                    "cold_fusion",
-                    "run1;run2",
-                    "cold_fusion_cap_share;cold_fusion_prod_share",
-                ],
-            )
-            assert result.exit_code == 0, result.output
-            assert os.path.isfile(out_file)
-            scenarios = io.read_rich_yaml(out_file)
-            assert "scenario_0" not in scenarios["scenarios"]
-            assert scenarios["scenarios"]["scenario_1"] == [
+        out_file = tmp_path / "scenarios.yaml"
+        result = runner.invoke(
+            cli.generate_scenarios,
+            [
+                _MODEL_NATIONAL,
+                str(out_file),
                 "cold_fusion",
-                "run1",
-                "cold_fusion_cap_share",
-            ]
+                "run1;run2",
+                "cold_fusion_cap_share;cold_fusion_prod_share",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert out_file.is_file()
+        scenarios = io.read_rich_yaml(out_file)
+        assert "scenario_0" not in scenarios["scenarios"]
+        assert scenarios["scenarios"]["scenario_1"] == [
+            "cold_fusion",
+            "run1",
+            "cold_fusion_cap_share",
+        ]
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"

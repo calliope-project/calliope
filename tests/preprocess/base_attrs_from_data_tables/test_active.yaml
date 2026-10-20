@@ -1,0 +1,156 @@
+# Variants for `TestBaseAttributesFromDataTables.test_active`.
+# `expected` is the resulting value of `active` for `test_supply_elec` at each node.
+#
+# `data_table_dfs` are records loaded as in-memory dataframes, indexed over the `rows` of the data table that references them.
+# `overrides` are applied as an override dictionary on the minimal test model.
+
+node_tech_table:
+  data_table_dfs:
+    table_1:
+      - {nodes: a, techs: test_supply_elec, active: false}
+      - {nodes: b, techs: test_supply_elec, active: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [nodes, techs], columns: inputs}
+  expected: {a: false, b: true}
+
+tech_node_table:
+  data_table_dfs:
+    table_1:
+      - {techs: test_supply_elec, nodes: a, active: false}
+      - {techs: test_supply_elec, nodes: b, active: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [techs, nodes], columns: inputs}
+  expected: {a: false, b: true}
+
+node_tech_table_with_other_input:
+  data_table_dfs:
+    table_1:
+      - {nodes: a, techs: test_supply_elec, active: false, flow_cap_max: 1}
+      - {nodes: b, techs: test_supply_elec, flow_cap_max: 2}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [nodes, techs], columns: inputs}
+  expected: {a: false, b: true}
+
+tech_table:
+  data_table_dfs:
+    table_1:
+      - {techs: test_supply_elec, active: false}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+  expected: {a: false, b: false}
+
+node_tech_table_then_table_without_active:
+  data_table_dfs:
+    table_1:
+      - {nodes: a, techs: test_supply_elec, active: false}
+    table_2:
+      - {nodes: a, techs: test_supply_elec, flow_cap_max: 1}
+      - {nodes: b, techs: test_supply_elec, flow_cap_max: 2}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [nodes, techs], columns: inputs}
+      table_2: {table: table_2, rows: [nodes, techs], columns: inputs}
+  expected: {a: false, b: true}
+
+table_without_active_then_node_tech_table:
+  data_table_dfs:
+    table_1:
+      - {nodes: a, techs: test_supply_elec, flow_cap_max: 1}
+      - {nodes: b, techs: test_supply_elec, flow_cap_max: 2}
+    table_2:
+      - {nodes: a, techs: test_supply_elec, active: false}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [nodes, techs], columns: inputs}
+      table_2: {table: table_2, rows: [nodes, techs], columns: inputs}
+  expected: {a: false, b: true}
+
+two_node_tech_tables:
+  data_table_dfs:
+    table_1:
+      - {nodes: a, techs: test_supply_elec, active: false}
+    table_2:
+      - {nodes: b, techs: test_supply_elec, active: false}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [nodes, techs], columns: inputs}
+      table_2: {table: table_2, rows: [nodes, techs], columns: inputs}
+  expected: {a: false, b: false}
+
+later_node_tech_table_overrides_earlier:
+  data_table_dfs:
+    table_1:
+      - {nodes: a, techs: test_supply_elec, active: false}
+    table_2:
+      - {nodes: a, techs: test_supply_elec, active: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [nodes, techs], columns: inputs}
+      table_2: {table: table_2, rows: [nodes, techs], columns: inputs}
+  expected: {a: true, b: true}
+
+node_tech_table_overrides_tech_table:
+  data_table_dfs:
+    table_1:
+      - {techs: test_supply_elec, active: false}
+    table_2:
+      - {nodes: a, techs: test_supply_elec, active: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+      table_2: {table: table_2, rows: [nodes, techs], columns: inputs}
+  expected: {a: true, b: false}
+
+yaml_node_tech_only:
+  data_table_dfs:
+    table_1:
+      - {nodes: a, techs: test_supply_elec, flow_cap_max: 1}
+      - {nodes: b, techs: test_supply_elec, flow_cap_max: 2}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [nodes, techs], columns: inputs}
+    nodes:
+      a:
+        techs:
+          test_supply_elec: {active: false}
+  expected: {a: false, b: true}
+
+yaml_tech_overrides_tech_table:
+  data_table_dfs:
+    table_1:
+      - {techs: test_supply_elec, active: false}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: techs, columns: inputs}
+    techs:
+      test_supply_elec: {active: true}
+  expected: {a: true, b: true}
+
+node_tech_table_overrides_yaml_tech:
+  data_table_dfs:
+    table_1:
+      - {nodes: a, techs: test_supply_elec, active: true}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [nodes, techs], columns: inputs}
+    techs:
+      test_supply_elec: {active: false}
+  expected: {a: true, b: false}
+
+yaml_node_tech_overrides_node_tech_table:
+  data_table_dfs:
+    table_1:
+      - {nodes: a, techs: test_supply_elec, active: false}
+      - {nodes: b, techs: test_supply_elec, active: false}
+  overrides:
+    data_tables:
+      table_1: {table: table_1, rows: [nodes, techs], columns: inputs}
+    nodes:
+      a:
+        techs:
+          test_supply_elec: {active: true}
+  expected: {a: true, b: false}

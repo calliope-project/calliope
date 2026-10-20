@@ -2,7 +2,7 @@
 
 Practical guides for getting the most out of Calliope, from troubleshooting common problems to advanced features like solver customisation and interfacing directly with the optimisation backend.
 
-These guides assume you are already familiar with [building and running a model](../basic/index.md).
+These guides assume you are already familiar with [building and running a model](../building_blocks/index.md).
 
 <div class="grid cards" markdown>
 
@@ -10,7 +10,7 @@ These guides assume you are already familiar with [building and running a model]
 
     ---
 
-    * [Troubleshoot](../troubleshooting.md): diagnose and fix common problems.
+    * [Troubleshoot](../how_to/troubleshooting.md): diagnose and fix common problems.
     * [Advanced constraints](constraints.md): more advanced features of Calliope's math and configuration.
     * [Time adjustment](time.md): resampling and clustering the model's time resolution.
     * [Generating run scripts](scripts.md): scripting many model runs in an automated way.

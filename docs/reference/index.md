@@ -2,7 +2,7 @@
 
 Reference material for Calliope: the YAML syntax and command-line interface, the built-in math formulations, the Python API, and the schemas that validate model definitions.
 
-These pages are intended for looking up specifics. For a guided introduction, see [getting started](../getting_started/concepts.md) and the [building blocks](../basic/index.md) section.
+These pages are intended for looking up specifics. For a guided introduction, see [getting started](../getting_started/concepts.md) and the [building blocks](../building_blocks/index.md) section.
 
 <div class="grid cards" markdown>
 

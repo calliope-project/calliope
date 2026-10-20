@@ -13,3 +13,5 @@ DTYPE_OPTIONS = {
 
 DATETIME_DTYPE = "M"
 """Numpy type kind for datetime arrays"""
+
+NODE_TECH = ("nodes", "techs")

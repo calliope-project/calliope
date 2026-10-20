@@ -1,5 +1,6 @@
 import logging
 import re
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -1279,6 +1280,116 @@ class TestDataTableBuilding:
         assert (to_check.sel(techs="test_supply_elec", nodes="a") == 10).all()
         assert (to_check.sel(techs="test_supply_elec", nodes="b").isnull()).all()
         assert (to_check.sel(techs="test_demand_elec") == 2).all()
+
+
+class TestBaseAttributesFromDataTables:
+    """Base attributes (`active`, `base_tech`, `one_way`, `link_from`, `link_to`) can be defined in data tables and/or YAML.
+
+    YAML takes precedence over data tables and later data tables take precedence over earlier ones.
+    Test variants are defined in `base_attrs_from_data_tables/{test_name}.yaml`.
+    """
+
+    @staticmethod
+    def _load_variants(test_name: str) -> list:
+        """Load test variants from `{test_name}.yaml`, with each variant ID as its pytest param ID."""
+        variants = io.read_rich_yaml(
+            Path(__file__).parent / "base_attrs_from_data_tables" / f"{test_name}.yaml"
+        )
+        return [
+            pytest.param(variant, id=name)
+            for name, variant in variants.as_dict().items()
+        ]
+
+    @pytest.fixture(scope="class")
+    @classmethod
+    def build_dataset(cls, minimal_test_model_path):
+        """Build a dataset from the minimal test model with a test variant applied.
+
+        The variant `overrides` are applied as an override dictionary.
+        Each of the variant `data_table_dfs` is a list of records, loaded as an in-memory dataframe indexed over the `rows` of the data table referencing it.
+        """
+
+        def _build_dataset(variant: dict) -> xr.Dataset:
+            override = variant["overrides"]
+            dfs = {
+                table["table"]: pd.DataFrame(
+                    variant["data_table_dfs"][table["table"]]
+                ).set_index(table["rows"])
+                for table in override.get("data_tables", {}).values()
+            }
+            model_def = prepare_model_definition(
+                io.read_rich_yaml(minimal_test_model_path),
+                scenario="simple_supply,two_hours",
+                override_dict=override,
+                definition_path=minimal_test_model_path,
+            )
+            math = model_math.build_math(
+                model_math.get_math_priority(model_def.config.init),
+                model_def.math.init.model_dump(),
+            )
+            tables_ = [
+                data_tables.DataTable(name, table, dfs, minimal_test_model_path)
+                for name, table in model_def.definition.data_tables.root.items()
+            ]
+            builder = ModelDataBuilder(
+                model_def.config.init, model_def.definition, math, tables_
+            )
+            builder.build()
+            return builder.dataset
+
+        return _build_dataset
+
+    @pytest.mark.parametrize("variant", _load_variants("test_tech_attrs"))
+    def test_tech_attrs(self, build_dataset, variant):
+        """Tech-level base attributes are passed through from any combination of data tables and YAML."""
+        ds = build_dataset(variant)
+
+        tech_ds = ds.sel(techs="test_link_a_b_elec")
+        assert {k: tech_ds[k].item() for k in variant["expected"]} == variant[
+            "expected"
+        ]
+        assert tech_ds.active.notnull().all()
+
+    def test_tech_attrs_over_nodes_fails(self, build_dataset):
+        """Tech-level base attributes cannot be defined over the `nodes` dimension."""
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_dataset(
+                {
+                    "data_table_dfs": {
+                        "table_1": [
+                            {
+                                "nodes": "a",
+                                "techs": "test_link_a_b_elec",
+                                "link_from": "a",
+                            }
+                        ]
+                    },
+                    "overrides": {
+                        "data_tables": {
+                            "table_1": {
+                                "table": "table_1",
+                                "rows": ["nodes", "techs"],
+                                "columns": "inputs",
+                            }
+                        }
+                    },
+                }
+            )
+
+        assert check_error_or_warning(
+            excinfo,
+            "Cannot define transmission technology data over the `nodes` dimension",
+        )
+
+    @pytest.mark.parametrize("variant", _load_variants("test_active"))
+    def test_active(self, build_dataset, variant):
+        """`active` is passed through from any combination of data tables and YAML, over techs or nodes and techs."""
+        ds = build_dataset(variant)
+
+        assert (
+            ds.active.sel(techs="test_supply_elec").to_series().to_dict()
+            == variant["expected"]
+        )
 
 
 class TestResample:

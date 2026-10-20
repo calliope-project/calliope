@@ -12,7 +12,7 @@ from mkdocs.structure.files import File
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
-CUSTOM_MATH_PATH = Path("docs") / "user_defined_math" / "examples"
+CUSTOM_MATH_PATH = Path("docs") / "examples" / "math_gallery"
 
 EXAMPLES_NAV_PATH = ["Examples & tutorials", "Math gallery"]
 
