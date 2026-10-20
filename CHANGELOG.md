@@ -9,6 +9,10 @@ Now correctly defines the recommended approach to re-initialise the model with t
 
 |fixed| math documentation is no longer empty for components whose `where` string is never valid in the documented model, when including all math (`include="all"`) (#902).
 
+### Internal changes
+
+|fixed| Improved HiGHS backend: faster shadow price extraction; batched variable and constraint construction, leading to model build times on a similar order as the Gurobi backend
+
 |fixed| circular scenario references now raise a clear `ModelError` naming the reference cycle instead of a bare `RecursionError` (#900).
 
 ## 0.7.0 (2026-09-01)

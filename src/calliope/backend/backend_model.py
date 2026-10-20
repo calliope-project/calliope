@@ -804,6 +804,52 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             da = tuple(arr.fillna(np.nan) for arr in da)
         return da
 
+    @staticmethod
+    def _broadcast_to_mask(
+        where: xr.DataArray, *args: xr.DataArray
+    ) -> tuple[xr.DataArray, np.ndarray, list[np.ndarray]]:
+        """Broadcast `where` against `args` and flatten the results.
+
+        Used to add components to a backend in batches while keeping the same
+        shape, dims and coords as the input arrays.
+
+        Args:
+            where (xr.DataArray): Boolean array masking the elements to act on.
+            *args (xr.DataArray): Arrays to broadcast against `where`.
+
+        Returns:
+            tuple[xr.DataArray, np.ndarray, list[np.ndarray]]:
+                The broadcast `where` array (to use as a template for the result),
+                that array's values flattened to 1D, and the flattened values of
+                each array in `args`.
+        """
+        broadcast_where, *broadcast_args = xr.broadcast(where, *args)
+        return (
+            broadcast_where,
+            broadcast_where.values.ravel(),
+            [arg.values.ravel() for arg in broadcast_args],
+        )
+
+    @staticmethod
+    def _scatter_objects(
+        template: xr.DataArray, mask: np.ndarray, objs: list
+    ) -> xr.DataArray:
+        """Place backend objects at the `mask` positions of an otherwise-NaN array.
+
+        Args:
+            template (xr.DataArray): Array whose shape, dims and coords to reuse.
+            mask (np.ndarray): Flattened boolean mask of `template`.
+            objs (list): One backend object per True element of `mask`.
+
+        Returns:
+            xr.DataArray: Object-dtype array of backend objects, NaN where masked out.
+        """
+        flat = np.full(mask.size, np.nan, dtype=object)
+        flat[mask] = objs
+        return xr.DataArray(
+            flat.reshape(template.shape), dims=template.dims, coords=template.coords
+        )
+
     def _raise_error_on_preexistence(
         self, key: str, obj_type: ALL_COMPONENTS_T, dataset: xr.Dataset | None = None
     ):
