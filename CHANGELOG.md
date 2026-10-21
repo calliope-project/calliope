@@ -15,6 +15,12 @@ With time clustering, the first timestep of a cluster is now compared with the l
 The first timestep of a model without clustering is now also limited, with the flow before the start of the model taken as zero.
 This changes the results of the national-scale example model, where `ccgt` can now produce at most 80% of its capacity in the first hour.
 
+### Internal changes
+
+|fixed| Improved HiGHS backend: faster shadow price extraction; batched variable and constraint construction, leading to model build times on a similar order as the Gurobi backend
+
+|fixed| circular scenario references now raise a clear `ModelError` naming the reference cycle instead of a bare `RecursionError` (#900).
+
 ## 0.7.0 (2026-09-01)
 
 v0.7 is a near-complete rewrite of Calliope's internals and of how models are defined, configured and solved.

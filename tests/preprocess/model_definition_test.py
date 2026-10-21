@@ -2,46 +2,18 @@ import pytest
 
 from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml
-from calliope.preprocess.model_definition import TemplateSolver
+from calliope.preprocess.model_definition import (
+    TemplateSolver,
+    _load_scenario_overrides,
+)
 
 from ..common.util import build_test_model as build_model
-from ..common.util import check_error_or_warning
 
 
 class TestScenarioOverrides:
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*(links, test_link_a_b_elec) | Deactivated:calliope.exceptions.ModelWarning"
-    )
-    def test_valid_scenarios(self, dummy_int):
-        """Test that valid scenario definition from overrides raises no error and results in applied scenario."""
-        override = read_rich_yaml(
-            f"""
-            scenarios:
-                scenario_1: ['one', 'two']
-
-            overrides:
-                one:
-                    techs.test_supply_gas.flow_cap_max: {dummy_int}
-                two:
-                    techs.test_supply_elec.flow_cap_max: {dummy_int / 2}
-
-            nodes:
-                a:
-                    techs:
-                        test_supply_gas:
-                        test_supply_elec:
-                        test_demand_elec:
-            """
-        )
-        model = build_model(override_dict=override, scenario="scenario_1")
-
-        assert model.inputs.flow_cap_max.sel(techs="test_supply_gas") == dummy_int
-        assert model.inputs.flow_cap_max.sel(techs="test_supply_elec") == dummy_int / 2
-
-    def test_valid_scenario_of_scenarios(self, dummy_int):
-        """Test that valid scenario definition which groups scenarios and overrides raises
-        no error and results in applied scenario.
-        """
+    @pytest.mark.parametrize("scenario", ["scenario_1", "scenario_2"])
+    def test_valid_scenarios(self, dummy_int, scenario):
+        """Direct and nested scenarios apply their overrides to model inputs."""
         override = read_rich_yaml(
             f"""
             scenarios:
@@ -65,40 +37,71 @@ class TestScenarioOverrides:
                         test_demand_elec:
             """
         )
-        model = build_model(override_dict=override, scenario="scenario_2")
+        model = build_model(override_dict=override, scenario=scenario)
 
         assert model.inputs.flow_cap_max.sel(techs="test_supply_gas") == dummy_int
         assert model.inputs.flow_cap_max.sel(techs="test_supply_elec") == dummy_int / 2
 
-    def test_invalid_scenarios_dict(self):
-        """Test that invalid scenario definition raises appropriate error"""
-        override = read_rich_yaml(
-            """
-            scenarios:
-                scenario_1:
-                    techs.foo.bar: 1
-            """
-        )
+    @pytest.mark.parametrize("scenario", ["A", "B,C", "A,A", "shared,A"])
+    def test_shared_scenario_descendant(self, scenario):
+        """Shared descendants are valid and their overrides are applied once."""
+        definition = {
+            "scenarios": {
+                "A": ["B", "C"],
+                "B": ["D", "left"],
+                "C": ["D", "right"],
+                "D": ["shared"],
+            },
+            "overrides": {
+                "shared": {"shared_value": 1},
+                "left": {"left_value": 2},
+                "right": {"right_value": 3},
+            },
+        }
+
+        model_def, applied_overrides = _load_scenario_overrides(definition, scenario)
+
+        assert model_def == {"shared_value": 1, "left_value": 2, "right_value": 3}
+        assert applied_overrides == "shared;left;right"
+
+    @pytest.mark.parametrize(
+        ("entries", "unknown_name"), [({"techs.foo.bar": 1}, "techs"), ("foo", "foo")]
+    )
+    def test_invalid_scenarios(self, entries, unknown_name):
+        definition = {"scenarios": {"A": entries}}
+
         with pytest.raises(ModelError) as excinfo:
-            build_model(override_dict=override, scenario="scenario_1")
+            _load_scenario_overrides(definition, "A")
 
-        assert check_error_or_warning(
-            excinfo, "(scenarios, scenario_1) | Unrecognised override name: techs."
+        assert str(excinfo.value) == (
+            f"(scenarios, A) | Unrecognised override name: {unknown_name}."
         )
 
-    def test_invalid_scenarios_str(self):
-        """Test that invalid scenario definition raises appropriate error"""
-        override = read_rich_yaml(
-            """
-            scenarios:
-                scenario_1: 'foo'
-            """
-        )
+    @pytest.mark.parametrize(
+        ("scenarios", "expected_path"),
+        [
+            ({"A": ["A"]}, ["A", "A"]),
+            ({"A": ["B"], "B": ["A"]}, ["A", "B", "A"]),
+            ({"A": ["B"], "B": ["C"], "C": ["B"]}, ["A", "B", "C", "B"]),
+            (
+                {"A": ["B", "C"], "B": ["D"], "C": ["D", "A"], "D": ["shared"]},
+                ["A", "C", "A"],
+            ),
+        ],
+    )
+    def test_circular_scenarios(self, scenarios, expected_path):
+        """Cycles raise ModelError with the full path, including any noncyclic prefix."""
+        definition = {
+            "scenarios": scenarios,
+            "overrides": {"shared": {"shared_value": 1}},
+        }
+
         with pytest.raises(ModelError) as excinfo:
-            build_model(override_dict=override, scenario="scenario_1")
+            _load_scenario_overrides(definition, "A")
 
-        assert check_error_or_warning(
-            excinfo, "(scenarios, scenario_1) | Unrecognised override name: foo."
+        assert str(excinfo.value) == (
+            f"(scenarios, {expected_path[-1]}) | Circular scenario reference detected: "
+            f"{' -> '.join(expected_path)}."
         )
 
 
