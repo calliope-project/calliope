@@ -346,6 +346,42 @@ ramping_down:
   scenario: simple_supply,two_hours
   lp_file: ramping_down.lp
 
+ramping_up_resampled:
+  description: "Test ramping_up constraint with 24 hour timesteps: the hourly rate applies over 24 hours"
+  register:
+    constraints: [ramping_up]
+    variables: [flow_out, flow_in, flow_cap]
+    parameters: [flow_ramping, timestep_resolution]
+    lookups: [carrier_in, carrier_out]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_ramping: 0.05
+  scenario: simple_supply,resample_two_days
+  lp_file: ramping_up_resampled.lp
+
+ramping_down_resampled:
+  description: "Test ramping_down constraint with 24 hour timesteps: the hourly rate applies over 24 hours"
+  register:
+    constraints: [ramping_down]
+    variables: [flow_out, flow_in, flow_cap]
+    parameters: [flow_ramping, timestep_resolution]
+    lookups: [carrier_in, carrier_out]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_ramping: 0.05
+  scenario: simple_supply,resample_two_days
+  lp_file: ramping_down_resampled.lp
+
+ramping_up_clustered:
+  description: "Test ramping_up constraint with clustered days: the first timestep of a cluster is compared with the last timestep of the same cluster"
+  register:
+    constraints: [ramping_up]
+    variables: [flow_out, flow_in, flow_cap]
+    parameters: [flow_ramping, timestep_resolution]
+    lookups: [carrier_in, carrier_out, cluster_first_timestep, lookup_cluster_last_timestep]
+  overrides:
+    nodes.a.techs.test_supply_elec.flow_ramping: 0.5
+  scenario: simple_supply,cluster_days_hourly
+  lp_file: ramping_up_clustered.lp
+
 balance_demand_sink_use_equals:
   description: "Test balance_demand constraint with sink_use_equals instead of sink_use_max"
   register:

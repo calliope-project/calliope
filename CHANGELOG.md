@@ -9,6 +9,12 @@ Now correctly defines the recommended approach to re-initialise the model with t
 
 |fixed| math documentation is no longer empty for components whose `where` string is never valid in the documented model, when including all math (`include="all"`) (#902).
 
+|fixed| `ramping_up` and `ramping_down` apply `flow_ramping` (unit: 1/hour) over the duration of the timestep.
+Before, the rate applied per timestep, so it was too strict for timesteps longer than one hour (e.g., 6 times too strict with 6-hourly resampling).
+With time clustering, the first timestep of a cluster is now compared with the last timestep of the same cluster, as for storage, instead of with the last timestep of the previous cluster.
+The first timestep of a model without clustering is now also limited, with the flow before the start of the model taken as zero.
+This changes the results of the national-scale example model, where `ccgt` can now produce at most 80% of its capacity in the first hour.
+
 ### Internal changes
 
 |fixed| Improved HiGHS backend: faster shadow price extraction; batched variable and constraint construction, leading to model build times on a similar order as the Gurobi backend

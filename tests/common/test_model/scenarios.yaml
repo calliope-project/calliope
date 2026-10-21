@@ -494,6 +494,15 @@ overrides:
   shadow_prices_invalid_constraint:
     config.solve.shadow_prices: ["flow_cap_max_foobar"]
 
+  cluster_days_hourly:
+    config.init.subset: {"timesteps": ["2005-01-01", "2005-01-03"]}
+    config.init.time_cluster: cluster_days_param
+    data_tables.cluster_days:
+      table: data_tables/cluster_days.csv
+      rows: datesteps
+      add_dims:
+        inputs: cluster_days_param
+
   inter_cluster_storage:
     config.init.subset: {"timesteps": ["2005-01-01", "2005-01-04"]}
     config.init.resample: {"timesteps": "24h"}
