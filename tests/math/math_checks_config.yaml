@@ -92,6 +92,12 @@ base:
         index: monetary
         dims: costs
 
+  ramping_with_short_timesteps:
+    scenario: simple_supply,one_day
+    override_dict:
+      data_tables.demand_elec.table: data_tables/demand_elec_15mins.csv
+      nodes.a.techs.test_supply_elec.flow_ramping: 0.5
+
   no_storage_discharge_depth_when_clustering:
     scenario: simple_storage,inter_cluster_storage
     override_dict:

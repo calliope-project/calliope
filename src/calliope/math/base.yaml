@@ -300,7 +300,8 @@ parameters:
     default: 1.0
     title: Ramping rate
     description: >-
-      limit maximum outflow / inflow / outflow - inflow (technology base class dependent) to a fraction of maximum capacity, which increases by that fraction at each timestep.
+      Limit the change of outflow / inflow / outflow - inflow (technology base class dependent)
+      between two consecutive timesteps to a fraction of the flow capacity per hour.
     unit: $\frac{1}{\text{hour}}$
 
   lifetime:
@@ -853,14 +854,27 @@ constraints:
 
   ramping_up:
     description: >-
-      Set the upper bound on a technology's ability to ramp outflow up
-      beyond a certain percentage compared to the previous timestep.
+      Set the upper bound on a technology's ability to ramp up between timesteps.
+      In the first timestep, the flow is taken as zero at the start of the model,
+      so the rate applies over the first half of the timestep.
+      With time clustering,
+      the first timestep of a cluster is compared with the last timestep of the same cluster.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "(carrier_in OR carrier_out) AND flow_ramping AND NOT timesteps==get_val_at_index(timesteps=0)"
+    where: "(carrier_in OR carrier_out) AND flow_ramping"
     equations:
-      - expression: $flow - roll($flow, timesteps=1) <= flow_ramping * flow_cap
+      - where: timesteps==get_val_at_index(timesteps=0) AND NOT cluster_first_timestep==True
+        expression: $average_power <= flow_ramping * flow_cap * timestep_resolution / 2
+      - where: NOT timesteps==get_val_at_index(timesteps=0) AND NOT cluster_first_timestep==True
+        expression: >-
+          $average_power - roll($average_power, timesteps=1) <=
+          flow_ramping * flow_cap * (timestep_resolution + roll(timestep_resolution, timesteps=1)) / 2
+      - where: cluster_first_timestep==True
+        expression: >-
+          $average_power - select_from_lookup_arrays($average_power, timesteps=lookup_cluster_last_timestep) <=
+          flow_ramping * flow_cap *
+          (timestep_resolution + select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep)) / 2
     sub_expressions:
-      flow: &ramping_flow
+      average_power: &average_power
         - where: "carrier_out AND NOT carrier_in"
           expression: flow_out / timestep_resolution
         - where: "carrier_in AND NOT carrier_out"
@@ -870,14 +884,79 @@ constraints:
 
   ramping_down:
     description: >-
-      Set the upper bound on a technology's ability to ramp outflow down
-      beyond a certain percentage compared to the previous timestep.
+      Set the lower bound on a technology's ability to ramp outflow down
+      compared to the previous timestep.
+      Complements the ramp up constraint.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "(carrier_in OR carrier_out) AND flow_ramping AND NOT timesteps==get_val_at_index(timesteps=0)"
+    where: "(carrier_in OR carrier_out) AND flow_ramping"
     equations:
-      - expression: -1 * flow_ramping * flow_cap <= $flow - roll($flow, timesteps=1)
+      - where: timesteps==get_val_at_index(timesteps=0) AND NOT cluster_first_timestep==True
+        expression: -1 * flow_ramping * flow_cap * timestep_resolution / 2 <= $average_power
+      - where: NOT timesteps==get_val_at_index(timesteps=0) AND NOT cluster_first_timestep==True
+        expression: >-
+          -1 * flow_ramping * flow_cap * (timestep_resolution + roll(timestep_resolution, timesteps=1)) / 2 <=
+          $average_power - roll($average_power, timesteps=1)
+      - where: cluster_first_timestep==True
+        expression: >-
+          -1 * flow_ramping * flow_cap *
+          (timestep_resolution + select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep)) / 2 <=
+          $average_power - select_from_lookup_arrays($average_power, timesteps=lookup_cluster_last_timestep)
     sub_expressions:
-      flow: *ramping_flow
+      average_power: *average_power
+
+  ramping_up_after_low_output:
+    description: >-
+      Additional ramp up bound after a timestep with low energy output.
+      Bounds instantaneous power at the end of the previous timestep using its total energy and the permitted ramping over its last hour.
+      The current timestep's average power can increase from that bound by half a timestep of ramping.
+      The reference hour is represented by `1` in the expression, meaning timesteps shorter than one hour are not supported.
+      For technologies with both inflow and outflow, the bound also accounts for possible negative power earlier in the previous timestep.
+      With clustering, the first timestep is compared with the last of its cluster.
+    foreach: [nodes, techs, carriers, timesteps]
+    where: "(carrier_in OR carrier_out) AND flow_ramping AND (cluster_first_timestep==True OR NOT timesteps==get_val_at_index(timesteps=0))"
+    equations:
+      - where: NOT cluster_first_timestep==True AND NOT (carrier_in AND carrier_out)
+        expression: >-
+          $average_power <= roll($average_power * timestep_resolution, timesteps=1)
+          + flow_ramping * flow_cap * (timestep_resolution + 1) / 2
+      - where: NOT cluster_first_timestep==True AND carrier_in AND carrier_out
+        expression: >-
+          $average_power <= roll($average_power * timestep_resolution, timesteps=1)
+          + (roll(timestep_resolution, timesteps=1) - 1) * flow_cap
+          + flow_ramping * flow_cap * (timestep_resolution + 1) / 2
+      - where: cluster_first_timestep==True AND NOT (carrier_in AND carrier_out)
+        expression: >-
+          $average_power <=
+          select_from_lookup_arrays($average_power * timestep_resolution, timesteps=lookup_cluster_last_timestep)
+          + flow_ramping * flow_cap * (timestep_resolution + 1) / 2
+      - where: cluster_first_timestep==True AND carrier_in AND carrier_out
+        expression: >-
+          $average_power <=
+          select_from_lookup_arrays($average_power * timestep_resolution, timesteps=lookup_cluster_last_timestep)
+          + (select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep) - 1) * flow_cap
+          + flow_ramping * flow_cap * (timestep_resolution + 1) / 2
+    sub_expressions:
+      average_power: *average_power
+
+  ramping_down_after_high_output:
+    description: >-
+      Additional ramp down bound after a timestep with high energy output.
+      Complements the low output ramp up constraint.
+    foreach: [nodes, techs, carriers, timesteps]
+    where: "(carrier_in OR carrier_out) AND flow_ramping AND (cluster_first_timestep==True OR NOT timesteps==get_val_at_index(timesteps=0))"
+    equations:
+      - where: NOT cluster_first_timestep==True
+        expression: >-
+          roll($average_power * timestep_resolution, timesteps=1)
+          - (roll(timestep_resolution, timesteps=1) - 1) * flow_cap
+          - flow_ramping * flow_cap * (timestep_resolution + 1) / 2 <= $average_power
+      - where: cluster_first_timestep==True
+        expression: >-
+          select_from_lookup_arrays($average_power * timestep_resolution, timesteps=lookup_cluster_last_timestep)
+          - (select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep) - 1) * flow_cap
+          - flow_ramping * flow_cap * (timestep_resolution + 1) / 2 <= $average_power
+    sub_expressions:
+      average_power: *average_power
 
 variables:
   flow_cap:
@@ -1409,6 +1488,11 @@ checks:
     where: base_tech==demand AND cost_flow_out
     message: "`cost_flow_out` does not apply to `demand` technologies. Use `cost_flow_in` instead."
     errors: warn
+
+  ramping_with_short_timesteps:
+    where: flow_ramping AND timestep_resolution<1
+    message: "`flow_ramping` needs timesteps of at least one hour, as `ramping_up_after_low_output` and `ramping_down_after_high_output` are not valid for shorter timesteps."
+    errors: raise
 
   no_storage_discharge_depth_when_clustering:
     where: storage_discharge_depth AND lookup_cluster_last_timestep
