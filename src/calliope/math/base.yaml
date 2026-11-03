@@ -301,13 +301,7 @@ parameters:
     title: Ramping rate
     description: >-
       Limit the change of outflow / inflow / outflow - inflow (technology base class dependent)
-      between two consecutive timesteps to this fraction of the flow capacity per hour.
-      The flow of a timestep is its average level, placed at the midpoint of the timestep,
-      and the level changes linearly between midpoints.
-      So the rate applies over the time between the midpoints of the two timesteps.
-      After a timestep with little energy (or nearly its full energy),
-      a second bound uses a reference period of one hour,
-      so timesteps must be at least one hour long.
+      between two consecutive timesteps to a fraction of the flow capacity per hour.
     unit: $\frac{1}{\text{hour}}$
 
   lifetime:
@@ -860,10 +854,7 @@ constraints:
 
   ramping_up:
     description: >-
-      Set the upper bound on a technology's ability to ramp outflow up
-      compared to the previous timestep.
-      The ramping rate is a fraction of the flow capacity per hour,
-      applied over the time between the midpoints of the two timesteps.
+      Set the upper bound on a technology's ability to ramp up between timesteps.
       In the first timestep, the flow is taken as zero at the start of the model,
       so the rate applies over the first half of the timestep.
       With time clustering,
@@ -883,7 +874,7 @@ constraints:
           flow_ramping * flow_cap *
           (timestep_resolution + select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep)) / 2
     sub_expressions:
-      average_power: &ramping_average_power
+      average_power: &average_power
         - where: "carrier_out AND NOT carrier_in"
           expression: flow_out / timestep_resolution
         - where: "carrier_in AND NOT carrier_out"
@@ -893,14 +884,9 @@ constraints:
 
   ramping_down:
     description: >-
-      Set the upper bound on a technology's ability to ramp outflow down
+      Set the lower bound on a technology's ability to ramp outflow down
       compared to the previous timestep.
-      The ramping rate is a fraction of the flow capacity per hour,
-      applied over the time between the midpoints of the two timesteps.
-      In the first timestep, the flow is taken as zero at the start of the model,
-      so the rate applies over the first half of the timestep.
-      With time clustering,
-      the first timestep of a cluster is compared with the last timestep of the same cluster.
+      Complements the ramp up constraint.
     foreach: [nodes, techs, carriers, timesteps]
     where: "(carrier_in OR carrier_out) AND flow_ramping"
     equations:
@@ -916,30 +902,16 @@ constraints:
           (timestep_resolution + select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep)) / 2 <=
           $average_power - select_from_lookup_arrays($average_power, timesteps=lookup_cluster_last_timestep)
     sub_expressions:
-      average_power: *ramping_average_power
+      average_power: *average_power
 
   ramping_up_after_low_output:
     description: >-
-      Set a second upper bound on a technology's ability to ramp outflow up,
-      after a timestep that carried little energy and so cannot have ended at a high level.
-      The bound uses a reference period `h_0` of one hour.
-      In the last `h_0` of the previous timestep, the level changes by at most `flow_ramping * flow_cap * h_0`,
-      and this period carries at most the energy of the whole timestep.
-      So the previous timestep ends at a level of at most
-      its energy divided by `h_0`, plus `flow_ramping * flow_cap * h_0 / 2`.
-      The average level of the current timestep is at most that end level
-      plus `flow_ramping * flow_cap * timestep_resolution / 2`.
-      In the expression, `h_0` is the `1` in `(timestep_resolution + 1)`,
-      and the energy of the previous timestep, `roll($average_power * timestep_resolution, timesteps=1)`,
-      is divided by `h_0 = 1`.
-      For a technology with both inflow and outflow, the level can be as low as `-flow_cap`
-      in the rest of the previous timestep,
-      so its last `h_0` can carry `(timestep_resolution - 1) * flow_cap` more energy,
-      with the resolution of the previous timestep and `1` again for `h_0`.
-      The bound is not valid for timesteps shorter than `h_0`,
-      so the check `ramping_with_short_timesteps` stops models with such timesteps.
-      With time clustering,
-      the first timestep of a cluster is compared with the last timestep of the same cluster.
+      Additional ramp up bound after a timestep with low energy output.
+      Bounds instantaneous power at the end of the previous timestep using its total energy and the permitted ramping over its last hour.
+      The current timestep's average power can increase from that bound by half a timestep of ramping.
+      The reference hour is represented by `1` in the expression, meaning timesteps shorter than one hour are not supported.
+      For technologies with both inflow and outflow, the bound also accounts for possible negative power earlier in the previous timestep.
+      With clustering, the first timestep is compared with the last of its cluster.
     foreach: [nodes, techs, carriers, timesteps]
     where: "(carrier_in OR carrier_out) AND flow_ramping AND (cluster_first_timestep==True OR NOT timesteps==get_val_at_index(timesteps=0))"
     equations:
@@ -964,29 +936,12 @@ constraints:
           + (select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep) - 1) * flow_cap
           + flow_ramping * flow_cap * (timestep_resolution + 1) / 2
     sub_expressions:
-      average_power: *ramping_average_power
+      average_power: *average_power
 
   ramping_down_after_high_output:
     description: >-
-      Set a second lower bound on a technology's ability to ramp outflow down,
-      after a timestep that carried nearly its full energy and so cannot have ended at a low level.
-      The bound uses the same reference period `h_0` of one hour as `ramping_up_after_low_output`.
-      The rest of the previous timestep carries at most `flow_cap` in each hour,
-      so its last `h_0` carries at least the energy of the whole timestep
-      minus `flow_cap` times the rest of the timestep.
-      In this period, the level changes by at most `flow_ramping * flow_cap * h_0`.
-      So the previous timestep ends at a level of at least
-      the energy of its last `h_0` divided by `h_0`, minus `flow_ramping * flow_cap * h_0 / 2`.
-      The average level of the current timestep is at least that end level
-      minus `flow_ramping * flow_cap * timestep_resolution / 2`.
-      In the expression, `h_0` is the `1` in `(timestep_resolution + 1)`
-      and in `(timestep_resolution - 1) * flow_cap`, with the resolution of the previous timestep,
-      and the energy of the previous timestep, `roll($average_power * timestep_resolution, timesteps=1)`,
-      is divided by `h_0 = 1`.
-      The bound is not valid for timesteps shorter than `h_0`,
-      so the check `ramping_with_short_timesteps` stops models with such timesteps.
-      With time clustering,
-      the first timestep of a cluster is compared with the last timestep of the same cluster.
+      Additional ramp down bound after a timestep with high energy output.
+      Complements the low output ramp up constraint.
     foreach: [nodes, techs, carriers, timesteps]
     where: "(carrier_in OR carrier_out) AND flow_ramping AND (cluster_first_timestep==True OR NOT timesteps==get_val_at_index(timesteps=0))"
     equations:
@@ -1001,7 +956,7 @@ constraints:
           - (select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep) - 1) * flow_cap
           - flow_ramping * flow_cap * (timestep_resolution + 1) / 2 <= $average_power
     sub_expressions:
-      average_power: *ramping_average_power
+      average_power: *average_power
 
 variables:
   flow_cap:
