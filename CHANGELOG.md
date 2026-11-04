@@ -9,6 +9,8 @@ Now correctly defines the recommended approach to re-initialise the model with t
 
 |fixed| math documentation is no longer empty for components whose `where` string is never valid in the documented model, when including all math (`include="all"`) (#902).
 
+|fixed| merging an input with and without a `carriers` dimension now raises a `ModelError` if it leaves an active technology with no data on the carriers it uses, instead of silently dropping the values (#899).
+
 ### Internal changes
 
 |fixed| Improved HiGHS backend: faster shadow price extraction; batched variable and constraint construction, leading to model build times on a similar order as the Gurobi backend

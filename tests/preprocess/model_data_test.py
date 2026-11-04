@@ -953,6 +953,100 @@ class TestModelDataCleaner:
         assert set(model_data_cleaner.dataset.nodes.values) == {"A", "C"}
         assert model_data_cleaner.dataset["active"].dtype.kind == "b"
 
+    @staticmethod
+    def _tables_with_and_without_carriers(table_order):
+        """A carrier-free `flow_cap_min` for gas supply, and one on heat for the conversion tech."""
+        data_table_dfs = {
+            "without_carrier": pd.DataFrame(
+                {"nodes": ["a"], "techs": ["test_supply_gas"], "value": [10.0]}
+            ).set_index(["nodes", "techs"]),
+            "with_carrier": pd.DataFrame(
+                {
+                    "nodes": ["a"],
+                    "techs": ["test_conversion"],
+                    "carriers": ["heat"],
+                    "value": [20.0],
+                }
+            ).set_index(["nodes", "techs", "carriers"]),
+        }
+        tables = {
+            "without_carrier": {
+                "table": "without_carrier",
+                "rows": ["nodes", "techs"],
+                "add_dims": {"inputs": "flow_cap_min"},
+            },
+            "with_carrier": {
+                "table": "with_carrier",
+                "rows": ["nodes", "techs", "carriers"],
+                "add_dims": {"inputs": "flow_cap_min"},
+            },
+        }
+        return {
+            "data_tables": {name: tables[name] for name in table_order}
+        }, data_table_dfs
+
+    @pytest.mark.parametrize(
+        "table_order",
+        [("without_carrier", "with_carrier"), ("with_carrier", "without_carrier")],
+    )
+    def test_error_if_carrier_merge_loses_input(self, table_order):
+        """A value without a carrier must not be lost, whichever order the tables load in."""
+        override, data_table_dfs = self._tables_with_and_without_carriers(table_order)
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(
+                override,
+                "simple_conversion,two_hours,investment_costs",
+                data_table_dfs=data_table_dfs,
+            )
+        assert check_error_or_warning(
+            excinfo, "(Model inputs, flow_cap_min) | This input is defined both"
+        )
+        assert "test_supply_gas" in str(excinfo.value)
+        assert "test_conversion" not in str(excinfo.value)
+
+    def test_no_error_if_carrier_merge_reaches_used_carrier(self):
+        """Broadcasting is fine when the carrier-free value lands on a carrier the tech uses."""
+        override, data_table_dfs = self._tables_with_and_without_carriers(
+            ("without_carrier", "with_carrier")
+        )
+        data_table_dfs["without_carrier"] = pd.DataFrame(
+            {"nodes": ["b"], "techs": ["test_conversion"], "value": [10.0]}
+        ).set_index(["nodes", "techs"])
+        model = build_model(
+            override,
+            "simple_conversion,two_hours,investment_costs",
+            data_table_dfs=data_table_dfs,
+        )
+        flow_cap_min = model.inputs.flow_cap_min.sel(techs="test_conversion")
+        assert flow_cap_min.sel(nodes="a", carriers="heat").item() == 20
+        assert flow_cap_min.sel(nodes="b", carriers="heat").item() == 10
+
+    def test_no_error_on_unused_carrier_without_carrier_merge(self):
+        """Without a merge across dimensions, data on an unused carrier is still just cleaned."""
+        override = {
+            "data_tables": {
+                "with_carrier": {
+                    "table": "with_carrier",
+                    "rows": ["nodes", "techs", "carriers"],
+                    "add_dims": {"inputs": "flow_cap_min"},
+                }
+            }
+        }
+        with_carrier = pd.DataFrame(
+            {
+                "nodes": ["a"],
+                "techs": ["test_supply_gas"],
+                "carriers": ["heat"],
+                "value": [20.0],
+            }
+        ).set_index(["nodes", "techs", "carriers"])
+        model = build_model(
+            override,
+            "simple_conversion,two_hours,investment_costs",
+            data_table_dfs={"with_carrier": with_carrier},
+        )
+        assert "flow_cap_min" not in model.inputs
+
     @pytest.mark.parametrize(
         ("existing_distance", "expected_distance"), [(np.nan, 343.834), (1, 1)]
     )
