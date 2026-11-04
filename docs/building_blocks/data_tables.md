@@ -572,6 +572,8 @@ This effectively replaces "A" with "B" on that dimension.
 3. The order of tabular data loading is in the order you list the tables.
 If a new table has data which clashes with preceding tables, it will override that data.
 This may have unexpected results if the files have different dimensions as the dimensions will be broadcast to match each other.
+For instance, if one table defines `flow_cap_max` with `carriers` and another defines it without, values from the second are only broadcast onto carriers in the first.
+If this leaves an active technology with no data on the carriers it uses, Calliope will raise an error, and you should add the `carriers` dimension to both tables.
 4. CSV files must have `.csv` in their filename (even if compressed, e.g., `.csv.zip`).
 If they don't, they won't be picked up by Calliope.
 5. We automatically infer which technologies are available at which nodes according to any tabular data containing _both_ the `nodes` and `techs` dimensions.

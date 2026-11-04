@@ -123,6 +123,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
         self.math = math
         self.model_definition = model_definition
         self.dataset = xr.Dataset()
+        self._inputs_merged_across_carriers: set[Hashable] = set()
         if tables:
             self.init_from_data_tables(tables)
 
@@ -130,6 +131,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
         """Build dataset from model definition."""
         self.add_node_tech_data()
         self.add_top_level_data_definitions()
+        self._raise_error_on_input_lost_in_carrier_merge()
 
     def init_from_data_tables(self, data_tables: Iterable[data_tables.DataTable]):
         """Initialise the model definition and dataset using data loaded from file / in-memory objects.
@@ -506,6 +508,12 @@ class ModelDataBuilder(ModelDTypeUpdater):
             to_add (xr.Dataset): Dataset to merge into the central dataset.
             id_ (str): ID of dataset being added, to use in log messages
         """
+        for name, data in to_add.data_vars.items():
+            if name in self.dataset.data_vars and "carriers" in set(
+                data.dims
+            ).symmetric_difference(self.dataset[name].dims):
+                self._inputs_merged_across_carriers.add(name)
+
         to_add_update_dim_dtype = to_add.assign_coords(
             self._update_dtypes(to_add.coords, id_)
         )
@@ -515,6 +523,38 @@ class ModelDataBuilder(ModelDTypeUpdater):
             compat="override",
             join="outer",
         ).fillna(self.dataset)
+
+    def _raise_error_on_input_lost_in_carrier_merge(self):
+        """Raise an error if merging an input with and without `carriers` left an active tech without usable data.
+
+        Values without a `carriers` dimension are only broadcast onto the carriers already in the other data.
+        If none of those are valid for a tech, cleaning the data would later drop its values without warning.
+
+        Raises:
+            exceptions.ModelError: An active tech only has data for this input on carriers it does not use.
+        """
+        ds = self._update_dtypes(self.dataset.copy())
+        def_matrix = (ds.carrier_in | ds.carrier_out) & ds.active
+        for name in sorted(self._inputs_merged_across_carriers):
+            data = ds[name]
+            if not {"carriers", "techs"}.issubset(data.dims):
+                continue
+            node_tech_dims = [dim for dim in NODE_TECH if dim in data.dims]
+            other_dims = set(data.dims).difference(node_tech_dims)
+            carriers_in_use = def_matrix.any(set(def_matrix.dims).difference(data.dims))
+            lost = (
+                data.notnull().any(other_dims)
+                & ~data.where(carriers_in_use).notnull().any(other_dims)
+                & def_matrix.any(set(def_matrix.dims).difference(node_tech_dims))
+            )
+            if lost.any():
+                items = lost.to_series()
+                raise exceptions.ModelError(
+                    f"(Model inputs, {name}) | This input is defined both with and "
+                    "without the `carriers` dimension, and these active technologies "
+                    f"have no data on the carriers they use: {items[items].index.tolist()}. "
+                    "Define this input with the `carriers` dimension everywhere."
+                )
 
     def _log_input_data_updates(self, name: str, input_data_da: xr.DataArray):
         """Logger for model input data updates.
