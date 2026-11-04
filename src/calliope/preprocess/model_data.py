@@ -541,9 +541,7 @@ class ModelDataBuilder(ModelDTypeUpdater):
                 continue
             node_tech_dims = [dim for dim in NODE_TECH if dim in data.dims]
             other_dims = set(data.dims).difference(node_tech_dims)
-            carriers_in_use = def_matrix.any(
-                set(def_matrix.dims).difference(data.dims)
-            )
+            carriers_in_use = def_matrix.any(set(def_matrix.dims).difference(data.dims))
             lost = (
                 data.notnull().any(other_dims)
                 & ~data.where(carriers_in_use).notnull().any(other_dims)
