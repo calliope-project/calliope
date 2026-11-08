@@ -9,6 +9,9 @@ Now correctly defines the recommended approach to re-initialise the model with t
 
 |fixed| math documentation is no longer empty for components whose `where` string is never valid in the documented model, when including all math (`include="all"`) (#902).
 
+|fixed| the `where` helper function no longer drops the enclosing `where` array, so arithmetic inside it (e.g., `where(flow_cap / my_param, my_param)`) is not evaluated on entries the component's `where` string excludes.
+This stops invalid values (e.g., NaN multipliers, which Gurobi rejects) being created for those entries (#913).
+
 ### Internal changes
 
 |fixed| Improved HiGHS backend: faster shadow price extraction; batched variable and constraint construction, leading to model build times on a similar order as the Gurobi backend

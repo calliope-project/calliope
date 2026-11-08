@@ -1262,6 +1262,26 @@ class TestApplyDefault:
 
         assert evaluated_.item()() == 11
 
+    def test_where_func_keeps_enclosing_where_array(
+        self, helper_function_allow_arithmetic, eval_kwargs
+    ):
+        """Test that the `where` helper function does not drop the enclosing where array.
+
+        Arithmetic inside `where` must not be evaluated on entries that the enclosing where array excludes,
+        so wrapping an expression in `where(..., all_true)` should not change the result.
+        Without the enclosing where array, the `inf` value of `with_inf` would enter into the summation.
+        """
+        parsed_ = helper_function_allow_arithmetic.parse_string(
+            "sum(where(with_inf + 1, all_true), over=[nodes, techs])", parse_all=True
+        )
+        where = eval_kwargs["eval_attrs"].input_data.with_inf_and_only_techs_as_bool
+        evaluated_ = parsed_[0].eval(
+            eval_kwargs["return_type"],
+            replace(eval_kwargs["eval_attrs"], where_array=where),
+        )
+
+        assert evaluated_.item()() == 11
+
 
 class TestApplyWhereArray:
     """Test that _apply_where_array correctly broadcasts and masks arrays using the where_array.
