@@ -909,11 +909,14 @@ constraints:
       Additional ramp up bound after a timestep with low energy output.
       Bounds instantaneous power at the end of the previous timestep using its total energy and the permitted ramping over its last hour.
       The current timestep's average power can increase from that bound by half a timestep of ramping.
-      The reference hour is represented by `1` in the expression, meaning timesteps shorter than one hour are not supported.
+      The reference hour is represented by `1` in the expression,
+      so the previous timestep must be at least one hour long.
+      The bound is only applied in timesteps longer than one hour;
+      after a timestep of exactly one hour, it is the same as the `ramping_up` bound.
       For technologies with both inflow and outflow, the bound also accounts for possible negative power earlier in the previous timestep.
       With clustering, the first timestep is compared with the last of its cluster.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "(carrier_in OR carrier_out) AND flow_ramping AND (cluster_first_timestep==True OR NOT timesteps==get_val_at_index(timesteps=0))"
+    where: "(carrier_in OR carrier_out) AND flow_ramping AND timestep_resolution>1 AND (cluster_first_timestep==True OR NOT timesteps==get_val_at_index(timesteps=0))"
     equations:
       - where: NOT cluster_first_timestep==True AND NOT (carrier_in AND carrier_out)
         expression: >-
@@ -941,9 +944,10 @@ constraints:
   ramping_down_after_high_output:
     description: >-
       Additional ramp down bound after a timestep with high energy output.
-      Complements the low output ramp up constraint.
+      Complements the low output ramp up constraint,
+      and is applied in the same timesteps.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "(carrier_in OR carrier_out) AND flow_ramping AND (cluster_first_timestep==True OR NOT timesteps==get_val_at_index(timesteps=0))"
+    where: "(carrier_in OR carrier_out) AND flow_ramping AND timestep_resolution>1 AND (cluster_first_timestep==True OR NOT timesteps==get_val_at_index(timesteps=0))"
     equations:
       - where: NOT cluster_first_timestep==True
         expression: >-
@@ -1491,8 +1495,8 @@ checks:
 
   ramping_with_short_timesteps:
     where: flow_ramping AND timestep_resolution<1
-    message: "`flow_ramping` needs timesteps of at least one hour, as `ramping_up_after_low_output` and `ramping_down_after_high_output` are not valid for shorter timesteps."
-    errors: raise
+    message: "`ramping_up_after_low_output` and `ramping_down_after_high_output` are only applied in timesteps longer than one hour and assume that the previous timestep is at least one hour long. With timesteps of different lengths, they can be too tight in a timestep that follows one shorter than one hour."
+    errors: warn
 
   no_storage_discharge_depth_when_clustering:
     where: storage_discharge_depth AND lookup_cluster_last_timestep

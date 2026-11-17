@@ -17,7 +17,8 @@ This changes the results of the national-scale example model, where `ccgt` can n
 
 |new| `ramping_up_after_low_output` and `ramping_down_after_high_output` constraints, which bound the ramp after a timestep that carried little energy (or nearly its full energy) and so cannot have ended at a high (or low) level.
 They use a reference period of one hour, so they are tighter than `ramping_up` and `ramping_down` only after timesteps longer than one hour, and the same after hourly timesteps.
-A new check raises an error if `flow_ramping` is used with timesteps shorter than one hour, as these constraints are not valid for them.
+They are applied only in timesteps longer than one hour.
+A new check warns if `flow_ramping` is used with timesteps shorter than one hour, as these constraints assume that the previous timestep is at least one hour long.
 
 ### Internal changes
 
