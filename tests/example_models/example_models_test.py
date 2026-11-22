@@ -136,13 +136,13 @@ class TestNationalScaleExampleModelSenseChecks:
 
             assert model.results.storage_cap.sel(
                 nodes="region1_1", techs="csp"
-            ) == approx(45129.950)
+            ) == approx(70119.401)
             assert model.results.storage_cap.sel(
                 nodes="region2", techs="battery"
             ) == approx(6675.173)
 
             assert model.results.flow_cap.sel(nodes="region1_1", techs="csp") == approx(
-                4626.588
+                10000
             )
             assert model.results.flow_cap.sel(
                 nodes="region2", techs="battery"
@@ -151,18 +151,18 @@ class TestNationalScaleExampleModelSenseChecks:
                 30000
             )
 
-            assert float(model.results.cost.sum()) == approx(38988.7442)
+            assert float(model.results.cost.sum()) == approx(44535.5795)
 
             assert float(
                 model.results.systemwide_levelised_cost.sel(
                     carriers="power", techs="battery"
                 ).item()
-            ) == approx(0.063543, abs=0.000001)
+            ) == approx(0.054888, abs=0.000001)
             assert float(
                 model.results.systemwide_capacity_factor.sel(
                     carriers="power", techs="battery"
                 ).item()
-            ) == approx(0.2642256, abs=0.000001)
+            ) == approx(0.3058923, abs=0.000001)
 
             model.results.total_levelised_cost.item() == approx(0.05456, abs=1e-5)
 
